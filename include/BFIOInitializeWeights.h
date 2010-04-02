@@ -45,6 +45,9 @@ namespace BFIO
         for( unsigned j=0; j<d; ++j )
             x0[j] = 0.5;
 
+        // Compute the unscaled weights for each local box by looping over 
+        // our sources and sorting them into the appropriate local box one 
+        // at a time. Bombs if a source is outside of our frequency box.
         for( unsigned i=0; i<mySources.size(); ++i )
         {
             const Array<R,d>& p = mySources[i].p;

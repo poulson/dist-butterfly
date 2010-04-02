@@ -99,9 +99,6 @@ namespace BFIO
         for( unsigned i=0; i<q; ++i )
             chebyGrid[i] = 0.5*cos(i*Pi/(q-1));
 
-        // Compute the unscaled weights for each local box by looping over 
-        // our sources and sorting them into the appropriate local box one 
-        // at a time. Bombs if a source is outside of our frequency box.
         vector< Array<C,Power<q,d>::value> > weights(boxes);
         InitializeWeights<Psi,R,d,q>
         ( N, mySources, chebyGrid, myFreqBoxWidths,
