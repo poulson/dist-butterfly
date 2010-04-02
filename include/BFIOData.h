@@ -37,7 +37,8 @@ namespace BFIO
         T operator[]( unsigned j ) const { return x[j]; }
     };
 
-    // A d-dimensional coordinate in the frequency domain and magnitude
+    // A d-dimensional coordinate in the polar frequency domain and the 
+    // magnitude of the source located there
     template<typename R,unsigned d>
     struct Source 
     { 
@@ -49,9 +50,8 @@ namespace BFIO
     template<typename Psi,typename R,unsigned d,unsigned q>
     struct LRP
     {
-        Array<R,d> x0;
         unsigned N;
-        unsigned level;
+        Array<R,d> x0;
         Array<R,d> points[ Power<q,d>::value ];
         std::complex<R> weights[ Power<q,d>::value ];
         
