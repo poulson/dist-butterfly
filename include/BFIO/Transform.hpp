@@ -16,14 +16,13 @@
    You should have received a copy of the GNU Lesser General Public License
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_TRANSFORM_H
-#define BFIO_TRANSFORM_H 1
+#ifndef BFIO_TRANSFORM_HPP
+#define BFIO_TRANSFORM_HPP 1
 
 #include <bitset>
 
-#include "BFIOUtil.h"
-#include "BFIOTemplate.h"
-#include "BFIOInitializeWeights.h"
+#include "BFIO/Util.hpp"
+#include "BFIO/Template.hpp"
 
 namespace BFIO
 {
@@ -118,5 +117,5 @@ namespace BFIO
     }
 }
 
-#endif /* BFIO_TRANSFORM_H */
+#endif /* BFIO_TRANSFORM_HPP */
 

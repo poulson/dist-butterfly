@@ -16,10 +16,10 @@
    You should have received a copy of the GNU Lesser General Public License
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_WEIGHT_SUMMATION_H
-#define BFIO_WEIGHT_SUMMATION_H 1
+#ifndef BFIO_WEIGHT_SUMMATION_HPP
+#define BFIO_WEIGHT_SUMMATION_HPP 1
 
-#include "BFIOLagrange.h"
+#include "BFIO/Lagrange.hpp"
 
 namespace BFIO
 {
@@ -68,5 +68,5 @@ namespace BFIO
     };
 }
 
-#endif /* BFIO_WEIGHT_SUMMATION_H */
+#endif /* BFIO_WEIGHT_SUMMATION_HPP */
 

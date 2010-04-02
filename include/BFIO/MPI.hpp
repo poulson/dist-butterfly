@@ -16,8 +16,8 @@
    You should have received a copy of the GNU Lesser General Public License
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_MPI_H
-#define BFIO_MPI_H 1
+#ifndef BFIO_MPI_HPP
+#define BFIO_MPI_HPP 1
 
 #include <complex>
 #include <iostream>
@@ -141,5 +141,5 @@ namespace BFIO
     }
 }
 
-#endif /* BFIO_MPI_H */
+#endif /* BFIO_MPI_HPP */
 

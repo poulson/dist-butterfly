@@ -16,14 +16,15 @@
    You should have received a copy of the GNU Lesser General Public License
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_TEMPLATE_H
-#define BFIO_TEMPLATE_H 1
+#ifndef BFIO_TEMPLATE_HPP
+#define BFIO_TEMPLATE_HPP 1
 
-#include "BFIOPower.h"
-#include "BFIOData.h"
-#include "BFIOLagrange.h"
-#include "BFIOWeightSummation.h"
-#include "BFIOScaleWeights.h"
+#include "BFIO/Power.hpp"
+#include "BFIO/Data.hpp"
+#include "BFIO/Lagrange.hpp"
+#include "BFIO/WeightSummation.hpp"
+#include "BFIO/ScaleWeights.hpp"
+#include "BFIO/InitializeWeights.hpp"
 
-#endif /* BFIO_TEMPLATE_H */
+#endif /* BFIO_TEMPLATE_HPP */
 

@@ -16,43 +16,12 @@
    You should have received a copy of the GNU Lesser General Public License
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_UTIL_H
-#define BFIO_UTIL_H 1
+#ifndef BFIO_HPP
+#define BFIO_HPP 1
 
-// C standard headers
-#include <cmath>
-#include <cstdlib>
+#include "BFIO/Template.hpp"
+#include "BFIO/Util.hpp"
+#include "BFIO/Transform.hpp"
 
-// C++ standard headers
-#include <complex>
-#include <iostream>
-#include <vector>
-
-// Additional library headers
-#include "mpi.h"
-
-#include "BFIOMPI.h"
-
-namespace BFIO
-{
-    inline bool
-    IsPowerOfTwo( unsigned N )
-    { return N && !(N & (N-1)); }
-
-    inline unsigned
-    Log2( unsigned N )
-    { 
-        unsigned j = 0;
-        while( (N>>j) > 1 )
-            ++j;
-        return j;
-    }
-
-    inline unsigned
-    TwiddleBit
-    ( unsigned N, unsigned l )
-    { return N ^ (1<<l); }
-}
-
-#endif /* BFIO_UTIL_H */
+#endif /* BFIO_HPP */
 

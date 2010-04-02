@@ -1,4 +1,4 @@
-#include "include/BFIO.h"
+#include "BFIO.hpp"
 using namespace std;
 using namespace BFIO;
 
@@ -51,9 +51,10 @@ main
     {
         Transform( 4, mySources, myLRPs, MPI_COMM_WORLD );
     }
-    catch( ... )
+    catch( const char* errorMsg )
     {
-        cout << "Caught exception on process " << rank << endl;
+        cout << "Caught exception on process " << rank << ":" << endl;
+        cout << "  " << errorMsg << endl;
     }
 
     MPI_Finalize();

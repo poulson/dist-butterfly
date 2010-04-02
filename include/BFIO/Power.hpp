@@ -16,12 +16,24 @@
    You should have received a copy of the GNU Lesser General Public License
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_H
-#define BFIO_H 1
+#ifndef BFIO_POWER_HPP
+#define BFIO_POWER_HPP 1
 
-#include "BFIOTemplate.h"
-#include "BFIOUtil.h"
-#include "BFIOTransform.h"
+namespace BFIO
+{
+    // Power<x,y>::value returns x to the y'th power at compile-time
+    template<unsigned x,unsigned y>
+    struct Power
+    { enum { value = x * Power<x,y-1>::value }; };
 
-#endif /* BFIO_H */
+    template<unsigned x>
+    struct Power<x,1>
+    { enum { value = x }; };
+
+    template<unsigned x>
+    struct Power<x,0>
+    { enum { value = 1 }; };
+}
+
+#endif /* BFIO_POWER_HPP */
 

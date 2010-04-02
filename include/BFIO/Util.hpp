@@ -16,24 +16,43 @@
    You should have received a copy of the GNU Lesser General Public License
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_POWER_H
-#define BFIO_POWER_H 1
+#ifndef BFIO_UTIL_HPP
+#define BFIO_UTIL_HPP 1
+
+// C standard headers
+#include <cmath>
+#include <cstdlib>
+
+// C++ standard headers
+#include <complex>
+#include <iostream>
+#include <vector>
+
+// Additional library headers
+#include "mpi.h"
+
+#include "BFIO/MPI.hpp"
 
 namespace BFIO
 {
-    // Power<x,y>::value returns x to the y'th power at compile-time
-    template<unsigned x,unsigned y>
-    struct Power
-    { enum { value = x * Power<x,y-1>::value }; };
+    inline bool
+    IsPowerOfTwo( unsigned N )
+    { return N && !(N & (N-1)); }
 
-    template<unsigned x>
-    struct Power<x,1>
-    { enum { value = x }; };
+    inline unsigned
+    Log2( unsigned N )
+    { 
+        unsigned j = 0;
+        while( (N>>j) > 1 )
+            ++j;
+        return j;
+    }
 
-    template<unsigned x>
-    struct Power<x,0>
-    { enum { value = 1 }; };
+    inline unsigned
+    TwiddleBit
+    ( unsigned N, unsigned l )
+    { return N ^ (1<<l); }
 }
 
-#endif /* BFIO_POWER_H */
+#endif /* BFIO_UTIL_HPP */
 

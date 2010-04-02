@@ -16,11 +16,11 @@
    You should have received a copy of the GNU Lesser General Public License
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_INITIALIZE_WEIGHTS_H
-#define BFIO_INITIALIZE_WEIGHTS_H 1
+#ifndef BFIO_INITIALIZE_WEIGHTS_HPP
+#define BFIO_INITIALIZE_WEIGHTS_HPP 1
 
-#include "BFIOUtil.h"
-#include "BFIOTemplate.h"
+#include "BFIO/Util.hpp"
+#include "BFIO/Template.hpp"
 
 namespace BFIO
 {
@@ -152,5 +152,5 @@ namespace BFIO
     }
 }
 
-#endif /* BFIO_INITIALIZE_WEIGHTS_H */
+#endif /* BFIO_INITIALIZE_WEIGHTS_HPP */
 

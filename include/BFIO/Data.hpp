@@ -16,8 +16,8 @@
    You should have received a copy of the GNU Lesser General Public License
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_DATA_H
-#define BFIO_DATA_H 1
+#ifndef BFIO_DATA_HPP
+#define BFIO_DATA_HPP 1
 
 #include <complex>
 
@@ -76,5 +76,5 @@ namespace BFIO
     }
 }
 
-#endif /* BFIO_DATA_H */
+#endif /* BFIO_DATA_HPP */
 

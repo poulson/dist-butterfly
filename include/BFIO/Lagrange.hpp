@@ -16,11 +16,11 @@
    You should have received a copy of the GNU Lesser General Public License
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_LAGRANGE_H
-#define BFIO_LAGRANGE_H 1
+#ifndef BFIO_LAGRANGE_HPP
+#define BFIO_LAGRANGE_HPP 1
 
-#include "BFIOPower.h"
-#include "BFIOData.h"
+#include "BFIO/Power.hpp"
+#include "BFIO/Data.hpp"
 
 namespace BFIO
 {
@@ -109,5 +109,5 @@ namespace BFIO
     };
 }
 
-#endif /* BFIO_LAGRANGE_H */
+#endif /* BFIO_LAGRANGE_HPP */
 

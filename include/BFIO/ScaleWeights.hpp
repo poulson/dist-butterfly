@@ -16,10 +16,10 @@
    You should have received a copy of the GNU Lesser General Public License
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_SCALE_WEIGHTS_H
-#define BFIO_SCALE_WEIGHTS_H 1
+#ifndef BFIO_SCALE_WEIGHTS_HPP
+#define BFIO_SCALE_WEIGHTS_HPP 1
 
-#include "BFIOScaleWeights.h"
+#include "BFIO/ScaleWeights.hpp"
 
 namespace BFIO
 {
@@ -114,5 +114,5 @@ namespace BFIO
     };
 }
 
-#endif /* BFIO_SCALE_WEIGHTS_H */
+#endif /* BFIO_SCALE_WEIGHTS_HPP */
 
