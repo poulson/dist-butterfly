@@ -71,7 +71,7 @@ namespace BFIO
 
         C value(0.,0.);
         for( unsigned j=0; j<Power<q,d>::value; ++j )
-            value += exp( C(0.,TwoPi*N)*Psi::Eval(x,points[j]) ) * weights[j];
+            value += exp( C(0.,TwoPi*N*Psi::Eval(x,points[j])) ) * weights[j];
         return value;
     }
 }

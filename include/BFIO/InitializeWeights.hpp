@@ -112,7 +112,7 @@ namespace BFIO
             for( unsigned j=0; j<d; ++j )
                 pRef[j] = (p[j]-p0[j])/widthOfB;
             const C f = mySources[i].magnitude;
-            const C alpha = exp( C(0.,TwoPi*N)*Psi::Eval(x0,p) ) * f;
+            const C alpha = exp( C(0.,TwoPi*N*Psi::Eval(x0,p)) ) * f;
             WeightSummation<R,d,q>::Eval(alpha,pRef,chebyGrid,weights[k]);
         }
 

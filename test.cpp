@@ -2,19 +2,13 @@
 using namespace std;
 using namespace BFIO;
 
-// Create a functor that performs a dot product in R^d
-template<typename R,unsigned d>
+// Create a functor that performs a dot product in R^2
 struct Dot
 { 
-    static inline complex<R>
+    static inline double
     Eval
-    ( const Array<R,d>& x, const Array<R,d>& p )
-    {
-        complex<R> z(0.,0.);
-        for( unsigned j=0; j<d; ++j )
-            z += x[j]*p[j];
-        return z;
-    }
+    ( const Array<double,2>& x, const Array<double,2>& p )
+    { return x[0]*p[0] + x[1]*p[1]; }
 };
 
 int
@@ -26,7 +20,7 @@ main
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
 
     vector< Source<double,2> > mySources;
-    vector< LRP<Dot<double,2>,double,2,5> > myLRPs;
+    vector< LRP<Dot,double,2,5> > myLRPs;
 
     // See what happens when we only put sources in the bottom-left corner
     if( rank == 0 )

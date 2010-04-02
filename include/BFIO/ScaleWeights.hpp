@@ -68,7 +68,7 @@ namespace BFIO
 
             Array<R,d> pT;
             ConstructPointLoop<R,d,q,t,d-1>::Eval(widthOfB,p0,chebyGrid,pT);
-            weights[t] *= exp( C(0.,-TwoPi*N)*Psi::Eval(x0,pT) );
+            weights[t] *= exp( C(0.,-TwoPi*N*Psi::Eval(x0,pT)) );
 
             ScaleWeightsOuter<Psi,R,d,q,t-1>::Eval
             (N,widthOfB,x0,p0,chebyGrid,weights);
@@ -92,7 +92,7 @@ namespace BFIO
 
             Array<R,d> pT;
             ConstructPointLoop<R,d,q,0,d-1>::Eval(widthOfB,p0,chebyGrid,pT);
-            weights[0] *= exp( C(0.,-TwoPi*N)*Psi::Eval(x0,pT) );
+            weights[0] *= exp( C(0.,-TwoPi*N*Psi::Eval(x0,pT)) );
         }
     };
 
