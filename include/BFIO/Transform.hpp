@@ -43,19 +43,19 @@ namespace BFIO
         using namespace std;
         typedef complex<R> C;
 
-        int rank, size;
+        int rank, Q;
         MPI_Comm_rank( comm, &rank );
-        MPI_Comm_size( comm, &size ); 
+        MPI_Comm_size( comm, &Q    ); 
         bitset<sizeof(int)*8> rankBits(rank);
 
         // Assert that N and size are powers of 2
         if( ! IsPowerOfTwo(N) )
             throw "Must use a power of 2 problem size.";
-        if( ! IsPowerOfTwo(size) ) 
+        if( ! IsPowerOfTwo(Q) ) 
             throw "Must use a power of 2 number of processes.";
-        const unsigned log2N = Log2( N );
-        const unsigned log2Size = Log2( size );
-        if( log2Size > d*log2N )
+        const unsigned L = Log2( N );
+        const unsigned q = Log2( Q );
+        if( q > d*L )
             throw "Cannot use more than N^d processes.";
 
         // Determine the number of partitions in each dimension of the 
@@ -67,7 +67,7 @@ namespace BFIO
         Array<unsigned,d> log2NumFreqParts;
         for( unsigned j=0; j<d; ++j )
             myFreqBoxCoords[j] = log2NumFreqParts[j] = 0;
-        for( unsigned j=log2Size; j>0; --j )
+        for( unsigned j=q; j>0; --j )
         {
             static unsigned nextPartDim = 0;
             // Double our current coordinate in the 'nextPartDim' dimension 
@@ -88,7 +88,7 @@ namespace BFIO
         Array<unsigned,d> log2BoxesPerDim;
         for( unsigned j=0; j<d; ++j )
         {
-            log2BoxesPerDim[j] = log2N-log2NumFreqParts[j];
+            log2BoxesPerDim[j] = L-log2NumFreqParts[j];
             log2Boxes += log2BoxesPerDim[j];
         }
         const unsigned boxes = 1<<log2Boxes;
@@ -99,19 +99,66 @@ namespace BFIO
             chebyGrid[i] = 0.5*cos(i*Pi/(q-1));
 
         vector< Array<C,Power<q,d>::value> > weights(boxes);
+        vector< Array<C,Power<q,d>::value> > partialWeights((2<<d)*boxes);
         InitializeWeights<Psi,R,d,q>
         ( N, mySources, chebyGrid, myFreqBoxWidths,
           myFreqBoxCoords, boxes, log2BoxesPerDim, weights );
 
-        // First half of algorithm
+        // First half of algorithm: frequency interpolation
+        for( unsigned l=1; l<L/2; ++l )
+        {
+            if( q <= d*(L-l) )
+            {
+                // Form the N^d/Q = 2^(d*L) / 2^q = 2^(d*L-q) weights
+            }
+            else 
+            {
+                // There are currently 2^(d*(L-l)) leaves. The frequency 
+                // partitioning is implied by reading the rank bits right-to-
+                // left, but the spatial partitioning is implied by reading the
+                // rank bits left-to-right starting from bit q-1. The spatial 
+                // partitioning among cores begins at the precise moment when 
+                // trees begin mergining in the frequency domain: the lowest 
+                // l such that q > d*(L-l), namely, l = L - floor( q/d ). The 
+                // first merge is the only case where the team could potentially
+                // differ from 2^d processes.
+                unsigned log2NumProcs = ( l == L-(q/d) ? q-d*(L-l) : d ); 
+
+                // We notice that our consistency in the cyclic bisection of 
+                // the frequency domain means that if log2NumProcs=a, then 
+                // we communicate with 1 other process in the first a of d 
+                // dimensions. Getting these ranks is implicit in the tree 
+                // structure.
+                
+                // Form the partial weights. 
+
+                // ReduceScatter over the necessary team into weights
+                // MPI_Comm_group, MPI_Group_incl, MPI_Comm_group...
+            }
+        }
 
         // Switch to spatial interpolation
 
-        // Second half of algorithm
-
-        // Copy weights into LRPs
+        // Second half of algorithm: spatial interpolation
+        for( unsigned l=L/2; l<L; ++l )
         {
-            myLRPs.resize( 1<<(d*log2N-log2Size) );
+            if( q <= d*(L-l) )
+            {
+                // Form the weights
+            }
+            else
+            {
+                unsigned log2NumProcs = ( l == L-(q/d) ? q-d*(L-l) : d );
+
+                // Form the partial weights
+
+                // ReduceScatter over the necessary team into weights
+            }
+        }
+
+        // Construct Low-Rank Potentials (LRPs) from weights
+        {
+            myLRPs.resize( 1<<(d*L-q) );
             // Fill in the LRPs
         }
     }
