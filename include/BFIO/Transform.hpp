@@ -43,19 +43,19 @@ namespace BFIO
         using namespace std;
         typedef complex<R> C;
 
-        int rank, Q;
+        int rank, S;
         MPI_Comm_rank( comm, &rank );
-        MPI_Comm_size( comm, &Q    ); 
+        MPI_Comm_size( comm, &S    ); 
         bitset<sizeof(int)*8> rankBits(rank);
 
         // Assert that N and size are powers of 2
         if( ! IsPowerOfTwo(N) )
             throw "Must use a power of 2 problem size.";
-        if( ! IsPowerOfTwo(Q) ) 
+        if( ! IsPowerOfTwo(S) ) 
             throw "Must use a power of 2 number of processes.";
         const unsigned L = Log2( N );
-        const unsigned q = Log2( Q );
-        if( q > d*L )
+        const unsigned s = Log2( S );
+        if( s > d*L )
             throw "Cannot use more than N^d processes.";
 
         // Determine the number of partitions in each dimension of the 
@@ -64,10 +64,10 @@ namespace BFIO
         // box in each spatial dimension.
         Array<R,d> myFreqBoxWidths;
         Array<unsigned,d> myFreqBoxCoords;
-        Array<unsigned,d> log2NumFreqParts;
+        Array<unsigned,d> log2FreqParts;
         for( unsigned j=0; j<d; ++j )
-            myFreqBoxCoords[j] = log2NumFreqParts[j] = 0;
-        for( unsigned j=q; j>0; --j )
+            myFreqBoxCoords[j] = log2FreqParts[j] = 0;
+        for( unsigned j=s; j>0; --j )
         {
             static unsigned nextPartDim = 0;
             // Double our current coordinate in the 'nextPartDim' dimension 
@@ -76,56 +76,91 @@ namespace BFIO
             myFreqBoxCoords[nextPartDim] = 
                 (myFreqBoxCoords[nextPartDim]<<1)+rankBits[j-1];
 
-            log2NumFreqParts[nextPartDim]++;
+            log2FreqParts[nextPartDim]++;
             nextPartDim = (nextPartDim+1) % d;
         }
         for( unsigned j=0; j<d; ++j )
-            myFreqBoxWidths[j] = 1. / static_cast<R>(1<<log2NumFreqParts[j]);
+            myFreqBoxWidths[j] = 1. / static_cast<R>(1<<log2FreqParts[j]);
 
         // Compute the number of 1/N width boxes in the frequency domain that 
-        // our process is responsible for initializing the weights in
-        unsigned log2Boxes = 0;
-        Array<unsigned,d> log2BoxesPerDim;
+        // our process is responsible for initializing the weights in. Also
+        // initialize each box being responsible for all of the spatial domain.
+        unsigned freqBoxes = 1;
+        unsigned spatialBoxes = 1;
+        Array<unsigned,d> log2FreqBoxes;
+        Array<unsigned,d> log2SpatialBoxes;
         for( unsigned j=0; j<d; ++j )
         {
-            log2BoxesPerDim[j] = L-log2NumFreqParts[j];
-            log2Boxes += log2BoxesPerDim[j];
+            log2FreqBoxes[j] = L-log2FreqParts[j];
+            log2SpatialBoxes[j] = 0;
+            freqBoxes <<= log2FreqBoxes[j];
         }
-        const unsigned boxes = 1<<log2Boxes;
 
         // Compute {zi} for the Chebyshev grid of order q over [-1/2,+1/2]
         Array<R,q> chebyGrid;
         for( unsigned i=0; i<q; ++i )
             chebyGrid[i] = 0.5*cos(i*Pi/(q-1));
 
-        vector< Array<C,Power<q,d>::value> > weights(boxes);
-        vector< Array<C,Power<q,d>::value> > partialWeights((2<<d)*boxes);
+        // Initialize the weights using Lagrangian interpolation on the 
+        // smooth component of the kernel.
+        vector< Array<C,Power<q,d>::value> > weights(freqBoxes);
         InitializeWeights<Psi,R,d,q>
         ( N, mySources, chebyGrid, myFreqBoxWidths,
-          myFreqBoxCoords, boxes, log2BoxesPerDim, weights );
+          myFreqBoxCoords, freqBoxes, log2FreqBoxes, weights );
 
         // First half of algorithm: frequency interpolation
+        vector< Array<C,Power<q,d>::value> > partialWeights((2<<d)*freqBoxes);
         for( unsigned l=1; l<L/2; ++l )
         {
-            if( q <= d*(L-l) )
+            if( s <= d*(L-l) )
             {
-                // Form the N^d/Q = 2^(d*L) / 2^q = 2^(d*L-q) weights
+                // Form the N^d/S = 2^(d*L) / 2^s = 2^(d*L-s) weights
+
+                // Loop over A boxes in spatial domain
+                for( unsigned i=0; i<spatialBoxes; ++i )
+                {
+                    // Compute the coordinates and center of this spatial box
+
+                    // Loop over the B boxes in frequency domain
+                    for( unsigned j=0; j<freqBoxes; ++j )
+                    {
+                        // Compute the coordinates and center of this freq box
+
+                        // Sum over the frequency children
+                        for( unsigned c=0; c<(1<<d); ++c )
+                        {
+
+                        }
+                        // Multiply by the prefactor 
+                        //weights[j+i*freqBoxes] *= 
+                        //    exp( C(0,-2*Pi*N*Psi::Eval(x0,pt)) );
+                    }
+                }
+
+                // Refine the spatial domain and coursen the frequency domain
+                for( unsigned j=0; j<d; ++j )
+                {
+                    --log2FreqBoxes[j];
+                    ++log2SpatialBoxes[j];
+                }
+                freqBoxes >>= d;
+                spatialBoxes <<= d;
             }
             else 
             {
                 // There are currently 2^(d*(L-l)) leaves. The frequency 
                 // partitioning is implied by reading the rank bits right-to-
                 // left, but the spatial partitioning is implied by reading the
-                // rank bits left-to-right starting from bit q-1. The spatial 
+                // rank bits left-to-right starting from bit s-1. The spatial 
                 // partitioning among cores begins at the precise moment when 
                 // trees begin mergining in the frequency domain: the lowest 
-                // l such that q > d*(L-l), namely, l = L - floor( q/d ). The 
+                // l such that s > d*(L-l), namely, l = L - floor( s/d ). The 
                 // first merge is the only case where the team could potentially
                 // differ from 2^d processes.
-                unsigned log2NumProcs = ( l == L-(q/d) ? q-d*(L-l) : d ); 
+                unsigned log2Procs = ( l == L-(s/d) ? s-d*(L-l) : d ); 
 
                 // We notice that our consistency in the cyclic bisection of 
-                // the frequency domain means that if log2NumProcs=a, then 
+                // the frequency domain means that if log2Procs=a, then 
                 // we communicate with 1 other process in the first a of d 
                 // dimensions. Getting these ranks is implicit in the tree 
                 // structure.
@@ -142,13 +177,13 @@ namespace BFIO
         // Second half of algorithm: spatial interpolation
         for( unsigned l=L/2; l<L; ++l )
         {
-            if( q <= d*(L-l) )
+            if( s <= d*(L-l) )
             {
                 // Form the weights
             }
             else
             {
-                unsigned log2NumProcs = ( l == L-(q/d) ? q-d*(L-l) : d );
+                unsigned log2Procs = ( l == L-(s/d) ? s-d*(L-l) : d );
 
                 // Form the partial weights
 
@@ -158,7 +193,7 @@ namespace BFIO
 
         // Construct Low-Rank Potentials (LRPs) from weights
         {
-            myLRPs.resize( 1<<(d*L-q) );
+            myLRPs.resize( 1<<(d*L-s) );
             // Fill in the LRPs
         }
     }

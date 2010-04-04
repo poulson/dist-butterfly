@@ -33,7 +33,7 @@ namespace BFIO
       const Array<R,d>& myFreqBoxWidths,
       const Array<unsigned,d>& myFreqBoxCoords,
       const unsigned boxes,
-      const Array<unsigned,d>& log2BoxesPerDim,
+      const Array<unsigned,d>& log2FreqBoxes,
             std::vector< Array<std::complex<R>,Power<q,d>::value> >& weights )
     {
         using namespace std;
@@ -71,7 +71,7 @@ namespace BFIO
                 // We must be in the box, so bitwise determine the coord index
                 // by bisection of box B_loc
                 localBoxCoords[j] = 0;
-                for( unsigned k=log2BoxesPerDim[j]; k>0; --k )
+                for( unsigned k=log2FreqBoxes[j]; k>0; --k )
                 {
                     const R middle = (rightBound-leftBound)/2.;
                     if( pj < middle )
@@ -102,7 +102,7 @@ namespace BFIO
             {
                 static unsigned log2BoxesUpToDim = 0;
                 k |= (localBoxCoords[j]<<log2BoxesUpToDim);
-                log2BoxesUpToDim += log2BoxesPerDim[j];
+                log2BoxesUpToDim += log2FreqBoxes[j];
             }
 
             // Add this point's contribution to the unscaled weights of B. 
@@ -130,7 +130,7 @@ namespace BFIO
             {
                 static unsigned log2BoxesUpToDim = 0;
                 unsigned log2BoxesUpToNextDim = 
-                    log2BoxesUpToDim+log2BoxesPerDim[j];
+                    log2BoxesUpToDim+log2FreqBoxes[j];
                 localBoxCoords[j] = (k>>log2BoxesUpToDim) & 
                                     ((1<<log2BoxesUpToNextDim)-1);
                 log2BoxesUpToDim = log2BoxesUpToNextDim;
