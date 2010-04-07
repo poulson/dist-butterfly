@@ -29,13 +29,13 @@ namespace BFIO
     {
         static inline void
         Eval
-        ( const R widthOfB,
+        ( const R wB,
           const Array<R,d>& p0,
           const Array<R,q>& chebyGrid,
                 Array<R,d>& pT        )
         {
-            pT[j] = widthOfB*chebyGrid[(t/Power<q,j>::value)%q]+p0[j];
-            ConstructPointLoop<R,d,q,t,j-1>::Eval(widthOfB,p0,chebyGrid,pT);
+            pT[j] = wB*chebyGrid[(t/Power<q,j>::value)%q]+p0[j];
+            ConstructPointLoop<R,d,q,t,j-1>::Eval(wB,p0,chebyGrid,pT);
         }
     };
 
@@ -44,11 +44,11 @@ namespace BFIO
     {
         static inline void
         Eval
-        ( const R widthOfB,
+        ( const R wB,
           const Array<R,d>& p0,
           const Array<R,q>& chebyGrid,
                 Array<R,d>& pT        )
-        { pT[0] = widthOfB*chebyGrid[t%q]+p0[0]; }
+        { pT[0] = wB*chebyGrid[t%q]+p0[0]; }
     };
 
     template<typename Psi,typename R,unsigned d,unsigned q,unsigned t>
@@ -57,7 +57,7 @@ namespace BFIO
         static inline void
         Eval
         ( const unsigned N,
-          const R widthOfB,
+          const R wB,
           const Array<R,d>& x0,
           const Array<R,d>& p0,
           const Array<R,q>& chebyGrid,
@@ -67,11 +67,11 @@ namespace BFIO
             typedef complex<R> C;
 
             Array<R,d> pT;
-            ConstructPointLoop<R,d,q,t,d-1>::Eval(widthOfB,p0,chebyGrid,pT);
+            ConstructPointLoop<R,d,q,t,d-1>::Eval(wB,p0,chebyGrid,pT);
             weights[t] *= exp( C(0.,-TwoPi*N*Psi::Eval(x0,pT)) );
 
             ScaleWeightsOuter<Psi,R,d,q,t-1>::Eval
-            (N,widthOfB,x0,p0,chebyGrid,weights);
+            (N,wB,x0,p0,chebyGrid,weights);
         }
     };
 
@@ -81,7 +81,7 @@ namespace BFIO
         static inline void
         Eval
         ( const unsigned N,
-          const R widthOfB,
+          const R wB,
           const Array<R,d>& x0,
           const Array<R,d>& p0,
           const Array<R,q>& chebyGrid,
@@ -91,7 +91,7 @@ namespace BFIO
             typedef complex<R> C;
 
             Array<R,d> pT;
-            ConstructPointLoop<R,d,q,0,d-1>::Eval(widthOfB,p0,chebyGrid,pT);
+            ConstructPointLoop<R,d,q,0,d-1>::Eval(wB,p0,chebyGrid,pT);
             weights[0] *= exp( C(0.,-TwoPi*N*Psi::Eval(x0,pT)) );
         }
     };
@@ -102,14 +102,14 @@ namespace BFIO
         static inline void
         Eval
         ( const unsigned N,
-          const R widthOfB,
+          const R wB,
           const Array<R,d>& x0,
           const Array<R,d>& p0,
           const Array<R,q>& chebyGrid,
                 Array<std::complex<R>,Power<q,d>::value>& weights )
         {
             ScaleWeightsOuter<Psi,R,d,q,Power<q,d>::value-1>::Eval
-            ( N, widthOfB, x0, p0, chebyGrid, weights );
+            ( N, wB, x0, p0, chebyGrid, weights );
         }
     };
 }

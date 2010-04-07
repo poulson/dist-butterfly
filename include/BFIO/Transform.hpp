@@ -46,7 +46,7 @@ namespace BFIO
         int rank, S;
         MPI_Comm_rank( comm, &rank );
         MPI_Comm_size( comm, &S    ); 
-        bitset<sizeof(int)*8> rankBits(rank);
+        bitset<sizeof(int)*8> rankBits(rank); 
 
         // Assert that N and size are powers of 2
         if( ! IsPowerOfTwo(N) )
@@ -58,42 +58,55 @@ namespace BFIO
         if( s > d*L )
             throw "Cannot use more than N^d processes.";
 
-        // Determine the number of partitions in each dimension of the 
-        // frequency domain by applying the partitions cyclically over the
-        // d dimensions. We can simultaneously compute the indices of our 
-        // box in each spatial dimension.
-        Array<R,d> myFreqBoxWidths;
-        Array<unsigned,d> myFreqBoxCoords;
-        Array<unsigned,d> log2FreqParts;
+        // Determine the number of boxes in each dimension of the frequency
+        // domain by applying the partitions cyclically over the d dimensions.
+        // We can simultaneously compute the indices of our box.
+        Array<unsigned,d> myFreqBox;
+        Array<unsigned,d> mySpatialBox;
+        Array<unsigned,d> log2FreqBoxesPerDim;
+        Array<unsigned,d> log2SpatialBoxesPerDim;
         for( unsigned j=0; j<d; ++j )
-            myFreqBoxCoords[j] = log2FreqParts[j] = 0;
+        {
+            myFreqBox[j] = 0;
+            mySpatialBox[j] = 0;
+            log2FreqBoxesPerDim[j] = 0;
+            log2SpatialBoxesPerDim[j] = 0;
+        }
         for( unsigned j=s; j>0; --j )
         {
-            static unsigned nextPartDim = 0;
-            // Double our current coordinate in the 'nextPartDim' dimension 
+            static unsigned nextDim = 0;
+            // Double our current coordinate in the 'nextDim' dimension 
             // and then choose the left/right position based on the (j-1)'th
             // bit of our rank
-            myFreqBoxCoords[nextPartDim] = 
-                (myFreqBoxCoords[nextPartDim]<<1)+rankBits[j-1];
+            myFreqBox[nextDim] = (myFreqBox[nextDim]<<1)+rankBits[j-1];
 
-            log2FreqParts[nextPartDim]++;
-            nextPartDim = (nextPartDim+1) % d;
+            log2FreqBoxesPerDim[nextDim]++;
+            nextDim = (nextDim+1) % d;
         }
+
+        // Initialize the widths of the boxes in the spatial and frequency 
+        // domains that our process is responsible for
+        Array<R,d> myFreqBoxWidths;
+        Array<R,d> mySpatialBoxWidths;
         for( unsigned j=0; j<d; ++j )
-            myFreqBoxWidths[j] = 1. / static_cast<R>(1<<log2FreqParts[j]);
+        {
+            myFreqBoxWidths[j] = static_cast<R>(1) / 
+                                 static_cast<R>(1<<log2FreqBoxesPerDim[j]);
+            mySpatialBoxWidths[j] = static_cast<R>(1);
+        }
 
         // Compute the number of 1/N width boxes in the frequency domain that 
         // our process is responsible for initializing the weights in. Also
         // initialize each box being responsible for all of the spatial domain.
-        unsigned freqBoxes = 1;
-        unsigned spatialBoxes = 1;
-        Array<unsigned,d> log2FreqBoxes;
-        Array<unsigned,d> log2SpatialBoxes;
+        unsigned log2LocalFreqBoxes = 0;
+        unsigned log2LocalSpatialBoxes = 0;
+        Array<unsigned,d> log2LocalFreqBoxesPerDim;
+        Array<unsigned,d> log2LocalSpatialBoxesPerDim;
         for( unsigned j=0; j<d; ++j )
         {
-            log2FreqBoxes[j] = L-log2FreqParts[j];
-            log2SpatialBoxes[j] = 0;
-            freqBoxes <<= log2FreqBoxes[j];
+            log2LocalFreqBoxesPerDim[j] = L-log2FreqBoxesPerDim[j];
+            log2LocalSpatialBoxesPerDim[j] = 0;
+            log2LocalFreqBoxes += log2LocalFreqBoxesPerDim[j];
         }
 
         // Compute {zi} for the Chebyshev grid of order q over [-1/2,+1/2]
@@ -103,28 +116,62 @@ namespace BFIO
 
         // Initialize the weights using Lagrangian interpolation on the 
         // smooth component of the kernel.
-        vector< Array<C,Power<q,d>::value> > weights(freqBoxes);
+        vector< Array<C,Power<q,d>::value> > weights(1<<log2LocalFreqBoxes);
         InitializeWeights<Psi,R,d,q>
-        ( N, mySources, chebyGrid, myFreqBoxWidths,
-          myFreqBoxCoords, freqBoxes, log2FreqBoxes, weights );
+        ( N, mySources, chebyGrid, myFreqBoxWidths, myFreqBox,
+          log2LocalFreqBoxes, log2FreqBoxesPerDim, weights    );
 
         // First half of algorithm: frequency interpolation
-        vector< Array<C,Power<q,d>::value> > partialWeights((2<<d)*freqBoxes);
+        vector< Array<C,Power<q,d>::value> > 
+            partialWeights(1<<(d+log2LocalFreqBoxes));
         for( unsigned l=1; l<L/2; ++l )
         {
+            // Compute the width of the nodes at level l
+            const R wA = static_cast<R>(1) / static_cast<R>(1<<l);
+            const R wB = static_cast<R>(1) / static_cast<R>(1<<(L-l));
+
             if( s <= d*(L-l) )
             {
                 // Form the N^d/S = 2^(d*L) / 2^s = 2^(d*L-s) weights
 
-                // Loop over A boxes in spatial domain
-                for( unsigned i=0; i<spatialBoxes; ++i )
+                // Loop over A boxes in spatial domain. 'i' will represent the 
+                // leaf number w.r.t. the tree implied by cyclically assigning
+                // the spatial bisections across the d dimensions. Thus if we 
+                // distribute the data cyclically in the _reverse_ order over 
+                // the d dimensions, then the ReduceScatter will not require 
+                // any packing or unpacking.
+                for( unsigned i=0; i<(1<<log2LocalSpatialBoxes); ++i )
                 {
                     // Compute the coordinates and center of this spatial box
+                    Array<R,d> x0;
+                    Array<unsigned,d> A;
+                    for( unsigned j=0; j<d; ++j )
+                    {
+                        static unsigned log2LocalSpatialBoxesUpToDim = 0;
+                        // A[j] = (i/localSpatialBoxesUpToDim) % 
+                        //        localSpatialBoxesPerDim[j]
+                        A[j] = (i>>log2LocalSpatialBoxesUpToDim) &
+                               ((1<<log2LocalSpatialBoxesPerDim[j])-1);
+                        x0[j] = mySpatialBox[j]*mySpatialBoxWidths[j] + 
+                                A[j]*wA + wA/2;
+                    }
 
                     // Loop over the B boxes in frequency domain
-                    for( unsigned j=0; j<freqBoxes; ++j )
+                    for( unsigned k=0; k<(1<<log2LocalFreqBoxes); ++k )
                     {
                         // Compute the coordinates and center of this freq box
+                        Array<R,d> p0;
+                        Array<unsigned,d> B;
+                        for( unsigned j=0; j<d; ++j )
+                        {
+                            static unsigned log2LocalFreqBoxesUpToDim = 0;
+                            B[j] = (k>>log2LocalFreqBoxesUpToDim) &
+                                   ((1<<log2LocalFreqBoxesPerDim[j])-1);
+                            p0[j] = myFreqBox[j]*myFreqBoxWidths[j] + 
+                                    B[j]*wB + wB/2;
+                        }
+
+                        // HERE
 
                         // Sum over the frequency children
                         for( unsigned c=0; c<(1<<d); ++c )
@@ -132,19 +179,17 @@ namespace BFIO
 
                         }
                         // Multiply by the prefactor 
-                        //weights[j+i*freqBoxes] *= 
-                        //    exp( C(0,-2*Pi*N*Psi::Eval(x0,pt)) );
                     }
                 }
 
                 // Refine the spatial domain and coursen the frequency domain
                 for( unsigned j=0; j<d; ++j )
                 {
-                    --log2FreqBoxes[j];
-                    ++log2SpatialBoxes[j];
+                    --log2LocalFreqBoxesPerDim[j];
+                    ++log2LocalSpatialBoxesPerDim[j];
                 }
-                freqBoxes >>= d;
-                spatialBoxes <<= d;
+                log2LocalFreqBoxes -= d;
+                log2LocalSpatialBoxes += d;
             }
             else 
             {

@@ -24,22 +24,51 @@
 
 namespace BFIO
 {
+    // Psi: Phase function in polar frequency coordinates
+    // R:   type for real variables (e.g., float or double)
+    // d:   dimension of problem
+    // q:   number of Chebyshev gridpoints per dimension
     template<typename Psi,typename R,unsigned d,unsigned q>
     inline void
     InitializeWeights
-    ( const unsigned N,
-      const std::vector< Source<R,d> >& mySources,
-      const Array<R,q>& chebyGrid,
-      const Array<R,d>& myFreqBoxWidths,
-      const Array<unsigned,d>& myFreqBoxCoords,
-      const unsigned boxes,
-      const Array<unsigned,d>& log2FreqBoxes,
-            std::vector< Array<std::complex<R>,Power<q,d>::value> >& weights )
+    ( 
+      // Number of frequency boxes in each dimension (must a power of 2)
+      const unsigned 
+            N,
+
+      // The sources in the polar frequency domain
+      const std::vector< Source<R,d> >& 
+            mySources,
+
+      // 1d Chebyshev grid that we extend to d-dimensions with tensor product
+      const Array<R,q>& 
+            chebyGrid,
+
+      // The widths of the box in the freq. domain that this process owns
+      const Array<R,d>& 
+            myFreqBoxWidths,
+
+      // The d-dimensional coordinates of the frequency box for this process
+      const Array<unsigned,d>& 
+            myFreqBox,
+
+      // Log2 of number of frequency leaf boxes this process should init.
+      const unsigned 
+            log2LocalFreqBoxes,
+
+      // Log2 of number of local frequency leaf boxes in each dimension 
+      const Array<unsigned,d>& 
+            log2LocalFreqBoxesPerDim,
+
+      // The resultant equivalent weights for a low-rank expansion in each box
+            std::vector< Array<std::complex<R>,Power<q,d>::value> >& 
+            weights 
+    )
     {
         using namespace std;
         typedef complex<R> C;
 
-        const R widthOfB = static_cast<R>(1) / N;
+        const R wB = static_cast<R>(1) / N;
 
         Array<R,d> x0;
         for( unsigned j=0; j<d; ++j )
@@ -53,12 +82,12 @@ namespace BFIO
             const Array<R,d>& p = mySources[i].p;
 
             // Determine which local box we're in (if any)
-            Array<unsigned,d> localBoxCoords;
+            Array<unsigned,d> B;
             for( unsigned j=0; j<d; ++j )
             {
                 const R pj = p[j];
-                R leftBound = myFreqBoxWidths[j]*myFreqBoxCoords[j];
-                R rightBound = myFreqBoxWidths[j]*(myFreqBoxCoords[j]+1);
+                R leftBound = myFreqBoxWidths[j]*myFreqBox[j];
+                R rightBound = myFreqBoxWidths[j]*(myFreqBox[j]+1);
                 if( pj < leftBound || pj >= rightBound )
                 {
                     cerr << "Source " << i << " was at " << pj
@@ -70,18 +99,18 @@ namespace BFIO
 
                 // We must be in the box, so bitwise determine the coord index
                 // by bisection of box B_loc
-                localBoxCoords[j] = 0;
-                for( unsigned k=log2FreqBoxes[j]; k>0; --k )
+                B[j] = 0;
+                for( unsigned k=log2LocalFreqBoxesPerDim[j]; k>0; --k )
                 {
                     const R middle = (rightBound-leftBound)/2.;
                     if( pj < middle )
                     {
-                        // implicitly setting bit k-1 of localBoxCoords[j] to 0
+                        // implicitly setting bit k-1 of B[j] to 0
                         rightBound = middle;
                     }
                     else
                     {
-                        localBoxCoords[j] |= (1<<(k-1));
+                        B[j] |= (1<<(k-1));
                         leftBound = middle;
                     }
                 }
@@ -91,18 +120,15 @@ namespace BFIO
             // of box B (not of B_loc!)
             Array<R,d> p0;
             for( unsigned j=0; j<d; ++j )
-            {
-                p0[j] = myFreqBoxWidths[j]*myFreqBoxCoords[j] + 
-                        (localBoxCoords[j]+0.5)*widthOfB;
-            }
+                p0[j] = myFreqBoxWidths[j]*myFreqBox[j] + B[j]*wB + wB/2;
 
             // Flatten the integer coordinates of B_loc into a single index
             unsigned k = 0;
             for( unsigned j=0; j<d; ++j )
             {
-                static unsigned log2BoxesUpToDim = 0;
-                k |= (localBoxCoords[j]<<log2BoxesUpToDim);
-                log2BoxesUpToDim += log2FreqBoxes[j];
+                static unsigned log2LocalBoxesUpToDim = 0;
+                k |= (B[j]<<log2LocalBoxesUpToDim);
+                log2LocalBoxesUpToDim += log2LocalFreqBoxesPerDim[j];
             }
 
             // Add this point's contribution to the unscaled weights of B. 
@@ -110,7 +136,7 @@ namespace BFIO
             // so we need to map p to it first.
             Array<R,d> pRef;
             for( unsigned j=0; j<d; ++j )
-                pRef[j] = (p[j]-p0[j])/widthOfB;
+                pRef[j] = (p[j]-p0[j])/wB;
             const C f = mySources[i].magnitude;
             const C alpha = exp( C(0.,TwoPi*N*Psi::Eval(x0,p)) ) * f;
             WeightSummation<R,d,q>::Eval(alpha,pRef,chebyGrid,weights[k]);
@@ -122,32 +148,28 @@ namespace BFIO
         // our local boxes, say B_loc, are subsets of a B, but we still need 
         // to consider our contribution to the weights corresponding to 
         // p_t^B lying in B \ B_loc.
-        for( unsigned k=0; k<boxes; ++k ) 
+        for( unsigned k=0; k<(1<<log2LocalFreqBoxes); ++k ) 
         {
             // Compute the local integer coordinates of box k
-            Array<unsigned,d> localBoxCoords;
+            Array<unsigned,d> B;
             for( unsigned j=0; j<d; ++j )
             {
-                static unsigned log2BoxesUpToDim = 0;
-                unsigned log2BoxesUpToNextDim = 
-                    log2BoxesUpToDim+log2FreqBoxes[j];
-                localBoxCoords[j] = (k>>log2BoxesUpToDim) & 
-                                    ((1<<log2BoxesUpToNextDim)-1);
-                log2BoxesUpToDim = log2BoxesUpToNextDim;
+                static unsigned log2LocalFreqBoxesUpToDim = 0;
+                // B[j] = (k/localFreqBoxesUpToDim) % localFreqBoxesPerDim[j]
+                B[j] = (k>>log2LocalFreqBoxesUpToDim) & 
+                       ((1<<log2LocalFreqBoxesPerDim[j])-1);
+                log2LocalFreqBoxesUpToDim += log2LocalFreqBoxesPerDim[j];
             }
 
             // Translate the local integer coordinates into the freq. center 
             Array<R,d> p0;
             for( unsigned j=0; j<d; ++j )
-            {
-                p0[j] = myFreqBoxWidths[j]*myFreqBoxCoords[j] + 
-                        (localBoxCoords[j]+0.5)*widthOfB;
-            }
+                p0[j] = myFreqBoxWidths[j]*myFreqBox[j] + B[j]*wB + wB/2;
 
             // Compute the prefactors given this p0 and multiply it by 
             // the corresponding weights
             ScaleWeights<Psi,R,d,q>::Eval
-            (N,widthOfB,x0,p0,chebyGrid,weights[k]);
+            (N,wB,x0,p0,chebyGrid,weights[k]);
         }
     }
 }
