@@ -126,6 +126,15 @@ namespace BFIO
             partialWeights(1<<(d+log2LocalFreqBoxes));
         for( unsigned l=1; l<L/2; ++l )
         {
+            // Compute the offsets for our frequency and spatial box
+            Array<R,d> myFreqBoxOffsets;
+            Array<R,d> mySpatialBoxOffsets;
+            for( unsigned j=0; j<d; ++j )
+            {
+                myFreqBoxOffsets[j] = myFreqBox[j]*myFreqBoxWidths[j];
+                mySpatialBoxOffsets[j] = mySpatialBox[j]*mySpatialBoxWidths[j];
+            }
+
             // Compute the width of the nodes at level l
             const R wA = static_cast<R>(1) / static_cast<R>(1<<l);
             const R wB = static_cast<R>(1) / static_cast<R>(1<<(L-l));
@@ -140,6 +149,7 @@ namespace BFIO
                 // distribute the data cyclically in the _reverse_ order over 
                 // the d dimensions, then the ReduceScatter will not require 
                 // any packing or unpacking.
+                vector< Array<C,Power<q,d>::value> > oldWeights = weights;
                 for( unsigned i=0; i<(1<<log2LocalSpatialBoxes); ++i )
                 {
                     // Compute the coordinates and center of this spatial box
@@ -152,8 +162,7 @@ namespace BFIO
                         //        localSpatialBoxesPerDim[j]
                         A[j] = (i>>log2LocalSpatialBoxesUpToDim) &
                                ((1<<log2LocalSpatialBoxesPerDim[j])-1);
-                        x0[j] = mySpatialBox[j]*mySpatialBoxWidths[j] + 
-                                A[j]*wA + wA/2;
+                        x0[j] = myFreqBoxOffsets[j] + A[j]*wA + wA/2;
                     }
 
                     // Loop over the B boxes in frequency domain
@@ -167,18 +176,16 @@ namespace BFIO
                             static unsigned log2LocalFreqBoxesUpToDim = 0;
                             B[j] = (k>>log2LocalFreqBoxesUpToDim) &
                                    ((1<<log2LocalFreqBoxesPerDim[j])-1);
-                            p0[j] = myFreqBox[j]*myFreqBoxWidths[j] + 
-                                    B[j]*wB + wB/2;
+                            p0[j] = mySpatialBoxOffsets[j] + B[j]*wB + wB/2;
                         }
-
-                        // HERE
 
                         // Sum over the frequency children
-                        for( unsigned c=0; c<(1<<d); ++c )
-                        {
-
-                        }
-                        // Multiply by the prefactor 
+                        const unsigned pairKey = k+i*(1<<log2LocalFreqBoxes);
+                        const unsigned parentPairOffset = 
+                            (k<<d)+(i>>d)*(1<<(log2LocalFreqBoxes+d));
+                        FreqWeightRecursion<Psi,R,d,q>::Eval
+                        ( N, chebyGrid, x0, p0, wB,
+                          parentPairOffset, oldWeights, weights[pairKey] );
                     }
                 }
 
@@ -206,9 +213,9 @@ namespace BFIO
 
                 // We notice that our consistency in the cyclic bisection of 
                 // the frequency domain means that if log2Procs=a, then 
-                // we communicate with 1 other process in the first a of d 
-                // dimensions. Getting these ranks is implicit in the tree 
-                // structure.
+                // we communicate with 1 other process in each of the first 
+                // a of d dimensions. Getting these ranks is implicit in the
+                // tree structure.
                 
                 // Form the partial weights. 
 

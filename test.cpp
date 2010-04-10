@@ -58,7 +58,6 @@ main
         mySources.resize(0);
     }
     
-
     try
     {
         Transform( 4, mySources, myLRPs, MPI_COMM_WORLD );

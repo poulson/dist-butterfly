@@ -19,11 +19,88 @@
 #ifndef BFIO_INITIALIZE_WEIGHTS_HPP
 #define BFIO_INITIALIZE_WEIGHTS_HPP 1
 
+#include "BFIO/MapToGlobalLoop.hpp"
 #include "BFIO/Util.hpp"
 #include "BFIO/Template.hpp"
 
 namespace BFIO
 {
+    template<typename R,unsigned d,unsigned q,unsigned t>
+    struct InitialWeightSummation
+    {
+        static inline void
+        Eval
+        ( const std::complex<R> alpha,
+          const Array<R,d>& pRef,
+          const Array<R,q>& chebyGrid,
+          Array<std::complex<R>,Power<q,d>::value>& weights )
+        {
+            weights[t] += alpha*Lagrange<R,d,q,t>::Eval(pRef,chebyGrid);
+            InitialWeightSummation<R,d,q,t-1>::Eval
+            ( alpha, pRef, chebyGrid, weights );
+        }
+    };
+
+    template<typename R,unsigned d,unsigned q>
+    struct InitialWeightSummation<R,d,q,0>
+    {
+        static inline void
+        Eval
+        ( const std::complex<R> alpha,
+          const Array<R,d>& pRef,
+          const Array<R,q>& chebyGrid,
+          Array<std::complex<R>,Power<q,d>::value>& weights )
+        {
+            weights[0] += alpha*Lagrange<R,d,q,0>::Eval( pRef, chebyGrid );
+        }
+    };
+
+    template<typename Psi,typename R,unsigned d,unsigned q,unsigned t>
+    struct InitialWeightScaling
+    {
+        static inline void
+        Eval
+        ( const unsigned N,
+          const R wB,
+          const Array<R,d>& x0,
+          const Array<R,d>& p0,
+          const Array<R,q>& chebyGrid,
+                Array<std::complex<R>,Power<q,d>::value>& weights )
+        {
+            using namespace std;
+            typedef complex<R> C;
+
+            Array<R,d> pT;
+            MapToGlobalLoop<R,d,q,t,d-1>::Eval( chebyGrid, wB, p0, pT );
+            weights[t] *= exp( C(0.,-TwoPi*N*Psi::Eval(x0,pT)) );
+
+
+            InitialWeightScaling<Psi,R,d,q,t-1>::Eval
+            (N,wB,x0,p0,chebyGrid,weights);
+        }
+    };
+
+    template<typename Psi,typename R,unsigned d,unsigned q>
+    struct InitialWeightScaling<Psi,R,d,q,0>
+    {
+        static inline void
+        Eval
+        ( const unsigned N,
+          const R wB,
+          const Array<R,d>& x0,
+          const Array<R,d>& p0,
+          const Array<R,q>& chebyGrid,
+                Array<std::complex<R>,Power<q,d>::value>& weights )
+        {
+            using namespace std;
+            typedef complex<R> C;
+
+            Array<R,d> pT;
+            MapToGlobalLoop<R,d,q,0,d-1>::Eval( chebyGrid, wB, p0, pT );
+            weights[0] *= exp( C(0.,-TwoPi*N*Psi::Eval(x0,pT)) );
+        }
+    };
+
     // Psi: Phase function in polar frequency coordinates
     // R:   type for real variables (e.g., float or double)
     // d:   dimension of problem
@@ -139,7 +216,8 @@ namespace BFIO
                 pRef[j] = (p[j]-p0[j])/wB;
             const C f = mySources[i].magnitude;
             const C alpha = exp( C(0.,TwoPi*N*Psi::Eval(x0,p)) ) * f;
-            WeightSummation<R,d,q>::Eval(alpha,pRef,chebyGrid,weights[k]);
+            InitialWeightSummation<R,d,q,Power<q,d>::value-1>::Eval
+            ( alpha, pRef, chebyGrid, weights[k] );
         }
 
         // Loop over all of the boxes to compute the {p_t^B} and prefactors
@@ -168,8 +246,8 @@ namespace BFIO
 
             // Compute the prefactors given this p0 and multiply it by 
             // the corresponding weights
-            ScaleWeights<Psi,R,d,q>::Eval
-            (N,wB,x0,p0,chebyGrid,weights[k]);
+            InitialWeightScaling<Psi,R,d,q,Power<q,d>::value-1>::Eval
+            ( N, wB, x0, p0, chebyGrid, weights[k] );
         }
     }
 }

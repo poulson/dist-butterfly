@@ -24,7 +24,7 @@
 
 namespace BFIO
 {
-   template<typename R,unsigned q,unsigned i,unsigned j>
+    template<typename R,unsigned q,unsigned i,unsigned j>
     struct LagrangeKernel
     {
         static inline void 
@@ -36,74 +36,57 @@ namespace BFIO
     };
     
     template<typename R,unsigned q,unsigned i,unsigned j>
-    struct LagrangeInnerLoopCore
+    struct LagrangeInnerLoop
     { 
         static inline void
         Eval( const R z, const Array<R,q>& chebyGrid, R& product ) 
         { LagrangeKernel<R,q,i,j>::Eval(z,chebyGrid,product);
-          LagrangeInnerLoopCore<R,q,i,j-1>::Eval(z,chebyGrid,product); } 
+          LagrangeInnerLoop<R,q,i,j-1>::Eval(z,chebyGrid,product); } 
     };
 
     template<typename R,unsigned q,unsigned i>
-    struct LagrangeInnerLoopCore<R,q,i,0>
+    struct LagrangeInnerLoop<R,q,i,0>
     { 
         static inline void 
         Eval( const R z, const Array<R,q>& chebyGrid, R& product ) 
         { LagrangeKernel<R,q,i,0>::Eval(z,chebyGrid,product); } 
     };
 
-    template<typename R,unsigned q,unsigned i>
-    struct LagrangeInnerLoop
-    { 
-        static inline void
-        Eval( const R z, const Array<R,q>& chebyGrid, R& product ) 
-        { LagrangeInnerLoopCore<R,q,i,q-1>::Eval(z,chebyGrid,product); } 
-    };
-
     template<typename R,unsigned d,unsigned q,unsigned t,unsigned j>
-    struct LagrangeOuterLoopCore
+    struct LagrangeOuterLoop
     {
         static inline void
         Eval( const Array<R,d>& z, const Array<R,q>& chebyGrid, R& product )
         { 
             // Pluck the j'th dimensional index out of t in order to 
             // accumulate the product in the j'th dimension.
-            LagrangeInnerLoop<R,q, (t/Power<q,j>::value)%q >::Eval
+            LagrangeInnerLoop<R,q, (t/Power<q,j>::value)%q, q-1 >::Eval
             ( z[j], chebyGrid, product );
-            LagrangeOuterLoopCore<R,d,q,t,j-1>::Eval( z, chebyGrid, product );
+            LagrangeOuterLoop<R,d,q,t,j-1>::Eval( z, chebyGrid, product );
         }
     };
 
     template<typename R,unsigned d,unsigned q,unsigned t>
-    struct LagrangeOuterLoopCore<R,d,q,t,0>
+    struct LagrangeOuterLoop<R,d,q,t,0>
     {
         static inline void
         Eval( const Array<R,d>& z, const Array<R,q>& chebyGrid, R& product )
         {
             // Pluck the 0'th dimensional index out of t in order to
             // accumulate the product in the 0'th dimension
-            LagrangeInnerLoop<R,q, t%q >::Eval
+            LagrangeInnerLoop<R,q, t%q, q-1 >::Eval
             ( z[0], chebyGrid, product );
         }
     };
 
-    // Outer loop for Lagrangian interpolation. 
     template<typename R,unsigned d,unsigned q,unsigned t>
-    struct LagrangeOuterLoop 
-    {
-        static inline void
-        Eval( const Array<R,d>& z, const Array<R,q>& chebyGrid, R& product )
-        { LagrangeOuterLoopCore<R,d,q,t,d-1>::Eval( z, chebyGrid, product ); }
-    };
-
-    template<typename R,unsigned d,unsigned q,unsigned t>
-    struct LagrangeInterp
+    struct Lagrange
     {
         static inline R
         Eval( const Array<R,d>& z, const Array<R,q>& chebyGrid )
         {
             R product = static_cast<R>(1);        
-            LagrangeOuterLoop<R,d,q,t>::Eval( z, chebyGrid, product );
+            LagrangeOuterLoop<R,d,q,t,d-1>::Eval( z, chebyGrid, product );
             return product;
         }
     };
