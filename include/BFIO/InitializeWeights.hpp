@@ -19,95 +19,18 @@
 #ifndef BFIO_INITIALIZE_WEIGHTS_HPP
 #define BFIO_INITIALIZE_WEIGHTS_HPP 1
 
-#include "BFIO/MapToGlobalLoop.hpp"
 #include "BFIO/Util.hpp"
-#include "BFIO/Template.hpp"
 
 namespace BFIO
 {
-    template<typename R,unsigned d,unsigned q,unsigned t>
-    struct InitialWeightSummation
-    {
-        static inline void
-        Eval
-        ( const std::complex<R> alpha,
-          const Array<R,d>& pRef,
-          const Array<R,q>& chebyNodes,
-          Array<std::complex<R>,Power<q,d>::value>& weights )
-        {
-            weights[t] += alpha*Lagrange<R,d,q,t>::Eval(pRef,chebyNodes);
-            InitialWeightSummation<R,d,q,t-1>::Eval
-            ( alpha, pRef, chebyNodes, weights );
-        }
-    };
-
-    template<typename R,unsigned d,unsigned q>
-    struct InitialWeightSummation<R,d,q,0>
-    {
-        static inline void
-        Eval
-        ( const std::complex<R> alpha,
-          const Array<R,d>& pRef,
-          const Array<R,q>& chebyNodes,
-          Array<std::complex<R>,Power<q,d>::value>& weights )
-        {
-            weights[0] += alpha*Lagrange<R,d,q,0>::Eval( pRef, chebyNodes );
-        }
-    };
-
-    template<typename Psi,typename R,unsigned d,unsigned q,unsigned t>
-    struct InitialWeightScaling
-    {
-        static inline void
-        Eval
-        ( const unsigned N,
-          const R wB,
-          const Array<R,d>& x0,
-          const Array<R,d>& p0,
-          const Array<R,q>& chebyNodes,
-                Array<std::complex<R>,Power<q,d>::value>& weights )
-        {
-            using namespace std;
-            typedef complex<R> C;
-
-            Array<R,d> pT;
-            MapToGlobalLoop<R,d,q,t,d-1>::Eval( chebyNodes, wB, p0, pT );
-            const R alpha = -TwoPi*N*Psi::Eval(x0,pT);
-            weights[t] *= C( cos(alpha), sin(alpha) );
-
-            InitialWeightScaling<Psi,R,d,q,t-1>::Eval
-            (N,wB,x0,p0,chebyNodes,weights);
-        }
-    };
-
-    template<typename Psi,typename R,unsigned d,unsigned q>
-    struct InitialWeightScaling<Psi,R,d,q,0>
-    {
-        static inline void
-        Eval
-        ( const unsigned N,
-          const R wB,
-          const Array<R,d>& x0,
-          const Array<R,d>& p0,
-          const Array<R,q>& chebyNodes,
-                Array<std::complex<R>,Power<q,d>::value>& weights )
-        {
-            using namespace std;
-            typedef complex<R> C;
-
-            Array<R,d> pT;
-            MapToGlobalLoop<R,d,q,0,d-1>::Eval( chebyNodes, wB, p0, pT );
-            const R alpha = -TwoPi*N*Psi::Eval(x0,pT);
-            weights[0] *= C( cos(alpha), sin(alpha) );
-        }
-    };
+    using namespace std;
 
     // Psi: Phase function in polar frequency coordinates
     // R:   type for real variables (e.g., float or double)
     // d:   dimension of problem
     // q:   number of Chebyshev gridpoints per dimension
     template<typename Psi,typename R,unsigned d,unsigned q>
-    inline void
+    void
     InitializeWeights
     ( 
       // Number of frequency boxes in each dimension (must a power of 2)
@@ -115,7 +38,7 @@ namespace BFIO
             N,
 
       // The sources in the polar frequency domain
-      const std::vector< Source<R,d> >& 
+      const vector< Source<R,d> >& 
             mySources,
 
       // 1d Chebyshev nodes that we extend to d-dimensions with tensor product
@@ -139,11 +62,10 @@ namespace BFIO
             log2LocalFreqBoxesPerDim,
 
       // The resultant equivalent weights for a low-rank expansion in each box
-            std::vector< Array<std::complex<R>,Power<q,d>::value> >& 
+            vector< Array<complex<R>,Power<q,d>::value> >& 
             weights 
     )
     {
-        using namespace std;
         typedef complex<R> C;
 
         const R wB = static_cast<R>(1) / N;
@@ -218,8 +140,8 @@ namespace BFIO
             const C f = mySources[i].magnitude;
             const R alpha = TwoPi*N*Psi::Eval(x0,p);
             const C beta = C( cos(alpha), sin(alpha) ) * f;
-            InitialWeightSummation<R,d,q,Power<q,d>::value-1>::Eval
-            ( beta, pRef, chebyNodes, weights[k] );
+            for( unsigned t=0; t<Power<q,d>::value; ++t )
+                weights[i][t] += beta*Lagrange<R,d,q>( t, pRef, chebyNodes );
         }
 
         // Loop over all of the boxes to compute the {p_t^B} and prefactors
@@ -248,8 +170,20 @@ namespace BFIO
 
             // Compute the prefactors given this p0 and multiply it by 
             // the corresponding weights
-            InitialWeightScaling<Psi,R,d,q,Power<q,d>::value-1>::Eval
-            ( N, wB, x0, p0, chebyNodes, weights[k] );
+            for( unsigned t=0; t<Power<q,d>::value; ++t )
+            {
+                // Compute the physical location of pt
+                Array<R,d> pt;
+                unsigned qToThej = q;
+                for( unsigned j=0; j<d; ++j )
+                {
+                    pt[j] = p0[j] + wB*chebyNodes[(t/qToThej)%q];
+                    qToThej *= q;
+                }
+
+                const R alpha = -TwoPi*N*Psi::Eval(x0,pt);
+                weights[k][t] *= C( cos(alpha), sin(alpha) );
+            }
         }
     }
 }

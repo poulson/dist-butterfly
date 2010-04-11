@@ -19,77 +19,32 @@
 #ifndef BFIO_LAGRANGE_HPP
 #define BFIO_LAGRANGE_HPP 1
 
-#include "BFIO/Power.hpp"
 #include "BFIO/Data.hpp"
 
 namespace BFIO
 {
-    template<typename R,unsigned q,unsigned i,unsigned j>
-    struct LagrangeKernel
+    template<typename R,unsigned d,unsigned q>
+    inline R
+    Lagrange
+    ( const unsigned t, const Array<R,d>& z, const Array<R,q>& chebyNodes )
     {
-        static inline void 
-        Eval( const R z, const Array<R,q>& chebyNodes, R& product )
-        { 
-            if( i != j ) 
-            { product *= (z-chebyNodes[j])/(chebyNodes[i]-chebyNodes[j]); }
-        }
-    };
-    
-    template<typename R,unsigned q,unsigned i,unsigned j>
-    struct LagrangeInnerLoop
-    { 
-        static inline void
-        Eval( const R z, const Array<R,q>& chebyNodes, R& product ) 
-        { LagrangeKernel<R,q,i,j>::Eval(z,chebyNodes,product);
-          LagrangeInnerLoop<R,q,i,j-1>::Eval(z,chebyNodes,product); } 
-    };
-
-    template<typename R,unsigned q,unsigned i>
-    struct LagrangeInnerLoop<R,q,i,0>
-    { 
-        static inline void 
-        Eval( const R z, const Array<R,q>& chebyNodes, R& product ) 
-        { LagrangeKernel<R,q,i,0>::Eval(z,chebyNodes,product); } 
-    };
-
-    template<typename R,unsigned d,unsigned q,unsigned t,unsigned j>
-    struct LagrangeOuterLoop
-    {
-        static inline void
-        Eval( const Array<R,d>& z, const Array<R,q>& chebyNodes, R& product )
-        { 
-            // Pluck the j'th dimensional index out of t in order to 
-            // accumulate the product in the j'th dimension.
-            LagrangeInnerLoop<R,q, (t/Power<q,j>::value)%q, q-1 >::Eval
-            ( z[j], chebyNodes, product );
-            LagrangeOuterLoop<R,d,q,t,j-1>::Eval( z, chebyNodes, product );
-        }
-    };
-
-    template<typename R,unsigned d,unsigned q,unsigned t>
-    struct LagrangeOuterLoop<R,d,q,t,0>
-    {
-        static inline void
-        Eval( const Array<R,d>& z, const Array<R,q>& chebyNodes, R& product )
+        R product = static_cast<R>(1);
+        unsigned qToThej = q;
+        for( unsigned j=0; j<d; ++j )
         {
-            // Pluck the 0'th dimensional index out of t in order to
-            // accumulate the product in the 0'th dimension
-            LagrangeInnerLoop<R,q, t%q, q-1 >::Eval
-            ( z[0], chebyNodes, product );
+            const unsigned i = (t/qToThej) % q;
+            for( unsigned k=0; k<q; ++k )
+            {
+                if( i != k )
+                {
+                    product *= (z[j]-chebyNodes[k]) / 
+                               (chebyNodes[i]-chebyNodes[k]);
+                }
+            }
+            qToThej *= q;
         }
-    };
-
-    template<typename R,unsigned d,unsigned q,unsigned t>
-    struct Lagrange
-    {
-        static inline R
-        Eval( const Array<R,d>& z, const Array<R,q>& chebyNodes )
-        {
-            R product = static_cast<R>(1);        
-            LagrangeOuterLoop<R,d,q,t,d-1>::Eval( z, chebyNodes, product );
-            return product;
-        }
-    };
+        return product;
+    }
 }
 
 #endif /* BFIO_LAGRANGE_HPP */

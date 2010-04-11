@@ -22,10 +22,15 @@
 #include <bitset>
 
 #include "BFIO/Util.hpp"
-#include "BFIO/Template.hpp"
+#include "BFIO/Power.hpp"
+#include "BFIO/Lagrange.hpp"
+#include "BFIO/InitializeWeights.hpp"
+#include "BFIO/FreqWeightRecursion.hpp"
 
 namespace BFIO
 {
+    using namespace std;
+
     // Applies the butterfly algorithm for the Fourier integral operator 
     // defined by Psi. This allows one to call the function
     // with their own functor, Psi, with potentially no performance penalty. 
@@ -36,17 +41,18 @@ namespace BFIO
     void
     Transform
     ( const unsigned N, 
-      const std::vector< Source<R,d> >& mySources,
-            std::vector< LRP<Psi,R,d,q> >& myLRPs,
-            MPI_Comm comm                         )
+      const vector< Source<R,d> >& mySources,
+            vector< LRP<Psi,R,d,q> >& myLRPs,
+            MPI_Comm comm                    )
     {
-        using namespace std;
         typedef complex<R> C;
 
         int rank, S;
         MPI_Comm_rank( comm, &rank );
         MPI_Comm_size( comm, &S    ); 
         bitset<sizeof(int)*8> rankBits(rank); 
+
+        double startTime = MPI_Wtime();
 
         // Assert that N and size are powers of 2
         if( ! IsPowerOfTwo(N) )
@@ -60,6 +66,7 @@ namespace BFIO
 
         if( rank == 0 )
         {
+            cout << MPI_Wtime()-startTime << " seconds." << endl;
             cout << "L = " << L << endl;
             cout << "s = " << s << endl;
         }
@@ -132,26 +139,50 @@ namespace BFIO
 
         // Compute the Chebyshev grid over [-1/2,+1/2]^d
         if( rank == 0 )
+        {
+            cout << MPI_Wtime()-startTime << " seconds." << endl;
             cout << "Initializing Chebyshev grid...";
+        }
         Array< Array<R,d>,Power<q,d>::value > chebyGrid;
-        ComputeChebyGrid( chebyNodes, chebyGrid );
+        for( unsigned t=0; t<Power<q,d>::value; ++t )
+        {
+            unsigned qToThej = q;
+            for( unsigned j=0; j<d; ++j )
+            {
+                unsigned i = (t/qToThej)%q;
+                chebyGrid[t][j] = chebyNodes[i];
+                qToThej *= q;
+            }
+        }
         if( rank == 0 )
+        {
             cout << "done." << endl;
+            cout << MPI_Wtime()-startTime << " seconds." << endl;
+        }
 
         // Initialize the weights using Lagrangian interpolation on the 
         // smooth component of the kernel.
         if( rank == 0 )
+        {
+            cout << MPI_Wtime()-startTime << " seconds." << endl;
             cout << "Initializing weights...";
+        }
         vector< Array<C,Power<q,d>::value> > weights(1<<log2LocalFreqBoxes);
         InitializeWeights<Psi,R,d,q>
         ( N, mySources, chebyNodes, myFreqBoxWidths, myFreqBox,
           log2LocalFreqBoxes, log2FreqBoxesPerDim, weights      );
         if( rank == 0 )
+        {
             cout << "done." << endl;
+            cout << MPI_Wtime()-startTime << " seconds." << endl;
+        }
 
         // First half of algorithm: frequency interpolation
         if( rank == 0 )
+        {
+            cout << MPI_Wtime()-startTime << " seconds." << endl;
             cout << "Starting first half of algorithm." << endl;
+        }
         for( unsigned l=1; l<L/2; ++l )
         {
             // Compute the width of the nodes at level l
@@ -161,7 +192,10 @@ namespace BFIO
             if( s <= d*(L-l) )
             {
                 if( rank == 0 )
-                    cout << "  l=" << l << " (serial)" << endl;
+                {
+                    cout<<"  "<<MPI_Wtime()-startTime<<" seconds."<<endl;
+                    cout<<"  l="<<l<<" (serial)"<<endl;
+                }
                 
                 // Refine the spatial domain and coursen the frequency domain
                 for( unsigned j=0; j<d; ++j )
@@ -210,29 +244,33 @@ namespace BFIO
                             p0[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
                         }
 
-                        const unsigned pairKey = k+i*(1u<<log2LocalFreqBoxes);
-                        const unsigned parentPairOffset = 
+                        const unsigned key = k+i*(1u<<log2LocalFreqBoxes);
+                        const unsigned parentOffset = 
                             (k<<d)+(i>>d)*(1u<<(log2LocalFreqBoxes+d));
                         if( rank == 0 )
                         {
+                            cout<<"  "<<MPI_Wtime()-startTime<<" secs."<<endl;
                             cout<<"  (k,i) = ("<<k<<","<<i<<")"<<endl;
-                            cout<<"  log2LocalFreq   ="<<log2LocalFreqBoxes<<endl;
-                            cout<<"  log2LocalSpac   ="<<log2LocalSpatialBoxes<<endl;
-                            cout<<"  length          ="<<weights.size()<<endl;
-                            cout<<"  pairKey         ="<<pairKey<<endl;
-                            cout<<"  parentPairOffset="<<parentPairOffset<<endl;
+                            cout<<"  log2LocalFreq ="<<log2LocalFreqBoxes<<endl;
+                            cout<<"  log2LocalSpac ="<<log2LocalSpatialBoxes<<endl;
+                            cout<<"  length        ="<<weights.size()<<endl;
+                            cout<<"  key           ="<<key<<endl;
+                            cout<<"  parentOffset  ="<<parentOffset<<endl;
                             cout<<endl;
                         }
                         FreqWeightRecursion<Psi,R,d,q>
                         ( N, chebyNodes, chebyGrid, x0, p0, wB,
-                          parentPairOffset, oldWeights, weights[pairKey] );
+                          parentOffset, oldWeights, weights[key] );
                     }
                 }
             }
             else 
             {
                 if( rank == 0 )
+                {
+                    cout<<"  "<<MPI_Wtime()-startTime<<" secs."<<endl;
                     cout << "  l=" << l << " (parallel)" << endl;
+                }
 
                 // There are currently 2^(d*(L-l)) leaves. The frequency 
                 // partitioning is implied by reading the rank bits right-to-
@@ -319,13 +357,16 @@ namespace BFIO
                             p0[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
                         }
 
-                        const unsigned pairKey = k+i*(1u<<log2LocalFreqBoxes);
-                        const unsigned parentPairOffset = 
+                        const unsigned key = k+i*(1u<<log2LocalFreqBoxes);
+                        const unsigned parentOffset = 
                             (k<<(d-log2Procs))+
                             (i>>(d-log2Procs))*(1u<<(log2LocalFreqBoxes+d));
+                        // HERE: Modify to loop over subset of children
+                        /*
                         FreqWeightRecursion<Psi,R,d,q>
                         ( N, chebyNodes, chebyGrid, x0, p0, wB,
-                          parentPairOffset, weights, partialWeights[pairKey] );
+                          parentOffset, weights, partialWeights[key] );
+                        */
                     }
                 }
 
@@ -357,10 +398,16 @@ namespace BFIO
             }
         }
         if( rank == 0 )
+        {
             cout << "Finished first half of algorithm." << endl;
+            cout<<"  "<<MPI_Wtime()-startTime<<" seconds."<<endl;
+        }
 
         if( rank == 0 )
+        {
+            cout<<"  "<<MPI_Wtime()-startTime<<" seconds."<<endl;
             cout << "Switching to spatial interpolation...";
+        }
         // Switch to spatial interpolation
         {
             // Compute the width of the nodes at level l
@@ -421,7 +468,10 @@ namespace BFIO
             }
         }
         if( rank == 0 )
+        {
             cout << "done." << endl;
+            cout<<"  "<<MPI_Wtime()-startTime<<" seconds."<<endl;
+        }
 
         // Second half of algorithm: spatial interpolation
         for( unsigned l=L/2; l<L; ++l )

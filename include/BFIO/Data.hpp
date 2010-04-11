@@ -23,6 +23,7 @@
 
 namespace BFIO
 {
+    using namespace std;
     static const double Pi    = 3.141592653589793;
     static const double TwoPi = 6.283185307179586;
 
@@ -43,7 +44,7 @@ namespace BFIO
     struct Source 
     { 
         Array<R,d> p;
-        std::complex<R> magnitude;
+        complex<R> magnitude;
     };
 
     // Low-rank potential
@@ -53,9 +54,9 @@ namespace BFIO
         unsigned N;
         Array<R,d> x0;
         Array<R,d> points[ Power<q,d>::value ];
-        std::complex<R> weights[ Power<q,d>::value ];
+        complex<R> weights[ Power<q,d>::value ];
         
-        std::complex<R> operator()( const Array<R,d>& x );
+        complex<R> operator()( const Array<R,d>& x );
     };
 }
 
@@ -63,10 +64,9 @@ namespace BFIO
 namespace BFIO
 {
     template<typename Psi,typename R,unsigned d,unsigned q>
-    inline std::complex<R>
+    inline complex<R>
     LRP<Psi,R,d,q>::operator()( const Array<R,d>& x )
     {
-        using namespace std;
         typedef complex<R> C;
 
         C value(0.,0.);

@@ -39,6 +39,8 @@ namespace BFIO
 // Implementations for {float,double,complex<float>,complex<double>}
 namespace BFIO
 {
+    using namespace std;
+
     template<>
     void
     Sum<float>
@@ -57,8 +59,8 @@ namespace BFIO
 
     template<>
     void
-    Sum< std::complex<float> >
-    ( std::complex<float>* sendBuf, std::complex<float>* recvBuf, int count,
+    Sum< complex<float> >
+    ( complex<float>* sendBuf, complex<float>* recvBuf, int count,
       MPI_Comm comm )
     {
         MPI_Allreduce( sendBuf, recvBuf, count, MPI_COMPLEX, MPI_SUM, comm );
@@ -66,8 +68,8 @@ namespace BFIO
 
     template<>
     void
-    Sum< std::complex<double> >
-    ( std::complex<double>* sendBuf, std::complex<double>* recvBuf, int count,
+    Sum< complex<double> >
+    ( complex<double>* sendBuf, complex<double>* recvBuf, int count,
       MPI_Comm comm )
     {
         MPI_Allreduce
@@ -108,8 +110,8 @@ namespace BFIO
 
     template<>
     void
-    SumScatter< std::complex<float> >
-    ( std::complex<float>* sendBuf, std::complex<float>* recvBuf, 
+    SumScatter< complex<float> >
+    ( complex<float>* sendBuf, complex<float>* recvBuf, 
       int* recvCounts, MPI_Comm comm )
     {
         using namespace std;
@@ -125,8 +127,8 @@ namespace BFIO
 
     template<>
     void
-    SumScatter< std::complex<double> >
-    ( std::complex<double>* sendBuf, std::complex<double>* recvBuf,
+    SumScatter< complex<double> >
+    ( complex<double>* sendBuf, complex<double>* recvBuf,
       int* recvCounts, MPI_Comm comm )
     {
         using namespace std;

@@ -19,8 +19,6 @@
 #ifndef BFIO_HPP
 #define BFIO_HPP 1
 
-#include "BFIO/Template.hpp"
-#include "BFIO/Util.hpp"
 #include "BFIO/Transform.hpp"
 
 #endif /* BFIO_HPP */
