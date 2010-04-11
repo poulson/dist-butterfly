@@ -152,7 +152,7 @@ namespace BFIO
                 // the d dimensions, then the ReduceScatter will not require 
                 // any packing or unpacking.
                 vector< Array<C,Power<q,d>::value> > oldWeights = weights;
-                for( unsigned i=0; i<(1<<log2LocalSpatialBoxes); ++i )
+                for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
                 {
                     // Compute the coordinates and center of this spatial box
                     Array<R,d> x0;
@@ -168,7 +168,7 @@ namespace BFIO
                     }
 
                     // Loop over the B boxes in frequency domain
-                    for( unsigned k=0; k<(1<<log2LocalFreqBoxes); ++k )
+                    for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k )
                     {
                         // Compute the coordinates and center of this freq box
                         Array<R,d> p0;
@@ -212,7 +212,9 @@ namespace BFIO
                 // l such that s > d*(L-l), namely, l = L - floor( s/d ). The 
                 // first merge is the only case where the team could potentially
                 // differ from 2^d processes.
-                unsigned log2Procs = ( l == L-(s/d) ? s-d*(L-l) : d ); 
+                //
+                // unsigned log2Procs = ( l == L-(s/d) ? s-d*(L-l) : d ); 
+                //
 
                 // We notice that our consistency in the cyclic bisection of 
                 // the frequency domain means that if log2Procs=a, then 
@@ -234,7 +236,7 @@ namespace BFIO
             const R wA = static_cast<R>(1) / static_cast<R>(1<<l);
             const R wB = static_cast<R>(1) / static_cast<R>(1<<(L-l));
             vector< Array<complex<R>,Power<q,d>::value> > oldWeights = weights;
-            for( unsigned i=0; i<(1<<log2LocalSpatialBoxes); ++i )
+            for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
             {
                 // Compute the coordinates and center of this spatial box
                 Array<R,d> x0;
@@ -254,7 +256,7 @@ namespace BFIO
                     for( unsigned j=0; j<d; ++j )
                         xPoints[t][j] = x0[j] + wA*chebyGrid[t][j];
 
-                for( unsigned k=0; k<(1<<log2LocalFreqBoxes); ++k )
+                for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k )
                 {
                     // Compute the coordinates and center of this freq box
                     Array<R,d> p0;
@@ -263,7 +265,7 @@ namespace BFIO
                     {
                         static unsigned log2LocalFreqBoxesUpToDim = 0;
                         B[j] = (k>>log2LocalFreqBoxesUpToDim) &
-                               ((1<<log2LocalFreqBoxesPerDim[j])-1);
+                               ((1u<<log2LocalFreqBoxesPerDim[j])-1);
                         p0[j] = mySpatialBoxOffsets[j] + B[j]*wB + wB/2;
                     }
 
@@ -272,7 +274,7 @@ namespace BFIO
                         for( unsigned j=0; j<d; ++j )
                             pPoints[t][j] = p0[j] + wB*chebyGrid[t][j];
 
-                    const unsigned key = k+i*(1<<log2LocalFreqBoxes);
+                    const unsigned key = k+i*(1u<<log2LocalFreqBoxes);
                     for( unsigned t=0; t<Power<q,d>::value; ++t )
                     {
                         weights[key][t] = 0;
@@ -295,7 +297,7 @@ namespace BFIO
             }
             else
             {
-                unsigned log2Procs = ( l == L-(s/d) ? s-d*(L-l) : d );
+                // unsigned log2Procs = ( l == L-(s/d) ? s-d*(L-l) : d );
 
                 // Form the partial weights
 

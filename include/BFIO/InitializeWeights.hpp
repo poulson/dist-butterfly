@@ -226,7 +226,7 @@ namespace BFIO
         // our local boxes, say B_loc, are subsets of a B, but we still need 
         // to consider our contribution to the weights corresponding to 
         // p_t^B lying in B \ B_loc.
-        for( unsigned k=0; k<(1<<log2LocalFreqBoxes); ++k ) 
+        for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k ) 
         {
             // Compute the local integer coordinates of box k
             Array<unsigned,d> B;
@@ -235,7 +235,7 @@ namespace BFIO
                 static unsigned log2LocalFreqBoxesUpToDim = 0;
                 // B[j] = (k/localFreqBoxesUpToDim) % localFreqBoxesPerDim[j]
                 B[j] = (k>>log2LocalFreqBoxesUpToDim) & 
-                       ((1<<log2LocalFreqBoxesPerDim[j])-1);
+                       ((1u<<log2LocalFreqBoxesPerDim[j])-1);
                 log2LocalFreqBoxesUpToDim += log2LocalFreqBoxesPerDim[j];
             }
 
