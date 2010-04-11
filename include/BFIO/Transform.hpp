@@ -234,8 +234,6 @@ namespace BFIO
                 if( rank == 0 )
                     cout << "  l=" << l << " (parallel)" << endl;
 
-                static vector< Array<C,Power<q,d>::value> > 
-                      partialWeights(1u<<(d+log2LocalFreqBoxes));
                 // There are currently 2^(d*(L-l)) leaves. The frequency 
                 // partitioning is implied by reading the rank bits right-to-
                 // left, but the spatial partitioning is implied by reading the
@@ -246,6 +244,11 @@ namespace BFIO
                 // first merge is the only case where the team could potentially
                 // differ from 2^d processes.
                 //
+                // We notice that our consistency in the cyclic bisection of 
+                // the frequency domain means that if log2Procs=a, then 
+                // we communicate with 1 other process in each of the first 
+                // a of d dimensions. Getting these ranks is implicit in the
+                // tree structure.
                 unsigned log2Procs = ( l == L-(s/d) ? s-d*(L-l) : d ); 
 
                 // Refine the spatial domain and coursen the frequency domain
@@ -276,21 +279,17 @@ namespace BFIO
                 }
                 log2LocalFreqBoxes -= (d-log2Procs);
                 log2LocalSpatialBoxes += (d-log2Procs);
-
-                // We notice that our consistency in the cyclic bisection of 
-                // the frequency domain means that if log2Procs=a, then 
-                // we communicate with 1 other process in each of the first 
-                // a of d dimensions. Getting these ranks is implicit in the
-                // tree structure.
                 
                 // Form the partial weights. 
-
+                //
                 // Loop over A boxes in spatial domain. 'i' will represent the 
                 // leaf number w.r.t. the tree implied by cyclically assigning
                 // the spatial bisections across the d dimensions. Thus if we 
                 // distribute the data cyclically in the _reverse_ order over 
                 // the d dimensions, then the ReduceScatter will not require 
                 // any packing or unpacking.
+                static vector< Array<C,Power<q,d>::value> > 
+                      partialWeights(1u<<(d+log2LocalFreqBoxes));
                 for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
                 {
                     // Compute the coordinates and center of this spatial box
@@ -333,14 +332,14 @@ namespace BFIO
                 // Set up our new communicator
                 MPI_Group group;
                 MPI_Comm_group( comm, &group );
-                const unsigned myTeamRank = (rank>>numSpaceCuts) & 
-                                            (1u<<log2Procs-1);
-                const unsigned startRank = rank-myTeamRank;
+                const int myTeamRank = (rank>>numSpaceCuts) & 
+                                       ((1<<log2Procs)-1);
+                const int startRank = rank-myTeamRank;
                 vector<int> ranks( 1u<<log2Procs );
-                for( int j=0; j<(1u<<log2Procs); ++j )
+                for( unsigned j=0; j<(1u<<log2Procs); ++j )
                     ranks[j] = startRank+j;
                 MPI_Group teamGroup;
-                MPI_Group_incl( group, 1u<<log2Procs, &ranks[0], &teamGroup );
+                MPI_Group_incl( group, 1<<log2Procs, &ranks[0], &teamGroup );
                 MPI_Comm  teamComm;
                 MPI_Comm_create( comm, teamGroup, &teamComm );
 
