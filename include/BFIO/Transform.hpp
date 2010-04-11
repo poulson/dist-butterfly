@@ -94,6 +94,15 @@ namespace BFIO
                                  static_cast<R>(1<<log2FreqBoxesPerDim[j]);
             mySpatialBoxWidths[j] = static_cast<R>(1);
         }
+        
+        // Compute the offsets for our frequency and spatial box
+        Array<R,d> myFreqBoxOffsets;
+        Array<R,d> mySpatialBoxOffsets;
+        for( unsigned j=0; j<d; ++j )
+        {
+            myFreqBoxOffsets[j] = myFreqBox[j]*myFreqBoxWidths[j];
+            mySpatialBoxOffsets[j] = mySpatialBox[j]*mySpatialBoxWidths[j];
+        }
 
         // Compute the number of 1/N width boxes in the frequency domain that 
         // our process is responsible for initializing the weights in. Also
@@ -109,32 +118,25 @@ namespace BFIO
             log2LocalFreqBoxes += log2LocalFreqBoxesPerDim[j];
         }
 
-        // Compute {zi} for the Chebyshev grid of order q over [-1/2,+1/2]
-        Array<R,q> chebyGrid;
+        // Compute {zi} for the Chebyshev nodes of order q over [-1/2,+1/2]
+        Array<R,q> chebyNodes;
         for( unsigned i=0; i<q; ++i )
-            chebyGrid[i] = 0.5*cos(i*Pi/(q-1));
+            chebyNodes[i] = 0.5*cos(i*Pi/(q-1));
+
+        // Compute the Chebyshev grid over [-1/2,+1/2]^d
+        Array< Array<R,d>,Power<q,d>::value > chebyGrid;
+        ComputeChebyGrid( chebyNodes, chebyGrid );
 
         // Initialize the weights using Lagrangian interpolation on the 
         // smooth component of the kernel.
         vector< Array<C,Power<q,d>::value> > weights(1<<log2LocalFreqBoxes);
         InitializeWeights<Psi,R,d,q>
-        ( N, mySources, chebyGrid, myFreqBoxWidths, myFreqBox,
-          log2LocalFreqBoxes, log2FreqBoxesPerDim, weights    );
+        ( N, mySources, chebyNodes, myFreqBoxWidths, myFreqBox,
+          log2LocalFreqBoxes, log2FreqBoxesPerDim, weights      );
 
         // First half of algorithm: frequency interpolation
-        vector< Array<C,Power<q,d>::value> > 
-            partialWeights(1<<(d+log2LocalFreqBoxes));
         for( unsigned l=1; l<L/2; ++l )
         {
-            // Compute the offsets for our frequency and spatial box
-            Array<R,d> myFreqBoxOffsets;
-            Array<R,d> mySpatialBoxOffsets;
-            for( unsigned j=0; j<d; ++j )
-            {
-                myFreqBoxOffsets[j] = myFreqBox[j]*myFreqBoxWidths[j];
-                mySpatialBoxOffsets[j] = mySpatialBox[j]*mySpatialBoxWidths[j];
-            }
-
             // Compute the width of the nodes at level l
             const R wA = static_cast<R>(1) / static_cast<R>(1<<l);
             const R wB = static_cast<R>(1) / static_cast<R>(1<<(L-l));
@@ -179,12 +181,11 @@ namespace BFIO
                             p0[j] = mySpatialBoxOffsets[j] + B[j]*wB + wB/2;
                         }
 
-                        // Sum over the frequency children
                         const unsigned pairKey = k+i*(1<<log2LocalFreqBoxes);
                         const unsigned parentPairOffset = 
                             (k<<d)+(i>>d)*(1<<(log2LocalFreqBoxes+d));
-                        FreqWeightRecursion<Psi,R,d,q>::Eval
-                        ( N, chebyGrid, x0, p0, wB,
+                        FreqWeightRecursion<Psi,R,d,q>
+                        ( N, chebyNodes, chebyGrid, x0, p0, wB,
                           parentPairOffset, oldWeights, weights[pairKey] );
                     }
                 }
@@ -200,6 +201,8 @@ namespace BFIO
             }
             else 
             {
+                static vector< Array<C,Power<q,d>::value> > 
+                      partialWeights(1<<(d+log2LocalFreqBoxes));
                 // There are currently 2^(d*(L-l)) leaves. The frequency 
                 // partitioning is implied by reading the rank bits right-to-
                 // left, but the spatial partitioning is implied by reading the
@@ -225,6 +228,63 @@ namespace BFIO
         }
 
         // Switch to spatial interpolation
+        {
+            // Compute the width of the nodes at level l
+            const unsigned l = L/2;
+            const R wA = static_cast<R>(1) / static_cast<R>(1<<l);
+            const R wB = static_cast<R>(1) / static_cast<R>(1<<(L-l));
+            vector< Array<complex<R>,Power<q,d>::value> > oldWeights = weights;
+            for( unsigned i=0; i<(1<<log2LocalSpatialBoxes); ++i )
+            {
+                // Compute the coordinates and center of this spatial box
+                Array<R,d> x0;
+                Array<unsigned,d> A;
+                for( unsigned j=0; j<d; ++j )
+                {
+                    static unsigned log2LocalSpatialBoxesUpToDim = 0; 
+                    // A[j] = (i/localSpatialBoxesUpToDim) % 
+                    //        localSpatialBoxesPerDim[j]
+                    A[j] = (i>>log2LocalSpatialBoxesUpToDim) &
+                           ((1<<log2LocalSpatialBoxesPerDim[j])-1);
+                    x0[j] = myFreqBoxOffsets[j] + A[j]*wA + wA/2;
+                }
+
+                static Array< Array<R,d>,Power<q,d>::value > xPoints;
+                for( unsigned t=0; t<Power<q,d>::value; ++t )
+                    for( unsigned j=0; j<d; ++j )
+                        xPoints[t][j] = x0[j] + wA*chebyGrid[t][j];
+
+                for( unsigned k=0; k<(1<<log2LocalFreqBoxes); ++k )
+                {
+                    // Compute the coordinates and center of this freq box
+                    Array<R,d> p0;
+                    Array<unsigned,d> B;
+                    for( unsigned j=0; j<d; ++j )
+                    {
+                        static unsigned log2LocalFreqBoxesUpToDim = 0;
+                        B[j] = (k>>log2LocalFreqBoxesUpToDim) &
+                               ((1<<log2LocalFreqBoxesPerDim[j])-1);
+                        p0[j] = mySpatialBoxOffsets[j] + B[j]*wB + wB/2;
+                    }
+
+                    static Array< Array<R,d>,Power<q,d>::value > pPoints;
+                    for( unsigned t=0; t<Power<q,d>::value; ++t )
+                        for( unsigned j=0; j<d; ++j )
+                            pPoints[t][j] = p0[j] + wB*chebyGrid[t][j];
+
+                    const unsigned key = k+i*(1<<log2LocalFreqBoxes);
+                    for( unsigned t=0; t<Power<q,d>::value; ++t )
+                    {
+                        weights[key][t] = 0;
+                        for( unsigned tp=0; tp<Power<q,d>::value; ++tp )
+                        {
+                            C a = C(0,2*Pi*N*Psi::Eval(xPoints[t],pPoints[s]));
+                            weights[key][t] += exp(a)*oldWeights[key][tp];
+                        }
+                    }
+                }
+            }
+        }
 
         // Second half of algorithm: spatial interpolation
         for( unsigned l=L/2; l<L; ++l )

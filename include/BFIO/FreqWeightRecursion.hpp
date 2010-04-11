@@ -31,11 +31,12 @@ namespace BFIO
     {
         static inline void    
         Eval
-        ( const Array<R,q>& chebyGrid, const unsigned c, Array<R,d>& pRef )
+        ( const Array< Array<R,d>,Power<q,d>::value >& chebyGrid, 
+          const unsigned c, Array<R,d>& pRef                     )
         { 
             pRef[j] = ( (c>>j)&1 ? 
-                        (2*chebyGrid[(tp/Power<q,j>::value)%q]+1)/4 :
-                        (2*chebyGrid[(tp/Power<q,j>::value)%q]-1)/4  );
+                        (2*chebyGrid[tp][j]+1)/4 :
+                        (2*chebyGrid[tp][j]-1)/4  );
             MapToParentLoop<R,d,q,tp,j-1>::Eval( chebyGrid, c, pRef );
         }
     };
@@ -45,11 +46,12 @@ namespace BFIO
     {
         static inline void
         Eval
-        ( const Array<R,q>& chebyGrid, const unsigned c, Array<R,d>& pRef )
+        ( const Array< Array<R,d>,Power<q,d>::value >& chebyGrid, 
+          const unsigned c, Array<R,d>& pRef                     )
         {
             pRef[0] = ( c&1 ? 
-                        (2*chebyGrid[tp%q]+1)/4 : 
-                        (2*chebyGrid[tp%q]-1)/4  );
+                        (2*chebyGrid[tp][0]+1)/4 : 
+                        (2*chebyGrid[tp][0]-1)/4  );
         }
     };
 
@@ -60,7 +62,8 @@ namespace BFIO
         static inline void
         Eval
         ( const unsigned N,
-          const Array<R,q>& chebyGrid,
+          const Array<R,q>& chebyNodes,
+          const Array< Array<R,d>,Power<q,d>::value >& chebyGrid,
           const Array<R,d>& x0,
           const Array<R,d>& p0,
           const R wB,
@@ -76,13 +79,13 @@ namespace BFIO
             // Scale and translate pRef to its actual location
             Array<R,d> p;
             for( unsigned j=0; j<d; ++j )
-                p[j] = wB*pRef[j] + p0[j];
+                p[j] = p0[j] + wB*pRef[j];
 
-            delta += Lagrange<R,d,q,t>::Eval( pRef, chebyGrid ) * 
+            delta += Lagrange<R,d,q,t>::Eval( pRef, chebyNodes ) * 
                      exp( C(0,2*Pi*N*Psi::Eval(x0,p)) ) * oldWeights[tp];
 
             FreqWeightRecursionInnerWeightLoop<Psi,R,d,q,t,c,tp-1>::Eval
-            ( N, chebyGrid, x0, p0, wB, oldWeights, delta );
+            ( N, chebyNodes, chebyGrid, x0, p0, wB, oldWeights, delta );
         }
     };
 
@@ -93,7 +96,8 @@ namespace BFIO
         static inline void
         Eval
         ( const unsigned N,
-          const Array<R,q>& chebyGrid,
+          const Array<R,q>& chebyNodes,
+          const Array< Array<R,d>,Power<q,d>::value >& chebyGrid,
           const Array<R,d>& x0,
           const Array<R,d>& p0,
           const R wB,
@@ -109,9 +113,9 @@ namespace BFIO
             // Scale and translate pRef to its actual location
             Array<R,d> p;
             for( unsigned j=0; j<d; ++j )
-                p[j] = wB*pRef[j] + p0[j];
+                p[j] = p0[j] + wB*pRef[j];
 
-            delta += Lagrange<R,d,q,t>::Eval( pRef, chebyGrid ) * 
+            delta += Lagrange<R,d,q,t>::Eval( pRef, chebyNodes ) * 
                      exp( C(0,2*Pi*N*Psi::Eval(x0,p)) ) * oldWeights[0];
         }
     };
@@ -123,7 +127,8 @@ namespace BFIO
         static inline void
         Eval
         ( const unsigned N,
-          const Array<R,q>& chebyGrid,
+          const Array<R,q>& chebyNodes,
+          const Array< Array<R,d>,Power<q,d>::value >& chebyGrid,
           const Array<R,d>& x0,
           const Array<R,d>& p0,
           const R wB,
@@ -135,10 +140,12 @@ namespace BFIO
 
             FreqWeightRecursionInnerWeightLoop
             <Psi,R,d,q,t,c,Power<q,d>::value-1>::Eval
-            ( N, chebyGrid, x0, p0, wB, oldWeights[parentPairKey], delta );
+            ( N, chebyNodes, chebyGrid, x0, p0, wB, 
+              oldWeights[parentPairKey], delta     );
 
             FreqWeightRecursionChildLoop<Psi,R,d,q,t,c-1>::Eval
-            ( N, chebyGrid, x0, p0, wB, parentPairOffset, oldWeights, delta );
+            ( N, chebyNodes, chebyGrid, x0, p0, wB, 
+              parentPairOffset, oldWeights, delta  );
         }
     };
 
@@ -148,7 +155,8 @@ namespace BFIO
         static inline void
         Eval
         ( const unsigned N,
-          const Array<R,q>& chebyGrid,
+          const Array<R,q>& chebyNodes,
+          const Array< Array<R,d>,Power<q,d>::value >& chebyGrid,
           const Array<R,d>& x0,
           const Array<R,d>& p0,
           const R wB,
@@ -159,7 +167,8 @@ namespace BFIO
             const unsigned parentPairKey = parentPairOffset;
             FreqWeightRecursionInnerWeightLoop
             <Psi,R,d,q,t,0,Power<q,d>::value-1>::Eval
-            ( N, chebyGrid, x0, p0, wB, oldWeights[parentPairKey], delta );
+            ( N, chebyNodes, chebyGrid, x0, p0, 
+              wB, oldWeights[parentPairKey], delta );
         }
     };
 
@@ -169,7 +178,8 @@ namespace BFIO
         static inline void
         Eval
         ( const unsigned N,
-          const Array<R,q>& chebyGrid,
+          const Array<R,q>& chebyNodes,
+          const Array< Array<R,d>,Power<q,d>::value >& chebyGrid,
           const Array<R,d>& x0,
           const Array<R,d>& p0,
           const R wB,
@@ -185,17 +195,19 @@ namespace BFIO
             // Compute the unscaled weight
             weights[weightIdx] = static_cast<R>(0);
             FreqWeightRecursionChildLoop<Psi,R,d,q,t,(1<<d)-1>::Eval
-            ( N, chebyGrid, x0, p0, wB, 
+            ( N, chebyNodes, chebyGrid, x0, p0, wB, 
               parentPairOffset, oldWeights, weights[weightIdx] );
 
             // Scale the weight
             Array<R,d> p;
-            MapToGlobalLoop<R,d,q,t,d-1>::Eval( chebyGrid, wB, p0, p );
+            for( unsigned j=0; j<d; ++j )
+                p[j] = p0[j] + wB*chebyGrid[t][j];
             weights[weightIdx] *= exp( C(0,-2*Pi*N*Psi::Eval(x0,p)) );
 
             // Continue looping over the weights
             FreqWeightRecursionOuterWeightLoop<Psi,R,d,q,t-1>::Eval
-            ( N, chebyGrid, x0, p0, wB, parentPairOffset, oldWeights, weights );
+            ( N, chebyNodes, chebyGrid, x0, p0, wB, 
+              parentPairOffset, oldWeights, weights );
         }
     };
 
@@ -205,7 +217,8 @@ namespace BFIO
         static inline void
         Eval
         ( const unsigned N,
-          const Array<R,q>& chebyGrid,
+          const Array<R,q>& chebyNodes,
+          const Array< Array<R,d>,Power<q,d>::value >& chebyGrid,
           const Array<R,d>& x0,
           const Array<R,d>& p0,
           const R wB,
@@ -221,36 +234,35 @@ namespace BFIO
             // Compute the unscaled weight
             weights[weightIdx] = static_cast<R>(0);
             FreqWeightRecursionChildLoop<Psi,R,d,q,0,(1<<d)-1>::Eval
-            ( N, chebyGrid, x0, p0, wB,
+            ( N, chebyNodes, chebyGrid, x0, p0, wB,
               parentPairOffset, oldWeights, weights[weightIdx] );
             
             // Scale the weight
             Array<R,d> p;
             for( unsigned j=0; j<d; ++j )
-                p[j] = chebyGrid[0]*wB + p0[j];
+                p[j] = p0[j] + wB*chebyGrid[0][j];
             weights[weightIdx] *= exp( C(0,-2*Pi*N*Psi::Eval(x0,p)) );
         }
     };
 
     template<typename Psi,typename R,unsigned d,unsigned q>
-    struct FreqWeightRecursion
+    inline void
+    FreqWeightRecursion
+    ( const unsigned N, 
+      const Array<R,q>& chebyNodes,
+      const Array< Array<R,d>,Power<q,d>::value >& chebyGrid,
+      const Array<R,d>& x0,
+      const Array<R,d>& p0,
+      const R wB,
+      const unsigned parentPairOffset,
+      const vector< Array<complex<R>,Power<q,d>::value> >& oldWeights,
+            Array<complex<R>,Power<q,d>::value> weights               )
     {
-        static inline void
-        Eval
-        ( const unsigned N,
-          const Array<R,q>& chebyGrid,
-          const Array<R,d>& x0,
-          const Array<R,d>& p0,
-          const R wB,
-          const unsigned parentPairOffset,
-          const vector< Array<complex<R>,Power<q,d>::value> >& oldWeights,
-                Array<complex<R>,Power<q,d>::value> weights               )
-        {
-            FreqWeightRecursionOuterWeightLoop
-            <Psi,R,d,q,Power<q,d>::value-1>::Eval
-            ( N, chebyGrid, x0, p0, wB, parentPairOffset, oldWeights, weights );
-        }
-    };
+        FreqWeightRecursionOuterWeightLoop
+        <Psi,R,d,q,Power<q,d>::value-1>::Eval
+        ( N, chebyNodes, chebyGrid, x0, p0, wB, 
+          parentPairOffset, oldWeights, weights );
+    }
 }
 
 #endif /* BFIO_FREQ_WEIGHT_RECURSION_HPP */

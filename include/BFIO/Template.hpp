@@ -21,6 +21,7 @@
 
 #include "BFIO/Power.hpp"
 #include "BFIO/Data.hpp"
+#include "BFIO/ComputeChebyGrid.hpp"
 #include "BFIO/Lagrange.hpp"
 #include "BFIO/InitializeWeights.hpp"
 #include "BFIO/FreqWeightRecursion.hpp"
