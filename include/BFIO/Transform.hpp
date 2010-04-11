@@ -58,9 +58,16 @@ namespace BFIO
         if( s > d*L )
             throw "Cannot use more than N^d processes.";
 
+        if( rank == 0 )
+        {
+            cout << "L = " << L << endl;
+            cout << "s = " << s << endl;
+        }
+
         // Determine the number of boxes in each dimension of the frequency
         // domain by applying the partitions cyclically over the d dimensions.
         // We can simultaneously compute the indices of our box.
+        unsigned numSpaceCuts = 0;
         Array<unsigned,d> myFreqBox;
         Array<unsigned,d> mySpatialBox;
         Array<unsigned,d> log2FreqBoxesPerDim;
@@ -124,25 +131,47 @@ namespace BFIO
             chebyNodes[i] = 0.5*cos(i*Pi/(q-1));
 
         // Compute the Chebyshev grid over [-1/2,+1/2]^d
+        if( rank == 0 )
+            cout << "Initializing Chebyshev grid...";
         Array< Array<R,d>,Power<q,d>::value > chebyGrid;
         ComputeChebyGrid( chebyNodes, chebyGrid );
+        if( rank == 0 )
+            cout << "done." << endl;
 
         // Initialize the weights using Lagrangian interpolation on the 
         // smooth component of the kernel.
+        if( rank == 0 )
+            cout << "Initializing weights...";
         vector< Array<C,Power<q,d>::value> > weights(1<<log2LocalFreqBoxes);
         InitializeWeights<Psi,R,d,q>
         ( N, mySources, chebyNodes, myFreqBoxWidths, myFreqBox,
           log2LocalFreqBoxes, log2FreqBoxesPerDim, weights      );
+        if( rank == 0 )
+            cout << "done." << endl;
 
         // First half of algorithm: frequency interpolation
+        if( rank == 0 )
+            cout << "Starting first half of algorithm." << endl;
         for( unsigned l=1; l<L/2; ++l )
         {
             // Compute the width of the nodes at level l
-            const R wA = static_cast<R>(1) / static_cast<R>(1<<l);
-            const R wB = static_cast<R>(1) / static_cast<R>(1<<(L-l));
+            const R wA = static_cast<R>(1) / static_cast<R>(1u<<l);
+            const R wB = static_cast<R>(1) / static_cast<R>(1u<<(L-l));
 
             if( s <= d*(L-l) )
             {
+                if( rank == 0 )
+                    cout << "  l=" << l << " (serial)" << endl;
+                
+                // Refine the spatial domain and coursen the frequency domain
+                for( unsigned j=0; j<d; ++j )
+                {
+                    --log2LocalFreqBoxesPerDim[j];
+                    ++log2LocalSpatialBoxesPerDim[j];
+                }
+                log2LocalFreqBoxes -= d;
+                log2LocalSpatialBoxes += d;
+
                 // Form the N^d/S = 2^(d*L) / 2^s = 2^(d*L-s) weights
 
                 // Loop over A boxes in spatial domain. 'i' will represent the 
@@ -163,8 +192,8 @@ namespace BFIO
                         // A[j] = (i/localSpatialBoxesUpToDim) % 
                         //        localSpatialBoxesPerDim[j]
                         A[j] = (i>>log2LocalSpatialBoxesUpToDim) &
-                               ((1<<log2LocalSpatialBoxesPerDim[j])-1);
-                        x0[j] = myFreqBoxOffsets[j] + A[j]*wA + wA/2;
+                               ((1u<<log2LocalSpatialBoxesPerDim[j])-1);
+                        x0[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
                     }
 
                     // Loop over the B boxes in frequency domain
@@ -177,32 +206,36 @@ namespace BFIO
                         {
                             static unsigned log2LocalFreqBoxesUpToDim = 0;
                             B[j] = (k>>log2LocalFreqBoxesUpToDim) &
-                                   ((1<<log2LocalFreqBoxesPerDim[j])-1);
-                            p0[j] = mySpatialBoxOffsets[j] + B[j]*wB + wB/2;
+                                   ((1u<<log2LocalFreqBoxesPerDim[j])-1);
+                            p0[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
                         }
 
-                        const unsigned pairKey = k+i*(1<<log2LocalFreqBoxes);
+                        const unsigned pairKey = k+i*(1u<<log2LocalFreqBoxes);
                         const unsigned parentPairOffset = 
-                            (k<<d)+(i>>d)*(1<<(log2LocalFreqBoxes+d));
+                            (k<<d)+(i>>d)*(1u<<(log2LocalFreqBoxes+d));
+                        if( rank == 0 )
+                        {
+                            cout<<"  (k,i) = ("<<k<<","<<i<<")"<<endl;
+                            cout<<"  log2LocalFreq   ="<<log2LocalFreqBoxes<<endl;
+                            cout<<"  log2LocalSpac   ="<<log2LocalSpatialBoxes<<endl;
+                            cout<<"  length          ="<<weights.size()<<endl;
+                            cout<<"  pairKey         ="<<pairKey<<endl;
+                            cout<<"  parentPairOffset="<<parentPairOffset<<endl;
+                            cout<<endl;
+                        }
                         FreqWeightRecursion<Psi,R,d,q>
                         ( N, chebyNodes, chebyGrid, x0, p0, wB,
                           parentPairOffset, oldWeights, weights[pairKey] );
                     }
                 }
-
-                // Refine the spatial domain and coursen the frequency domain
-                for( unsigned j=0; j<d; ++j )
-                {
-                    --log2LocalFreqBoxesPerDim[j];
-                    ++log2LocalSpatialBoxesPerDim[j];
-                }
-                log2LocalFreqBoxes -= d;
-                log2LocalSpatialBoxes += d;
             }
             else 
             {
+                if( rank == 0 )
+                    cout << "  l=" << l << " (parallel)" << endl;
+
                 static vector< Array<C,Power<q,d>::value> > 
-                      partialWeights(1<<(d+log2LocalFreqBoxes));
+                      partialWeights(1u<<(d+log2LocalFreqBoxes));
                 // There are currently 2^(d*(L-l)) leaves. The frequency 
                 // partitioning is implied by reading the rank bits right-to-
                 // left, but the spatial partitioning is implied by reading the
@@ -213,8 +246,36 @@ namespace BFIO
                 // first merge is the only case where the team could potentially
                 // differ from 2^d processes.
                 //
-                // unsigned log2Procs = ( l == L-(s/d) ? s-d*(L-l) : d ); 
-                //
+                unsigned log2Procs = ( l == L-(s/d) ? s-d*(L-l) : d ); 
+
+                // Refine the spatial domain and coursen the frequency domain
+                for( unsigned j=0; j<log2Procs; ++j )
+                {
+                    if( myFreqBox[j] & 1 )
+                    {
+                        myFreqBoxOffsets[j] *= 
+                            static_cast<R>(myFreqBox[j]-1) /
+                            static_cast<R>(myFreqBox[j]);
+                    }
+                    myFreqBox[j] >>= 1;
+                    myFreqBoxWidths[j] *= static_cast<R>(2);
+
+                    mySpatialBoxWidths[j] /= static_cast<R>(2);
+                    mySpatialBox[j] <<= 1;
+                    if( rankBits[numSpaceCuts+j] ) 
+                    {
+                        mySpatialBox[j] |= 1;
+                        mySpatialBoxOffsets[j] += mySpatialBoxWidths[j];     
+                    }
+
+                }
+                for( unsigned j=log2Procs; j<d; ++j )
+                {
+                    --log2LocalFreqBoxesPerDim[j];
+                    ++log2LocalSpatialBoxesPerDim[j];
+                }
+                log2LocalFreqBoxes -= (d-log2Procs);
+                log2LocalSpatialBoxes += (d-log2Procs);
 
                 // We notice that our consistency in the cyclic bisection of 
                 // the frequency domain means that if log2Procs=a, then 
@@ -224,17 +285,89 @@ namespace BFIO
                 
                 // Form the partial weights. 
 
-                // ReduceScatter over the necessary team into weights
-                // MPI_Comm_group, MPI_Group_incl, MPI_Comm_group...
+                // Loop over A boxes in spatial domain. 'i' will represent the 
+                // leaf number w.r.t. the tree implied by cyclically assigning
+                // the spatial bisections across the d dimensions. Thus if we 
+                // distribute the data cyclically in the _reverse_ order over 
+                // the d dimensions, then the ReduceScatter will not require 
+                // any packing or unpacking.
+                for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
+                {
+                    // Compute the coordinates and center of this spatial box
+                    Array<R,d> x0;
+                    Array<unsigned,d> A;
+                    for( unsigned j=0; j<d; ++j )
+                    {
+                        static unsigned log2LocalSpatialBoxesUpToDim = 0;
+                        // A[j] = (i/localSpatialBoxesUpToDim) % 
+                        //        localSpatialBoxesPerDim[j]
+                        A[j] = (i>>log2LocalSpatialBoxesUpToDim) &
+                               ((1<<log2LocalSpatialBoxesPerDim[j])-1);
+                        x0[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
+                    }
+
+                    // Loop over the B boxes in frequency domain
+                    for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k )
+                    {
+                        // Compute the coordinates and center of this freq box
+                        Array<R,d> p0;
+                        Array<unsigned,d> B;
+                        for( unsigned j=0; j<d; ++j )
+                        {
+                            static unsigned log2LocalFreqBoxesUpToDim = 0;
+                            B[j] = (k>>log2LocalFreqBoxesUpToDim) &
+                                   ((1u<<log2LocalFreqBoxesPerDim[j])-1);
+                            p0[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
+                        }
+
+                        const unsigned pairKey = k+i*(1u<<log2LocalFreqBoxes);
+                        const unsigned parentPairOffset = 
+                            (k<<(d-log2Procs))+
+                            (i>>(d-log2Procs))*(1u<<(log2LocalFreqBoxes+d));
+                        FreqWeightRecursion<Psi,R,d,q>
+                        ( N, chebyNodes, chebyGrid, x0, p0, wB,
+                          parentPairOffset, weights, partialWeights[pairKey] );
+                    }
+                }
+
+                // Set up our new communicator
+                MPI_Group group;
+                MPI_Comm_group( comm, &group );
+                const unsigned myTeamRank = (rank>>numSpaceCuts) & 
+                                            (1u<<log2Procs-1);
+                const unsigned startRank = rank-myTeamRank;
+                vector<int> ranks( 1u<<log2Procs );
+                for( int j=0; j<(1u<<log2Procs); ++j )
+                    ranks[j] = startRank+j;
+                MPI_Group teamGroup;
+                MPI_Group_incl( group, 1u<<log2Procs, &ranks[0], &teamGroup );
+                MPI_Comm  teamComm;
+                MPI_Comm_create( comm, teamGroup, &teamComm );
+
+                // Scatter the summation of the weights
+                vector<int> recvCounts( 1u<<log2Procs );
+                for( unsigned j=0; j<(1u<<log2Procs); ++j )
+                    recvCounts[j] = weights.size()*Power<q,d>::value;
+                SumScatter
+                ( &(partialWeights[0][0]), &(weights[0][0]), 
+                  &recvCounts[0], teamComm                  );
+
+                // Tear down the new communicator
+                MPI_Comm_free( &teamComm );
+                MPI_Group_free( &teamGroup );
             }
         }
+        if( rank == 0 )
+            cout << "Finished first half of algorithm." << endl;
 
+        if( rank == 0 )
+            cout << "Switching to spatial interpolation...";
         // Switch to spatial interpolation
         {
             // Compute the width of the nodes at level l
             const unsigned l = L/2;
-            const R wA = static_cast<R>(1) / static_cast<R>(1<<l);
-            const R wB = static_cast<R>(1) / static_cast<R>(1<<(L-l));
+            const R wA = static_cast<R>(1) / static_cast<R>(1u<<l);
+            const R wB = static_cast<R>(1) / static_cast<R>(1u<<(L-l));
             vector< Array<complex<R>,Power<q,d>::value> > oldWeights = weights;
             for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
             {
@@ -247,7 +380,7 @@ namespace BFIO
                     // A[j] = (i/localSpatialBoxesUpToDim) % 
                     //        localSpatialBoxesPerDim[j]
                     A[j] = (i>>log2LocalSpatialBoxesUpToDim) &
-                           ((1<<log2LocalSpatialBoxesPerDim[j])-1);
+                           ((1u<<log2LocalSpatialBoxesPerDim[j])-1);
                     x0[j] = myFreqBoxOffsets[j] + A[j]*wA + wA/2;
                 }
 
@@ -280,13 +413,16 @@ namespace BFIO
                         weights[key][t] = 0;
                         for( unsigned tp=0; tp<Power<q,d>::value; ++tp )
                         {
-                            C a = C(0,2*Pi*N*Psi::Eval(xPoints[t],pPoints[s]));
-                            weights[key][t] += exp(a)*oldWeights[key][tp];
+                            R alpha = TwoPi*N*Psi::Eval(xPoints[t],pPoints[s]);
+                            weights[key][t] += C( cos(alpha), sin(alpha) ) * 
+                                               oldWeights[key][tp];
                         }
                     }
                 }
             }
         }
+        if( rank == 0 )
+            cout << "done." << endl;
 
         // Second half of algorithm: spatial interpolation
         for( unsigned l=L/2; l<L; ++l )

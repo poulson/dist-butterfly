@@ -72,8 +72,8 @@ namespace BFIO
 
             Array<R,d> pT;
             MapToGlobalLoop<R,d,q,t,d-1>::Eval( chebyNodes, wB, p0, pT );
-            weights[t] *= exp( C(0.,-TwoPi*N*Psi::Eval(x0,pT)) );
-
+            const R alpha = -TwoPi*N*Psi::Eval(x0,pT);
+            weights[t] *= C( cos(alpha), sin(alpha) );
 
             InitialWeightScaling<Psi,R,d,q,t-1>::Eval
             (N,wB,x0,p0,chebyNodes,weights);
@@ -97,7 +97,8 @@ namespace BFIO
 
             Array<R,d> pT;
             MapToGlobalLoop<R,d,q,0,d-1>::Eval( chebyNodes, wB, p0, pT );
-            weights[0] *= exp( C(0.,-TwoPi*N*Psi::Eval(x0,pT)) );
+            const R alpha = -TwoPi*N*Psi::Eval(x0,pT);
+            weights[0] *= C( cos(alpha), sin(alpha) );
         }
     };
 
@@ -215,9 +216,10 @@ namespace BFIO
             for( unsigned j=0; j<d; ++j )
                 pRef[j] = (p[j]-p0[j])/wB;
             const C f = mySources[i].magnitude;
-            const C alpha = exp( C(0.,TwoPi*N*Psi::Eval(x0,p)) ) * f;
+            const R alpha = TwoPi*N*Psi::Eval(x0,p);
+            const C beta = C( cos(alpha), sin(alpha) ) * f;
             InitialWeightSummation<R,d,q,Power<q,d>::value-1>::Eval
-            ( alpha, pRef, chebyNodes, weights[k] );
+            ( beta, pRef, chebyNodes, weights[k] );
         }
 
         // Loop over all of the boxes to compute the {p_t^B} and prefactors

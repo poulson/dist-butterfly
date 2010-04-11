@@ -60,7 +60,7 @@ main
     
     try
     {
-        Transform( 4, mySources, myLRPs, MPI_COMM_WORLD );
+        Transform( 16, mySources, myLRPs, MPI_COMM_WORLD );
     }
     catch( const char* errorMsg )
     {

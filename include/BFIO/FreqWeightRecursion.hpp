@@ -26,30 +26,30 @@ namespace BFIO
 {
     using namespace std;
 
-    template<typename R,unsigned d,unsigned q,unsigned tp,unsigned j>
+    template<typename R,unsigned d,unsigned q,unsigned c,unsigned tp,unsigned j>
     struct MapToParentLoop
     {
         static inline void    
         Eval
         ( const Array< Array<R,d>,Power<q,d>::value >& chebyGrid, 
-          const unsigned c, Array<R,d>& pRef                     )
+                Array<R,d>& pRef                                 )
         { 
-            pRef[j] = ( (c>>j)&1 ? 
+            pRef[j] = ( (c>>j) & 1 ? 
                         (2*chebyGrid[tp][j]+1)/4 :
                         (2*chebyGrid[tp][j]-1)/4  );
-            MapToParentLoop<R,d,q,tp,j-1>::Eval( chebyGrid, c, pRef );
+            MapToParentLoop<R,d,q,c,tp,j-1>::Eval( chebyGrid, pRef );
         }
     };
 
-    template<typename R,unsigned d,unsigned q,unsigned tp>
-    struct MapToParentLoop<R,d,q,tp,0>
+    template<typename R,unsigned d,unsigned q,unsigned c,unsigned tp>
+    struct MapToParentLoop<R,d,q,c,tp,0>
     {
         static inline void
         Eval
         ( const Array< Array<R,d>,Power<q,d>::value >& chebyGrid, 
-          const unsigned c, Array<R,d>& pRef                     )
+                Array<R,d>& pRef                                 )
         {
-            pRef[0] = ( c&1 ? 
+            pRef[0] = ( c & 1 ? 
                         (2*chebyGrid[tp][0]+1)/4 : 
                         (2*chebyGrid[tp][0]-1)/4  );
         }
@@ -74,15 +74,16 @@ namespace BFIO
 
             // Compute the t-prime point in Bc mapped to the reference grid of B
             Array<R,d> pRef;
-            MapToParentLoop<R,d,q,tp,d-1>::Eval( chebyGrid, c, pRef );
+            MapToParentLoop<R,d,q,c,tp,d-1>::Eval( chebyGrid, pRef );
 
             // Scale and translate pRef to its actual location
             Array<R,d> p;
             for( unsigned j=0; j<d; ++j )
                 p[j] = p0[j] + wB*pRef[j];
 
+            const R alpha = TwoPi*N*Psi::Eval(x0,p);
             delta += Lagrange<R,d,q,t>::Eval( pRef, chebyNodes ) * 
-                     exp( C(0,2*Pi*N*Psi::Eval(x0,p)) ) * oldWeights[tp];
+                     C( cos(alpha), sin(alpha) ) * oldWeights[tp];
 
             FreqWeightRecursionInnerWeightLoop<Psi,R,d,q,t,c,tp-1>::Eval
             ( N, chebyNodes, chebyGrid, x0, p0, wB, oldWeights, delta );
@@ -108,15 +109,16 @@ namespace BFIO
 
             // Compute the t-prime point in Bc mapped to the reference grid of B
             Array<R,d> pRef;
-            MapToParentLoop<R,d,q,0,d-1>::Eval( chebyGrid, c, pRef );
+            MapToParentLoop<R,d,q,c,0,d-1>::Eval( chebyGrid, pRef );
 
             // Scale and translate pRef to its actual location
             Array<R,d> p;
             for( unsigned j=0; j<d; ++j )
                 p[j] = p0[j] + wB*pRef[j];
 
+            const R alpha = TwoPi*N*Psi::Eval(x0,p);
             delta += Lagrange<R,d,q,t>::Eval( pRef, chebyNodes ) * 
-                     exp( C(0,2*Pi*N*Psi::Eval(x0,p)) ) * oldWeights[0];
+                     C( cos(alpha), sin(alpha) ) * oldWeights[0];
         }
     };
 
@@ -202,7 +204,8 @@ namespace BFIO
             Array<R,d> p;
             for( unsigned j=0; j<d; ++j )
                 p[j] = p0[j] + wB*chebyGrid[t][j];
-            weights[weightIdx] *= exp( C(0,-2*Pi*N*Psi::Eval(x0,p)) );
+            const R alpha = -TwoPi*N*Psi::Eval(x0,p);
+            weights[weightIdx] *= C( cos(alpha), sin(alpha) );
 
             // Continue looping over the weights
             FreqWeightRecursionOuterWeightLoop<Psi,R,d,q,t-1>::Eval
@@ -241,7 +244,8 @@ namespace BFIO
             Array<R,d> p;
             for( unsigned j=0; j<d; ++j )
                 p[j] = p0[j] + wB*chebyGrid[0][j];
-            weights[weightIdx] *= exp( C(0,-2*Pi*N*Psi::Eval(x0,p)) );
+            const R alpha = -TwoPi*N*Psi::Eval(x0,p);
+            weights[weightIdx] *= C( cos(alpha), sin(alpha) );
         }
     };
 
