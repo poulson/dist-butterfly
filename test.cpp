@@ -20,6 +20,14 @@
 using namespace std;
 using namespace BFIO;
 
+void 
+Usage()
+{
+    cout << "test <N>" << endl;
+    cout << "  N: power of 2, the frequency spread in each dimension" << endl;
+    cout << endl;
+}
+
 // Create a functor that performs a dot product in R^2
 struct Dot
 { 
@@ -36,6 +44,15 @@ main
     int rank;
     MPI_Init( &argc, &argv );
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+
+    if( argc != 2 )
+    {
+        if( rank == 0 )
+            Usage();
+        MPI_Finalize();
+        return 0;
+    }
+    const unsigned N = atoi(argv[1]);
 
     vector< Source<double,2> > mySources;
     vector< LRP<Dot,double,2,5> > myLRPs;
@@ -60,7 +77,7 @@ main
     
     try
     {
-        Transform( 16, mySources, myLRPs, MPI_COMM_WORLD );
+        Transform( N, mySources, myLRPs, MPI_COMM_WORLD );
     }
     catch( const char* errorMsg )
     {

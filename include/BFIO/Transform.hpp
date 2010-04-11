@@ -26,6 +26,7 @@
 #include "BFIO/Lagrange.hpp"
 #include "BFIO/InitializeWeights.hpp"
 #include "BFIO/FreqWeightRecursion.hpp"
+#include "BFIO/FreqWeightPartialRecursion.hpp"
 
 namespace BFIO
 {
@@ -164,7 +165,6 @@ namespace BFIO
         // smooth component of the kernel.
         if( rank == 0 )
         {
-            cout << MPI_Wtime()-startTime << " seconds." << endl;
             cout << "Initializing weights...";
         }
         vector< Array<C,Power<q,d>::value> > weights(1<<log2LocalFreqBoxes);
@@ -180,7 +180,6 @@ namespace BFIO
         // First half of algorithm: frequency interpolation
         if( rank == 0 )
         {
-            cout << MPI_Wtime()-startTime << " seconds." << endl;
             cout << "Starting first half of algorithm." << endl;
         }
         for( unsigned l=1; l<L/2; ++l )
@@ -247,6 +246,7 @@ namespace BFIO
                         const unsigned key = k+i*(1u<<log2LocalFreqBoxes);
                         const unsigned parentOffset = 
                             (k<<d)+(i>>d)*(1u<<(log2LocalFreqBoxes+d));
+#ifndef NDEBUG
                         if( rank == 0 )
                         {
                             cout<<"  "<<MPI_Wtime()-startTime<<" secs."<<endl;
@@ -258,6 +258,7 @@ namespace BFIO
                             cout<<"  parentOffset  ="<<parentOffset<<endl;
                             cout<<endl;
                         }
+#endif
                         FreqWeightRecursion<Psi,R,d,q>
                         ( N, chebyNodes, chebyGrid, x0, p0, wB,
                           parentOffset, oldWeights, weights[key] );
@@ -288,6 +289,20 @@ namespace BFIO
                 // a of d dimensions. Getting these ranks is implicit in the
                 // tree structure.
                 unsigned log2Procs = ( l == L-(s/d) ? s-d*(L-l) : d ); 
+                
+                // Set up our new communicator
+                MPI_Group group;
+                MPI_Comm_group( comm, &group );
+                const int myTeamRank = (rank>>numSpaceCuts) & 
+                                       ((1<<log2Procs)-1);
+                const int startRank = rank-myTeamRank;
+                vector<int> ranks( 1u<<log2Procs );
+                for( unsigned j=0; j<(1u<<log2Procs); ++j )
+                    ranks[j] = startRank+j;
+                MPI_Group teamGroup;
+                MPI_Group_incl( group, 1<<log2Procs, &ranks[0], &teamGroup );
+                MPI_Comm  teamComm;
+                MPI_Comm_create( comm, teamGroup, &teamComm );
 
                 // Refine the spatial domain and coursen the frequency domain
                 for( unsigned j=0; j<log2Procs; ++j )
@@ -303,12 +318,11 @@ namespace BFIO
 
                     mySpatialBoxWidths[j] /= static_cast<R>(2);
                     mySpatialBox[j] <<= 1;
-                    if( rankBits[numSpaceCuts+j] ) 
+                    if( rankBits[numSpaceCuts++] ) 
                     {
                         mySpatialBox[j] |= 1;
                         mySpatialBoxOffsets[j] += mySpatialBoxWidths[j];     
                     }
-
                 }
                 for( unsigned j=log2Procs; j<d; ++j )
                 {
@@ -361,28 +375,12 @@ namespace BFIO
                         const unsigned parentOffset = 
                             (k<<(d-log2Procs))+
                             (i>>(d-log2Procs))*(1u<<(log2LocalFreqBoxes+d));
-                        // HERE: Modify to loop over subset of children
-                        /*
-                        FreqWeightRecursion<Psi,R,d,q>
-                        ( N, chebyNodes, chebyGrid, x0, p0, wB,
+                        FreqWeightPartialRecursion<Psi,R,d,q>
+                        ( log2Procs, myTeamRank, 
+                          N, chebyNodes, chebyGrid, x0, p0, wB,
                           parentOffset, weights, partialWeights[key] );
-                        */
                     }
                 }
-
-                // Set up our new communicator
-                MPI_Group group;
-                MPI_Comm_group( comm, &group );
-                const int myTeamRank = (rank>>numSpaceCuts) & 
-                                       ((1<<log2Procs)-1);
-                const int startRank = rank-myTeamRank;
-                vector<int> ranks( 1u<<log2Procs );
-                for( unsigned j=0; j<(1u<<log2Procs); ++j )
-                    ranks[j] = startRank+j;
-                MPI_Group teamGroup;
-                MPI_Group_incl( group, 1<<log2Procs, &ranks[0], &teamGroup );
-                MPI_Comm  teamComm;
-                MPI_Comm_create( comm, teamGroup, &teamComm );
 
                 // Scatter the summation of the weights
                 vector<int> recvCounts( 1u<<log2Procs );
@@ -405,7 +403,6 @@ namespace BFIO
 
         if( rank == 0 )
         {
-            cout<<"  "<<MPI_Wtime()-startTime<<" seconds."<<endl;
             cout << "Switching to spatial interpolation...";
         }
         // Switch to spatial interpolation
