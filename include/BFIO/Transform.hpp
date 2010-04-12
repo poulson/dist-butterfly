@@ -180,7 +180,7 @@ namespace BFIO
             cout << MPI_Wtime()-startTime << " seconds." << endl;
         }
 
-        // First half of algorithm: frequency interpolation
+        // Start the main recursion loop
         if( rank == 0 )
         {
             cout << "Starting algorithm." << endl;
