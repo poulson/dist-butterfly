@@ -238,6 +238,9 @@ namespace BFIO
                         A[j] = (i>>log2LocalSpatialBoxesUpToDim) &
                                ((1u<<log2LocalSpatialBoxesPerDim[j])-1);
                         x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
+
+                        log2LocalSpatialBoxesUpToDim += 
+                            log2LocalSpatialBoxesPerDim[j];
                     }
 
                     // Loop over the B boxes in frequency domain
@@ -252,6 +255,9 @@ namespace BFIO
                             B[j] = (k>>log2LocalFreqBoxesUpToDim) &
                                    ((1u<<log2LocalFreqBoxesPerDim[j])-1);
                             p0B[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
+
+                            log2LocalFreqBoxesUpToDim += 
+                                log2LocalFreqBoxesPerDim[j];
                         }
 
                         const unsigned key = k+i*(1u<<log2LocalFreqBoxes);
@@ -380,6 +386,9 @@ namespace BFIO
                         A[j] = (i>>log2LocalSpatialBoxesUpToDim) &
                                ((1<<log2LocalSpatialBoxesPerDim[j])-1);
                         x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
+
+                        log2LocalSpatialBoxesUpToDim += 
+                            log2LocalSpatialBoxesPerDim[j];
                     }
 
                     // Loop over the B boxes in frequency domain
@@ -394,6 +403,9 @@ namespace BFIO
                             B[j] = (k>>log2LocalFreqBoxesUpToDim) &
                                    ((1u<<log2LocalFreqBoxesPerDim[j])-1);
                             p0B[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
+
+                            log2LocalFreqBoxesUpToDim += 
+                                log2LocalFreqBoxesPerDim[j];
                         }
 
                         const unsigned key = k+i*(1u<<log2LocalFreqBoxes);

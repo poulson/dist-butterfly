@@ -126,9 +126,9 @@ namespace BFIO
             unsigned k = 0;
             for( unsigned j=0; j<d; ++j )
             {
-                static unsigned log2LocalBoxesUpToDim = 0;
-                k |= (B[j]<<log2LocalBoxesUpToDim);
-                log2LocalBoxesUpToDim += log2LocalFreqBoxesPerDim[j];
+                static unsigned log2LocalFreqBoxesUpToDim = 0;
+                k |= (B[j]<<log2LocalFreqBoxesUpToDim);
+                log2LocalFreqBoxesUpToDim += log2LocalFreqBoxesPerDim[j];
             }
 
             // Add this point's contribution to the unscaled weights of B. 

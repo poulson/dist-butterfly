@@ -61,6 +61,9 @@ namespace BFIO
                 A[j] = (i>>log2LocalSpatialBoxesUpToDim) &
                        ((1u<<log2LocalSpatialBoxesPerDim[j])-1);
                 x0A[j] = myFreqBoxOffsets[j] + A[j]*wA + wA/2;
+
+                log2LocalSpatialBoxesUpToDim += 
+                    log2LocalSpatialBoxesPerDim[j];
             }
 
             static Array< Array<R,d>,Power<q,d>::value > xPoints;
@@ -79,6 +82,8 @@ namespace BFIO
                     B[j] = (k>>log2LocalFreqBoxesUpToDim) &
                            ((1u<<log2LocalFreqBoxesPerDim[j])-1);
                     p0B[j] = mySpatialBoxOffsets[j] + B[j]*wB + wB/2;
+
+                    log2LocalFreqBoxesUpToDim += log2LocalFreqBoxesPerDim[j];
                 }
 
                 static Array< Array<R,d>,Power<q,d>::value > pPoints;
