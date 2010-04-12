@@ -185,7 +185,7 @@ namespace BFIO
         {
             cout << "Starting algorithm." << endl;
         }
-        for( unsigned l=1; l<L; ++l )
+        for( unsigned l=1; l<=L; ++l )
         {
             if( l == L/2 )
             {
