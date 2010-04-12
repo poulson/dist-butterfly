@@ -481,8 +481,42 @@ namespace BFIO
 
         // Construct Low-Rank Potentials (LRPs) from weights
         {
-            myLRPs.resize( 1<<(d*L-s) );
+            const R wA = static_cast<R>(1)/static_cast<R>(N);
+
             // Fill in the LRPs
+            myLRPs.resize( 1<<(d*L-s) );
+            for( unsigned i=0; i<myLRPs.size(); ++i )
+            {
+                myLRPs[i].N = N;
+
+                // Compute the coordinates and center of this spatial box
+                Array<unsigned,d> A;
+                Array<unsigned,d> x0A;
+                for( unsigned j=0; j<d; ++j )
+                {
+                    static unsigned log2LocalSpatialBoxesUpToDim = 0;
+                    // A[j] = (i/localSpatialBoxesUpToDim) % 
+                    //        localSpatialBoxesPerDim[j]
+                    A[j] = (i>>log2LocalSpatialBoxesUpToDim) &
+                           ((1<<log2LocalSpatialBoxesPerDim[j])-1);
+                    x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
+
+                    log2LocalSpatialBoxesUpToDim +=
+                        log2LocalSpatialBoxesPerDim[j];
+                }
+
+                // Fill in the spatial center of the box
+                for( unsigned j=0; j<d; ++j )
+                    myLRPs[i].x0[j] = x0A[j];
+    
+                // Fill in the grid points of the box
+                for( unsigned t=0; t<Power<q,d>::value; ++t )             
+                    for( unsigned j=0; j<d; ++j )    
+                        myLRPs[i].points[t][j] = x0A[j] + wA*chebyGrid[t][j];
+
+                // Fill in the weights for the grid points
+                myLRPs[i].weights = weights[i];
+            }
         }
     }
 }
