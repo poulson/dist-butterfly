@@ -53,8 +53,11 @@ namespace BFIO
     {
         unsigned N;
         Array<R,d> x0;
-        Array< Array<R,d>,Power<q,d>::value > points;
-        Array< complex<R>,Power<q,d>::value > weights;
+        vector< Array<R,d> > points;
+        vector< complex<R> > weights;
+
+        LRP() : points( Power<q,d>::value ), weights( Power<q,d>::value )
+        { }
         
         complex<R> operator()( const Array<R,d>& x );
     };

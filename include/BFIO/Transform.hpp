@@ -146,7 +146,7 @@ namespace BFIO
             cout << MPI_Wtime()-startTime << " seconds." << endl;
             cout << "Initializing Chebyshev grid...";
         }
-        Array< Array<R,d>,Power<q,d>::value > chebyGrid;
+        vector< Array<R,d> > chebyGrid( Power<q,d>::value );
         for( unsigned t=0; t<Power<q,d>::value; ++t )
         {
             unsigned qToThej = q;
@@ -167,7 +167,8 @@ namespace BFIO
         // smooth component of the kernel.
         if( rank == 0 )
             cout << "Initializing weights...";
-        vector< Array<C,Power<q,d>::value> > weights(1<<log2LocalFreqBoxes);
+        vector< vector<C> > weights
+        ( 1<<log2LocalFreqBoxes, vector<C>(Power<q,d>::value) );
         InitializeWeights<Psi,R,d,q>
         ( N, mySources, chebyNodes, myFreqBoxWidths, myFreqBox,
           log2LocalFreqBoxes, log2FreqBoxesPerDim, weights      );
@@ -219,7 +220,7 @@ namespace BFIO
                 // distribute the data cyclically in the _reverse_ order over 
                 // the d dimensions, then the ReduceScatter will not require 
                 // any packing or unpacking.
-                vector< Array<C,Power<q,d>::value> > oldWeights = weights;
+                vector< vector<C> > oldWeights = weights;
                 for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
                 {
                     // Compute the coordinates and center of this spatial box
@@ -375,8 +376,9 @@ namespace BFIO
                 // distribute the data cyclically in the _reverse_ order over 
                 // the d dimensions, then the ReduceScatter will not require 
                 // any packing or unpacking.
-                vector< Array<C,Power<q,d>::value> > partialWeights
-                (1u<<(log2Procs+log2LocalFreqBoxes+log2LocalSpatialBoxes));
+                vector< vector<C> > partialWeights
+                ( 1u<<(log2Procs+log2LocalFreqBoxes+log2LocalSpatialBoxes),
+                  vector<C>( Power<q,d>::value )                           );
                 for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
                 {
                     // Compute the coordinates and center of this spatial box

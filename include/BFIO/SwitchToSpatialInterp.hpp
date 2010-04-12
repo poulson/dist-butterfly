@@ -36,9 +36,8 @@ namespace BFIO
       const Array<unsigned,d>& log2LocalSpatialBoxesPerDim,
       const Array<R,d>& myFreqBoxOffsets,
       const Array<R,d>& mySpatialBoxOffsets,
-      const Array< Array<R,d>,Power<q,d>::value >& chebyGrid,
-            vector< Array<complex<R>,Power<q,d>::value> > weights
-    )
+      const vector< Array<R,d> >& chebyGrid,
+            vector< vector< complex<R> > >& weights         )
     {
         typedef complex<R> C;
         const unsigned N = 1u<<L;
@@ -47,7 +46,7 @@ namespace BFIO
         const unsigned l = L/2;
         const R wA = static_cast<R>(1) / static_cast<R>(1u<<l);
         const R wB = static_cast<R>(1) / static_cast<R>(1u<<(L-l));
-        vector< Array<complex<R>,Power<q,d>::value> > oldWeights = weights;
+        vector< vector< complex<R> > > oldWeights = weights;
         for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
         {
             // Compute the coordinates and center of this spatial box
@@ -66,7 +65,7 @@ namespace BFIO
                     log2LocalSpatialBoxesPerDim[j];
             }
 
-            static Array< Array<R,d>,Power<q,d>::value > xPoints;
+            static vector< Array<R,d> > xPoints( Power<q,d>::value );
             for( unsigned t=0; t<Power<q,d>::value; ++t )
                 for( unsigned j=0; j<d; ++j )
                     xPoints[t][j] = x0A[j] + wA*chebyGrid[t][j];
@@ -86,7 +85,7 @@ namespace BFIO
                     log2LocalFreqBoxesUpToDim += log2LocalFreqBoxesPerDim[j];
                 }
 
-                static Array< Array<R,d>,Power<q,d>::value > pPoints;
+                static vector< Array<R,d> > pPoints( Power<q,d>::value );
                 for( unsigned t=0; t<Power<q,d>::value; ++t )
                     for( unsigned j=0; j<d; ++j )
                         pPoints[t][j] = p0B[j] + wB*chebyGrid[t][j];

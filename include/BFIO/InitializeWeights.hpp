@@ -62,7 +62,7 @@ namespace BFIO
             log2LocalFreqBoxesPerDim,
 
       // The resultant equivalent weights for a low-rank expansion in each box
-            vector< Array<complex<R>,Power<q,d>::value> >& 
+            vector< vector< complex<R> > >& 
             weights 
     )
     {

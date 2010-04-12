@@ -30,7 +30,7 @@ namespace BFIO
     SpatialWeightRecursion
     ( const unsigned N, 
       const Array<R,q>& chebyNodes,
-      const Array< Array<R,d>,Power<q,d>::value >& chebyGrid,
+      const vector< Array<R,d> >& chebyGrid,
       const Array<unsigned,d>& ARelativeToAp,
       const Array<R,d>& x0A,
       const Array<R,d>& x0Ap,
@@ -38,8 +38,8 @@ namespace BFIO
       const R wA,
       const R wB,
       const unsigned parentOffset,
-      const vector< Array<complex<R>,Power<q,d>::value> >& oldWeights,
-            Array<complex<R>,Power<q,d>::value>& weights              )
+      const vector< vector< complex<R> > >& oldWeights,
+            vector< complex<R> >& weights              )
     {
         typedef complex<R> C;
 
