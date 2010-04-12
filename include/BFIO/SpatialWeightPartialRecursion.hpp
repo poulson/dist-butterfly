@@ -16,8 +16,8 @@
    You should have received a copy of the GNU Lesser General Public License
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_FREQ_WEIGHT_PARTIAL_RECURSION_HPP
-#define BFIO_FREQ_WEIGHT_PARTIAL_RECURSION_HPP 1
+#ifndef BFIO_SPATIAL_WEIGHT_RECURSION_HPP
+#define BFIO_SPATIAL_WEIGHT_RECURSION_HPP 1
 
 #include "BFIO/Lagrange.hpp"
 
@@ -27,14 +27,17 @@ namespace BFIO
 
     template<typename Psi,typename R,unsigned d,unsigned q>
     inline void
-    FreqWeightPartialRecursion
+    SpatialWeightRecursion
     ( const unsigned log2Procs,
       const unsigned myTeamRank,
       const unsigned N, 
       const Array<R,q>& chebyNodes,
       const Array< Array<R,d>,Power<q,d>::value >& chebyGrid,
+      const unsigned k,
       const Array<R,d>& x0A,
+      const Array<R,d>& x0Ap,
       const Array<R,d>& p0B,
+      const R wA,
       const R wB,
       const unsigned parentOffset,
       const vector< Array<complex<R>,Power<q,d>::value> >& oldWeights,
@@ -44,44 +47,56 @@ namespace BFIO
 
         for( unsigned t=0; t<Power<q,d>::value-1; ++t )
         {
+            // Compute xt(A)
+            Array<R,d> xtA;
+            for( unsigned j=0; j<d; ++j )
+                xtA[j] = x0A[j] + wA*chebyGrid[t][j];
+
+            // Compute xt(A) mapped to the reference grid of Ap
+            Array<R,d> xtARefAp;
+            for( unsigned j=0; j<d; ++j )
+            {
+                xtARefAp[j] = ( (k>>j) & 1 ? 
+                                (2*chebyGrid[t][j]+1)/4 :
+                                (2*chebyGrid[t][j]-1)/4  );
+            }
+
             // Compute the unscaled weight
             weights[t] = 0;
             for( unsigned cLocal=0; cLocal<(1u<<(d-log2Procs)); ++cLocal )
             {
                 const unsigned c = cLocal + myTeamRank*(1u<<(d-log2Procs));
                 const unsigned parentKey = parentOffset + c;
+
+                // Compute p0(Bc)
+                Array<R,d> p0Bc;
+                for( unsigned j=0; j<d; ++j )
+                {
+                    p0Bc[j] = p0B[j] + wB*( (c>>j) & 1 ?
+                                            (2*chebyGrid[t][j]+1)/4 :
+                                            (2*chebyGrid[t][j]-1)/4  );
+                }
+
                 for( unsigned tp=0; tp<Power<q,d>::value-1; ++tp )        
                 {
-                    // Map p_t'(Bc) to the reference domain of B
-                    Array<R,d> ptpBcRefB;
+                    // Compute xtp(Ap)
+                    Array<R,d> xtpAp;
                     for( unsigned j=0; j<d; ++j )
-                    {
-                        ptpBcRefB[j] = ( (c>>j) & 1 ? 
-                                         (2*chebyGrid[tp][j]+1)/4 :
-                                         (2*chebyGrid[tp][j]-1)/4  );
-                    }
+                        xtpAp[j] = x0Ap[j] + (wA*2)*chebyGrid[tp][j];
 
-                    // Scale and translate p_t'(Bc) on ref of B to p_t'
-                    Array<R,d> ptp;
-                    for( unsigned j=0; j<d; ++j )
-                        ptp[j] = p0B[j] + wB*ptpBcRefB[j];
-
-                    const R alpha = TwoPi*N*Psi::Eval(x0A,ptp);
-                    weights[t] += Lagrange<R,d,q>( t, ptpBcRefB, chebyNodes ) *
+                    const R alpha = -TwoPi*N*Psi::Eval(xtpAp,p0Bc);
+                    weights[t] += Lagrange<R,d,q>( tp, xtARefAp, chebyNodes ) *
                                   C( cos(alpha), sin(alpha) ) * 
                                   oldWeights[parentKey][tp];
                 }
+                
+                // Scale the weight
+                const R alpha = TwoPi*N*Psi::Eval(xtA,p0Bc);
+                weights[t] *= C( cos(alpha), sin(alpha) );
             }
-
-            // Scale the weight
-            Array<R,d> ptB;
-            for( unsigned j=0; j<d; ++j )
-                ptB[j] = p0B[j] + wB*chebyGrid[t][j];
-            const R alpha = -TwoPi*N*Psi::Eval(x0A,ptB);
-            weights[t] *= C( cos(alpha), sin(alpha) );
         }
     }
 }
 
-#endif /* BFIO_FREQ_WEIGHT_PARTIAL_RECURSION_HPP */
+#endif /* BFIO_SPATIAL_WEIGHT_RECURSION_HPP */
 

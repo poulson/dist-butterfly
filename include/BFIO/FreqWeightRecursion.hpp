@@ -31,8 +31,8 @@ namespace BFIO
     ( const unsigned N, 
       const Array<R,q>& chebyNodes,
       const Array< Array<R,d>,Power<q,d>::value >& chebyGrid,
-      const Array<R,d>& x0,
-      const Array<R,d>& p0,
+      const Array<R,d>& x0A,
+      const Array<R,d>& p0B,
       const R wB,
       const unsigned parentOffset,
       const vector< Array<complex<R>,Power<q,d>::value> >& oldWeights,
@@ -49,32 +49,32 @@ namespace BFIO
                 const unsigned parentKey = parentOffset + c;
                 for( unsigned tp=0; tp<Power<q,d>::value-1; ++tp )        
                 {
-                    // Map the tp'th reference point to its parent reference
-                    Array<R,d> pRef;
+                    // Map p_t'(Bc) to the reference domain of B
+                    Array<R,d> ptpBcRefB;
                     for( unsigned j=0; j<d; ++j )
                     {
-                        pRef[j] = ( (c>>j) & 1 ? 
-                                    (2*chebyGrid[tp][j]+1)/4 :
-                                    (2*chebyGrid[tp][j]-1)/4  );
+                        ptpBcRefB[j] = ( (c>>j) & 1 ? 
+                                         (2*chebyGrid[tp][j]+1)/4 :
+                                         (2*chebyGrid[tp][j]-1)/4  );
                     }
 
-                    // Scale and translate the the physical position
-                    Array<R,d> p;
+                    // Scale and translate p_t'(Bc) on ref of B to p_t'
+                    Array<R,d> ptp;
                     for( unsigned j=0; j<d; ++j )
-                        p[j] = p0[j] + wB*pRef[j];
+                        ptp[j] = p0B[j] + wB*ptpBcRefB[j];
 
-                    const R alpha = TwoPi*N*Psi::Eval(x0,p);
-                    weights[t] += Lagrange<R,d,q>( t, pRef, chebyNodes ) *
+                    const R alpha = TwoPi*N*Psi::Eval(x0A,ptp);
+                    weights[t] += Lagrange<R,d,q>( t, ptpBcRefB, chebyNodes ) *
                                   C( cos(alpha), sin(alpha) ) * 
                                   oldWeights[parentKey][tp];
                 }
             }
 
             // Scale the weight
-            Array<R,d> p;
+            Array<R,d> ptB;
             for( unsigned j=0; j<d; ++j )
-                p[j] = p0[j] + wB*chebyGrid[t][j];
-            const R alpha = -TwoPi*N*Psi::Eval(x0,p);
+                ptB[j] = p0B[j] + wB*chebyGrid[t][j];
+            const R alpha = -TwoPi*N*Psi::Eval(x0A,ptB);
             weights[t] *= C( cos(alpha), sin(alpha) );
         }
     }
