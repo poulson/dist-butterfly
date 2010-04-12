@@ -38,11 +38,11 @@ namespace BFIO
       const R wB,
       const unsigned parentOffset,
       const vector< Array<complex<R>,Power<q,d>::value> >& oldWeights,
-            Array<complex<R>,Power<q,d>::value> weights               )
+            Array<complex<R>,Power<q,d>::value>& weights              )
     {
         typedef complex<R> C;
 
-        for( unsigned t=0; t<Power<q,d>::value-1; ++t )
+        for( unsigned t=0; t<Power<q,d>::value; ++t )
         {
             // Compute the unscaled weight
             weights[t] = 0;
@@ -50,7 +50,7 @@ namespace BFIO
             {
                 const unsigned c = cLocal + myTeamRank*(1u<<(d-log2Procs));
                 const unsigned parentKey = parentOffset + c;
-                for( unsigned tp=0; tp<Power<q,d>::value-1; ++tp )        
+                for( unsigned tp=0; tp<Power<q,d>::value; ++tp )        
                 {
                     // Map p_t'(Bc) to the reference domain of B
                     Array<R,d> ptpBcRefB;

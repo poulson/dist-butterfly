@@ -33,19 +33,19 @@ namespace BFIO
       const unsigned N, 
       const Array<R,q>& chebyNodes,
       const Array< Array<R,d>,Power<q,d>::value >& chebyGrid,
-      const unsigned k,
+      const Array<unsigned,d>& ARelativeToAp,
       const Array<R,d>& x0A,
       const Array<R,d>& x0Ap,
       const Array<R,d>& p0B,
       const R wA,
       const R wB,
       const unsigned parentOffset,
-      const vector< Array<complex<R>,Power<q,d>::value> >& oldWeights,
-            Array<complex<R>,Power<q,d>::value> weights               )
+      const vector< Array<complex<R>,Power<q,d>::value> >& weights,
+            Array<complex<R>,Power<q,d>::value>& partialWeights    )
     {
         typedef complex<R> C;
 
-        for( unsigned t=0; t<Power<q,d>::value-1; ++t )
+        for( unsigned t=0; t<Power<q,d>::value; ++t )
         {
             // Compute xt(A)
             Array<R,d> xtA;
@@ -56,13 +56,13 @@ namespace BFIO
             Array<R,d> xtARefAp;
             for( unsigned j=0; j<d; ++j )
             {
-                xtARefAp[j] = ( (k>>j) & 1 ? 
+                xtARefAp[j] = ( ARelativeToAp[j] ? 
                                 (2*chebyGrid[t][j]+1)/4 :
                                 (2*chebyGrid[t][j]-1)/4  );
             }
 
             // Compute the unscaled weight
-            weights[t] = 0;
+            partialWeights[t] = 0;
             for( unsigned cLocal=0; cLocal<(1u<<(d-log2Procs)); ++cLocal )
             {
                 const unsigned c = cLocal + myTeamRank*(1u<<(d-log2Procs));
@@ -77,7 +77,7 @@ namespace BFIO
                                             (2*chebyGrid[t][j]-1)/4  );
                 }
 
-                for( unsigned tp=0; tp<Power<q,d>::value-1; ++tp )        
+                for( unsigned tp=0; tp<Power<q,d>::value; ++tp )        
                 {
                     // Compute xtp(Ap)
                     Array<R,d> xtpAp;
@@ -85,14 +85,14 @@ namespace BFIO
                         xtpAp[j] = x0Ap[j] + (wA*2)*chebyGrid[tp][j];
 
                     const R alpha = -TwoPi*N*Psi::Eval(xtpAp,p0Bc);
-                    weights[t] += Lagrange<R,d,q>( tp, xtARefAp, chebyNodes ) *
-                                  C( cos(alpha), sin(alpha) ) * 
-                                  oldWeights[parentKey][tp];
+                    partialWeights[t] += 
+                        Lagrange<R,d,q>( tp, xtARefAp, chebyNodes ) *
+                        C( cos(alpha), sin(alpha) ) * weights[parentKey][tp];
                 }
                 
                 // Scale the weight
                 const R alpha = TwoPi*N*Psi::Eval(xtA,p0Bc);
-                weights[t] *= C( cos(alpha), sin(alpha) );
+                partialWeights[t] *= C( cos(alpha), sin(alpha) );
             }
         }
     }

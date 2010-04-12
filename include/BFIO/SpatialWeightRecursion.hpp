@@ -31,7 +31,7 @@ namespace BFIO
     ( const unsigned N, 
       const Array<R,q>& chebyNodes,
       const Array< Array<R,d>,Power<q,d>::value >& chebyGrid,
-      const unsigned k,
+      const Array<unsigned,d>& ARelativeToAp,
       const Array<R,d>& x0A,
       const Array<R,d>& x0Ap,
       const Array<R,d>& p0B,
@@ -39,11 +39,11 @@ namespace BFIO
       const R wB,
       const unsigned parentOffset,
       const vector< Array<complex<R>,Power<q,d>::value> >& oldWeights,
-            Array<complex<R>,Power<q,d>::value> weights               )
+            Array<complex<R>,Power<q,d>::value>& weights              )
     {
         typedef complex<R> C;
 
-        for( unsigned t=0; t<Power<q,d>::value-1; ++t )
+        for( unsigned t=0; t<Power<q,d>::value; ++t )
         {
             // Compute xt(A)
             Array<R,d> xtA;
@@ -54,7 +54,7 @@ namespace BFIO
             Array<R,d> xtARefAp;
             for( unsigned j=0; j<d; ++j )
             {
-                xtARefAp[j] = ( (k>>j) & 1 ? 
+                xtARefAp[j] = ( ARelativeToAp[j] ? 
                                 (2*chebyGrid[t][j]+1)/4 :
                                 (2*chebyGrid[t][j]-1)/4  );
             }
@@ -74,7 +74,7 @@ namespace BFIO
                                             (2*chebyGrid[t][j]-1)/4  );
                 }
 
-                for( unsigned tp=0; tp<Power<q,d>::value-1; ++tp )        
+                for( unsigned tp=0; tp<Power<q,d>::value; ++tp )        
                 {
                     // Compute xtp(Ap)
                     Array<R,d> xtpAp;
