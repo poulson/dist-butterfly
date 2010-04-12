@@ -78,7 +78,6 @@ namespace BFIO
         // Determine the number of boxes in each dimension of the frequency
         // domain by applying the partitions cyclically over the d dimensions.
         // We can simultaneously compute the indices of our box.
-        unsigned numSpaceCuts = 0;
         Array<unsigned,d> myFreqBox;
         Array<unsigned,d> mySpatialBox;
         Array<unsigned,d> log2FreqBoxesPerDim;
@@ -308,14 +307,15 @@ namespace BFIO
                 }
 
                 // There are currently 2^(d*(L-l)) leaves. The frequency 
-                // partitioning is implied by reading the rank bits right-to-
-                // left, but the spatial partitioning is implied by reading the
-                // rank bits left-to-right starting from bit s-1. The spatial 
-                // partitioning among cores begins at the precise moment when 
-                // trees begin mergining in the frequency domain: the lowest 
-                // l such that s > d*(L-l), namely, l = L - floor( s/d ). The 
-                // first merge is the only case where the team could potentially
-                // differ from 2^d processes.
+                // partitioning is implied by reading the rank bits left-to-
+                // right starting with bit s-1, but the spatial partitioning 
+                // is implied by reading the rank bits right-to-left. The 
+                // spatial partitioning among cores begins at the precise moment
+                // when trees begin mergining in the frequency domain: the 
+                // lowest l such that s > d*(L-l), namely, 
+                //                    l = L - floor( s/d ).
+                // The first merge is the only case where the team could 
+                // potentially differ from 2^d processes.
                 //
                 // We notice that our consistency in the cyclic bisection of 
                 // the frequency domain means that if log2Procs=a, then 
@@ -325,14 +325,15 @@ namespace BFIO
                 unsigned log2Procs = ( l == L-(s/d) ? s-d*(L-l) : d ); 
                 
                 // Set up our new communicator
+                static unsigned numSpaceCuts = 0;
                 MPI_Group group;
                 MPI_Comm_group( comm, &group );
                 const int myTeamRank = (rank>>numSpaceCuts) & 
                                        ((1<<log2Procs)-1);
-                const int startRank = rank-myTeamRank;
+                const int startRank = rank-(myTeamRank<<numSpaceCuts);
                 vector<int> ranks( 1u<<log2Procs );
                 for( unsigned j=0; j<(1u<<log2Procs); ++j )
-                    ranks[j] = startRank+j;
+                    ranks[j] = startRank+(j<<numSpaceCuts);
                 MPI_Group teamGroup;
                 MPI_Group_incl( group, 1<<log2Procs, &ranks[0], &teamGroup );
                 MPI_Comm  teamComm;
@@ -374,8 +375,8 @@ namespace BFIO
                 // distribute the data cyclically in the _reverse_ order over 
                 // the d dimensions, then the ReduceScatter will not require 
                 // any packing or unpacking.
-                static vector< Array<C,Power<q,d>::value> > 
-                      partialWeights(1u<<(d+log2LocalFreqBoxes));
+                vector< Array<C,Power<q,d>::value> > partialWeights
+                (1u<<(log2Procs+log2LocalFreqBoxes+log2LocalSpatialBoxes));
                 for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
                 {
                     // Compute the coordinates and center of this spatial box
@@ -469,6 +470,7 @@ namespace BFIO
                 // Tear down the new communicator
                 MPI_Comm_free( &teamComm );
                 MPI_Group_free( &teamGroup );
+                MPI_Group_free( &group );
             }
         }
         if( rank == 0 )
