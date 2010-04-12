@@ -16,8 +16,8 @@
    You should have received a copy of the GNU Lesser General Public License
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_SPATIAL_WEIGHT_RECURSION_HPP
-#define BFIO_SPATIAL_WEIGHT_RECURSION_HPP 1
+#ifndef BFIO_SPATIAL_WEIGHT_PARTIAL_RECURSION_HPP
+#define BFIO_SPATIAL_WEIGHT_PARTIAL_RECURSION_HPP 1
 
 #include "BFIO/Lagrange.hpp"
 
@@ -27,7 +27,7 @@ namespace BFIO
 
     template<typename Psi,typename R,unsigned d,unsigned q>
     inline void
-    SpatialWeightRecursion
+    SpatialWeightPartialRecursion
     ( const unsigned log2Procs,
       const unsigned myTeamRank,
       const unsigned N, 
@@ -98,5 +98,5 @@ namespace BFIO
     }
 }
 
-#endif /* BFIO_SPATIAL_WEIGHT_RECURSION_HPP */
+#endif /* BFIO_SPATIAL_WEIGHT_PARTIAL_RECURSION_HPP */
 
