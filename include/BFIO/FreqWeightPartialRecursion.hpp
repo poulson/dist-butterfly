@@ -25,7 +25,7 @@ namespace BFIO
 {
     using namespace std;
 
-    template<typename Psi,typename R,unsigned d,unsigned q>
+    template<typename Phi,typename R,unsigned d,unsigned q>
     inline void
     FreqWeightPartialRecursion
     ( const unsigned log2Procs,
@@ -66,7 +66,7 @@ namespace BFIO
                     for( unsigned j=0; j<d; ++j )
                         ptp[j] = p0B[j] + wB*ptpBcRefB[j];
 
-                    const R alpha = TwoPi*N*Psi::Eval(x0A,ptp);
+                    const R alpha = TwoPi*N*Phi::Eval(x0A,ptp);
                     weights[t] += lagrangeFreqLookup[t][c][tp] * 
                                   C( cos(alpha), sin(alpha) ) * 
                                   oldWeights[parentKey][tp];
@@ -77,7 +77,7 @@ namespace BFIO
             Array<R,d> ptB;
             for( unsigned j=0; j<d; ++j )
                 ptB[j] = p0B[j] + wB*chebyGrid[t][j];
-            const R alpha = -TwoPi*N*Psi::Eval(x0A,ptB);
+            const R alpha = -TwoPi*N*Phi::Eval(x0A,ptB);
             weights[t] *= C( cos(alpha), sin(alpha) );
         }
     }

@@ -25,7 +25,7 @@ namespace BFIO
 {
     using namespace std;
 
-    template<typename Psi,typename R,unsigned d,unsigned q>
+    template<typename Phi,typename R,unsigned d,unsigned q>
     inline void
     SpatialWeightRecursion
     ( const unsigned N, 
@@ -72,14 +72,14 @@ namespace BFIO
                     for( unsigned j=0; j<d; ++j )
                         xtpAp[j] = x0Ap[j] + (wA*2)*chebyGrid[tp][j];
 
-                    const R alpha = -TwoPi*N*Psi::Eval(xtpAp,p0Bc);
+                    const R alpha = -TwoPi*N*Phi::Eval(xtpAp,p0Bc);
                     weights[t] += lagrangeSpatialLookup[t][ARelativeToAp][tp] *
                                   C( cos(alpha), sin(alpha) ) * 
                                   oldWeights[parentKey][tp];
                 }
                 
                 // Scale the weight
-                const R alpha = TwoPi*N*Psi::Eval(xtA,p0Bc);
+                const R alpha = TwoPi*N*Phi::Eval(xtA,p0Bc);
                 weights[t] *= C( cos(alpha), sin(alpha) );
             }
         }

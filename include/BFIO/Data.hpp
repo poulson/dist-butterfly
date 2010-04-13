@@ -38,7 +38,7 @@ namespace BFIO
         T operator[]( unsigned j ) const { return x[j]; }
     };
 
-    // A d-dimensional coordinate in the polar frequency domain and the 
+    // A d-dimensional coordinate in the frequency domain and the 
     // magnitude of the source located there
     template<typename R,unsigned d>
     struct Source 
@@ -48,7 +48,7 @@ namespace BFIO
     };
 
     // Low-rank potential
-    template<typename Psi,typename R,unsigned d,unsigned q>
+    template<typename Phi,typename R,unsigned d,unsigned q>
     struct LRP
     {
         unsigned N;
@@ -66,16 +66,16 @@ namespace BFIO
 // Inline implementations
 namespace BFIO
 {
-    template<typename Psi,typename R,unsigned d,unsigned q>
+    template<typename Phi,typename R,unsigned d,unsigned q>
     inline complex<R>
-    LRP<Psi,R,d,q>::operator()( const Array<R,d>& x )
+    LRP<Phi,R,d,q>::operator()( const Array<R,d>& x )
     {
         typedef complex<R> C;
 
         C value(0.,0.);
         for( unsigned j=0; j<Power<q,d>::value; ++j )
         {
-            const R alpha = TwoPi*N*Psi::Eval(x,points[j]);
+            const R alpha = TwoPi*N*Phi::Eval(x,points[j]);
             value += C( cos(alpha), sin(alpha) ) * weights[j];
         }
         return value;

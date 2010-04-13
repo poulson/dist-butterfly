@@ -36,17 +36,17 @@ namespace BFIO
     using namespace std;
 
     // Applies the butterfly algorithm for the Fourier integral operator 
-    // defined by Psi. This allows one to call the function
-    // with their own functor, Psi, with potentially no performance penalty. 
+    // defined by the phase function Phi. This allows one to call the function
+    // with their own functor, Phi, with potentially no performance penalty. 
     // R is the datatype for representing a Real and d is the spatial and 
     // frequency dimension. q is the number of points in each dimension of the 
     // Chebyshev tensor-product grid (q^d points total).
-    template<typename Psi,typename R,unsigned d,unsigned q>
+    template<typename Phi,typename R,unsigned d,unsigned q>
     void
     Transform
     ( const unsigned N, 
       const vector< Source<R,d> >& mySources,
-            vector< LRP<Psi,R,d,q> >& myLRPs,
+            vector< LRP<Phi,R,d,q> >& myLRPs,
             MPI_Comm comm                    )
     {
         typedef complex<R> C;
@@ -225,7 +225,7 @@ namespace BFIO
             cout << "Initializing weights...";
         vector< vector<C> > weights
         ( 1<<log2LocalFreqBoxes, vector<C>(Power<q,d>::value) );
-        InitializeWeights<Psi,R,d,q>
+        InitializeWeights<Phi,R,d,q>
         ( N, mySources, chebyNodes, myFreqBoxWidths, myFreqBox,
           log2LocalFreqBoxes, log2FreqBoxesPerDim, weights      );
         if( rank == 0 )
@@ -241,7 +241,7 @@ namespace BFIO
         {
             if( l == L/2 )
             {
-                SwitchToSpatialInterp<Psi,R,d,q>
+                SwitchToSpatialInterp<Phi,R,d,q>
                 ( L, s, log2LocalFreqBoxes, log2LocalSpatialBoxes,
                   log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
                   myFreqBoxOffsets, mySpatialBoxOffsets, chebyGrid, weights );
@@ -330,7 +330,7 @@ namespace BFIO
 #endif
                         if( l < L/2 )
                         {
-                            FreqWeightRecursion<Psi,R,d,q>
+                            FreqWeightRecursion<Phi,R,d,q>
                             ( N, chebyGrid, lagrangeFreqLookup,
                               x0A, p0B, wB,
                               parentOffset, oldWeights, weights[key] );
@@ -348,7 +348,7 @@ namespace BFIO
                                 x0Ap[j] = (globalA[j]/2)*2*wA + wA;
                                 ARelativeToAp |= (globalA[j]&1)<<j;
                             }
-                            SpatialWeightRecursion<Psi,R,d,q>
+                            SpatialWeightRecursion<Phi,R,d,q>
                             ( N, chebyGrid, lagrangeSpatialLookup,
                               ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                               parentOffset, oldWeights, weights[key] );
@@ -491,7 +491,7 @@ namespace BFIO
 #endif
                         if( l < L/2 )
                         {
-                            FreqWeightPartialRecursion<Psi,R,d,q>
+                            FreqWeightPartialRecursion<Phi,R,d,q>
                             ( log2Procs, myTeamRank, 
                               N, chebyGrid, lagrangeFreqLookup,
                               x0A, p0B, wB,
@@ -510,7 +510,7 @@ namespace BFIO
                                 x0Ap[j] = (globalA[j]/2)*2*wA + wA;
                                 ARelativeToAp |= (globalA[j]&1)<<j;
                             }
-                            SpatialWeightPartialRecursion<Psi,R,d,q>
+                            SpatialWeightPartialRecursion<Phi,R,d,q>
                             ( log2Procs, myTeamRank,
                               N, chebyGrid, lagrangeSpatialLookup,
                               ARelativeToAp, x0A, x0Ap, p0B, wA, wB,

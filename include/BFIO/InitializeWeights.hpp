@@ -25,11 +25,11 @@ namespace BFIO
 {
     using namespace std;
 
-    // Psi: Phase function in polar frequency coordinates
+    // Phi: Phase function 
     // R:   type for real variables (e.g., float or double)
     // d:   dimension of problem
     // q:   number of Chebyshev gridpoints per dimension
-    template<typename Psi,typename R,unsigned d,unsigned q>
+    template<typename Phi,typename R,unsigned d,unsigned q>
     void
     InitializeWeights
     ( 
@@ -37,7 +37,7 @@ namespace BFIO
       const unsigned 
             N,
 
-      // The sources in the polar frequency domain
+      // The sources in the frequency domain
       const vector< Source<R,d> >& 
             mySources,
 
@@ -138,14 +138,14 @@ namespace BFIO
             for( unsigned j=0; j<d; ++j )
                 pRef[j] = (p[j]-p0[j])/wB;
             const C f = mySources[i].magnitude;
-            const R alpha = TwoPi*N*Psi::Eval(x0,p);
+            const R alpha = TwoPi*N*Phi::Eval(x0,p);
             const C beta = C( cos(alpha), sin(alpha) ) * f;
             for( unsigned t=0; t<Power<q,d>::value; ++t )
                 weights[i][t] += beta*Lagrange<R,d,q>( t, pRef, chebyNodes );
         }
 
         // Loop over all of the boxes to compute the {p_t^B} and prefactors
-        // for each delta weight {delta_t^AB}, exp(-2 Pi i N Psi(x0,p_t^B) ).
+        // for each delta weight {delta_t^AB}, exp(-2 Pi i N Phi(x0,p_t^B) ).
         // Notice that if we are sharing a box with one or more processes, then
         // our local boxes, say B_loc, are subsets of a B, but we still need 
         // to consider our contribution to the weights corresponding to 
@@ -181,7 +181,7 @@ namespace BFIO
                     qToThej *= q;
                 }
 
-                const R alpha = -TwoPi*N*Psi::Eval(x0,pt);
+                const R alpha = -TwoPi*N*Phi::Eval(x0,pt);
                 weights[k][t] *= C( cos(alpha), sin(alpha) );
             }
         }

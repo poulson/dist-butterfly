@@ -25,7 +25,7 @@ namespace BFIO
 {
     using namespace std;
 
-    template<typename Psi,typename R,unsigned d,unsigned q>
+    template<typename Phi,typename R,unsigned d,unsigned q>
     void
     SwitchToSpatialInterp
     ( const unsigned L, 
@@ -96,7 +96,7 @@ namespace BFIO
                     weights[key][t] = 0;
                     for( unsigned tp=0; tp<Power<q,d>::value; ++tp )
                     {
-                        R alpha = TwoPi*N*Psi::Eval(xPoints[t],pPoints[s]);
+                        R alpha = TwoPi*N*Phi::Eval(xPoints[t],pPoints[s]);
                         weights[key][t] += C( cos(alpha), sin(alpha) ) *
                                            oldWeights[key][tp];
                     }
