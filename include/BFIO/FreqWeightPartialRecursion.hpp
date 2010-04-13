@@ -31,8 +31,8 @@ namespace BFIO
     ( const unsigned log2Procs,
       const unsigned myTeamRank,
       const unsigned N, 
-      const Array<R,q>& chebyNodes,
       const vector< Array<R,d> >& chebyGrid,
+      const vector< vector< vector<R> > >& lagrangeFreqLookup,
       const Array<R,d>& x0A,
       const Array<R,d>& p0B,
       const R wB,
@@ -67,7 +67,7 @@ namespace BFIO
                         ptp[j] = p0B[j] + wB*ptpBcRefB[j];
 
                     const R alpha = TwoPi*N*Psi::Eval(x0A,ptp);
-                    weights[t] += Lagrange<R,d,q>( t, ptpBcRefB, chebyNodes ) *
+                    weights[t] += lagrangeFreqLookup[t][c][tp] * 
                                   C( cos(alpha), sin(alpha) ) * 
                                   oldWeights[parentKey][tp];
                 }

@@ -29,9 +29,9 @@ namespace BFIO
     inline void
     SpatialWeightRecursion
     ( const unsigned N, 
-      const Array<R,q>& chebyNodes,
       const vector< Array<R,d> >& chebyGrid,
-      const Array<unsigned,d>& ARelativeToAp,
+      const vector< vector< vector<R> > >& lagrangeSpatialLookup,
+      const unsigned ARelativeToAp,
       const Array<R,d>& x0A,
       const Array<R,d>& x0Ap,
       const Array<R,d>& p0B,
@@ -49,15 +49,6 @@ namespace BFIO
             Array<R,d> xtA;
             for( unsigned j=0; j<d; ++j )
                 xtA[j] = x0A[j] + wA*chebyGrid[t][j];
-
-            // Compute xt(A) mapped to the reference grid of Ap
-            Array<R,d> xtARefAp;
-            for( unsigned j=0; j<d; ++j )
-            {
-                xtARefAp[j] = ( ARelativeToAp[j] ? 
-                                (2*chebyGrid[t][j]+1)/4 :
-                                (2*chebyGrid[t][j]-1)/4  );
-            }
 
             // Compute the unscaled weight
             weights[t] = 0;
@@ -82,7 +73,7 @@ namespace BFIO
                         xtpAp[j] = x0Ap[j] + (wA*2)*chebyGrid[tp][j];
 
                     const R alpha = -TwoPi*N*Psi::Eval(xtpAp,p0Bc);
-                    weights[t] += Lagrange<R,d,q>( tp, xtARefAp, chebyNodes ) *
+                    weights[t] += lagrangeSpatialLookup[t][ARelativeToAp][tp] *
                                   C( cos(alpha), sin(alpha) ) * 
                                   oldWeights[parentKey][tp];
                 }

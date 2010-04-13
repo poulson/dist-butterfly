@@ -163,6 +163,62 @@ namespace BFIO
             cout << MPI_Wtime()-startTime << " seconds." << endl;
         }
 
+        // Compute the evaluation of each of the q^d Lagrangian polynomials
+        // over the 2^d sub boxes' q^d points. This version is stored such that
+        // stride 1 access will be used during the frequency weight recursion
+        vector< vector< vector<R> > > lagrangeFreqLookup
+        ( Power<q,d>::value, 
+          vector< vector<R> >
+          ( (1<<d), vector<R>( Power<q,d>::value ) ) );
+        for( unsigned t=0; t<Power<q,d>::value; ++t )
+        {
+            for( unsigned c=0; c<(1u<<d); ++c )
+            {
+                for( unsigned tp=0; tp<Power<q,d>::value; ++tp )
+                {
+                    // Map p_t'(Bc) to the reference domain of its parent, B
+                    Array<R,d> ptpBcRefB;
+                    for( unsigned j=0; j<d; ++j )
+                    {
+                        ptpBcRefB[j] = ( (c>>j) & 1 ?
+                                         (2*chebyGrid[tp][j]+1)/4 :
+                                         (2*chebyGrid[tp][j]-1)/4  );
+                    }
+                    // Store the evaluation of L_t^B(p_t'(Bc))
+                    lagrangeFreqLookup[t][c][tp] = 
+                        Lagrange<R,d,q>( t, ptpBcRefB, chebyNodes );
+                }
+            }
+        }
+        
+        // Compute the evaluation of each of the q^d Lagrangian polynomials
+        // over the 2^d sub boxes' q^d points. This version is stored such that
+        // stride 1 access will be used during the spatial weight recursion
+        vector< vector< vector<R> > > lagrangeSpatialLookup
+        ( Power<q,d>::value,
+          vector< vector<R> >
+          ( (1<<d), vector<R>( Power<q,d>::value ) ) );
+        for( unsigned t=0; t<Power<q,d>::value; ++t )
+        {
+            for( unsigned k=0; k<(1u<<d); ++k )
+            {
+                // Map x_t(A) to the reference domain of its parent
+                Array<R,d> xtARefAp;
+                for( unsigned j=0; j<d; ++j )
+                {
+                    xtARefAp[j] = ( (k>>j) & 1 ?
+                                    (2*chebyGrid[t][j]+1)/4 :
+                                    (2*chebyGrid[t][j]-1)/4  );
+                }
+                for( unsigned tp=0; tp<Power<q,d>::value; ++tp )
+                {
+                    // Store the evalutation of L_t'^Ap(x_t(A))
+                    lagrangeSpatialLookup[t][k][tp] = 
+                        Lagrange<R,d,q>( tp, xtARefAp, chebyNodes );     
+                }
+            }
+        }
+
         // Initialize the weights using Lagrangian interpolation on the 
         // smooth component of the kernel.
         if( rank == 0 )
@@ -275,13 +331,14 @@ namespace BFIO
                         if( l < L/2 )
                         {
                             FreqWeightRecursion<Psi,R,d,q>
-                            ( N, chebyNodes, chebyGrid, x0A, p0B, wB,
+                            ( N, chebyGrid, lagrangeFreqLookup,
+                              x0A, p0B, wB,
                               parentOffset, oldWeights, weights[key] );
                         }
                         else
                         {
+                            unsigned ARelativeToAp = 0;
                             Array<unsigned,d> globalA;
-                            Array<unsigned,d> ARelativeToAp;
                             Array<R,d> x0Ap;
                             for( unsigned j=0; j<d; ++j )
                             {
@@ -289,10 +346,10 @@ namespace BFIO
                                     mySpatialBox[j]*
                                     (1u<<log2LocalSpatialBoxesPerDim[j]) + A[j];
                                 x0Ap[j] = (globalA[j]/2)*2*wA + wA;
-                                ARelativeToAp[j] = globalA[j] & 1;
+                                ARelativeToAp |= (globalA[j]&1)<<j;
                             }
                             SpatialWeightRecursion<Psi,R,d,q>
-                            ( N, chebyNodes, chebyGrid, 
+                            ( N, chebyGrid, lagrangeSpatialLookup,
                               ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                               parentOffset, oldWeights, weights[key] );
                         }
@@ -436,13 +493,14 @@ namespace BFIO
                         {
                             FreqWeightPartialRecursion<Psi,R,d,q>
                             ( log2Procs, myTeamRank, 
-                              N, chebyNodes, chebyGrid, x0A, p0B, wB,
-                              parentOffset, weights, partialWeights[key] );
+                              N, chebyGrid, lagrangeFreqLookup,
+                              x0A, p0B, wB,
+                              parentOffset, weights, partialWeights[key]   );
                         }
                         else
                         {
+                            unsigned ARelativeToAp = 0;
                             Array<unsigned,d> globalA;
-                            Array<unsigned,d> ARelativeToAp;
                             Array<R,d> x0Ap;
                             for( unsigned j=0; j<d; ++j )
                             {
@@ -450,11 +508,11 @@ namespace BFIO
                                     mySpatialBox[j]*
                                     (1u<<log2LocalSpatialBoxesPerDim[j]) + A[j];
                                 x0Ap[j] = (globalA[j]/2)*2*wA + wA;
-                                ARelativeToAp[j] = globalA[j] & 1;
+                                ARelativeToAp |= (globalA[j]&1)<<j;
                             }
                             SpatialWeightPartialRecursion<Psi,R,d,q>
                             ( log2Procs, myTeamRank,
-                              N, chebyNodes, chebyGrid,
+                              N, chebyGrid, lagrangeSpatialLookup,
                               ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                               parentOffset, weights, partialWeights[key] );
                         }
