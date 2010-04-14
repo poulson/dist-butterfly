@@ -139,6 +139,10 @@ namespace BFIO
         Array<R,q> chebyNodes;
         for( unsigned i=0; i<q; ++i )
             chebyNodes[i] = 0.5*cos(i*Pi/(q-1));
+        cout << "chebyNodes: ";
+        for( unsigned i=0; i<q; ++i )
+            cout << chebyNodes[i] << " ";
+        cout << endl;
 
         // Compute the Chebyshev grid over [-1/2,+1/2]^d
         if( rank == 0 )
@@ -567,6 +571,14 @@ namespace BFIO
         {
             cout << "Finished recursion." << endl;
             cout<<"  "<<MPI_Wtime()-startTime<<" seconds."<<endl;
+        }
+        for( unsigned r=0; r<weights.size(); ++r )
+        {
+            for( unsigned t=0; t<Power<q,d>::value; ++t )
+            {
+                cout << "weights[" << r << "][" << t << "]: " 
+                     << weights[r][t] << endl;
+            }
         }
 
         // Construct Low-Rank Potentials (LRPs) from weights

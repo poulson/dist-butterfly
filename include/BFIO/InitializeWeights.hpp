@@ -88,9 +88,6 @@ namespace BFIO
                 const R pj = p[j];
                 R leftBound = myFreqBoxWidths[j]*myFreqBox[j];
                 R rightBound = myFreqBoxWidths[j]*(myFreqBox[j]+1);
-                cout << "pj,leftBound,rightBound,log2Local: " << pj << "," 
-                     << leftBound << "," << rightBound << "," 
-                     << log2LocalFreqBoxesPerDim[j] << endl;
                 if( pj < leftBound || pj >= rightBound )
                 {
                     cerr << "Source " << i << " was at " << pj
@@ -151,7 +148,7 @@ namespace BFIO
             {
                 cout << "L" << t << "( " << pRef[0] << "," << pRef[1] << " )"
                      << Lagrange<R,d,q>( t, pRef, chebyNodes ) << endl;
-                weights[i][t] += beta*Lagrange<R,d,q>( t, pRef, chebyNodes );
+                weights[k][t] += beta*Lagrange<R,d,q>( t, pRef, chebyNodes );
             }
         }
 

@@ -38,7 +38,7 @@ struct Dot
 };
 
 #define d 2
-#define q 5
+#define q 2
 
 int
 main
@@ -91,9 +91,9 @@ main
                 cout << "Process " << i << ":" << endl;
                 for( unsigned k=0; k<myLRPs.size(); ++k )
                 {
-                    Array<double,d> x0 = myLRPs[i].x0;
+                    Array<double,d> x0 = myLRPs[k].x0;
                     cout << "  x0: " << x0[0] << "," << x0[1] << endl;
-                    complex<double> u = myLRPs[i]( x0 );
+                    complex<double> u = myLRPs[k]( x0 );
                     cout << "  u(x0): " << u << endl << endl;
                 }
             }
