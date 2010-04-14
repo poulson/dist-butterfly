@@ -88,6 +88,9 @@ namespace BFIO
                 const R pj = p[j];
                 R leftBound = myFreqBoxWidths[j]*myFreqBox[j];
                 R rightBound = myFreqBoxWidths[j]*(myFreqBox[j]+1);
+                cout << "pj,leftBound,rightBound,log2Local: " << pj << "," 
+                     << leftBound << "," << rightBound << "," 
+                     << log2LocalFreqBoxesPerDim[j] << endl;
                 if( pj < leftBound || pj >= rightBound )
                 {
                     cerr << "Source " << i << " was at " << pj
@@ -114,6 +117,7 @@ namespace BFIO
                         leftBound = middle;
                     }
                 }
+                cout << "B[j]: " << B[j] << endl;
             }
 
             // Translate the local integer coordinates into the freq. center
@@ -124,9 +128,9 @@ namespace BFIO
 
             // Flatten the integer coordinates of B_loc into a single index
             unsigned k = 0;
+            unsigned log2LocalFreqBoxesUpToDim = 0;
             for( unsigned j=0; j<d; ++j )
             {
-                static unsigned log2LocalFreqBoxesUpToDim = 0;
                 k |= (B[j]<<log2LocalFreqBoxesUpToDim);
                 log2LocalFreqBoxesUpToDim += log2LocalFreqBoxesPerDim[j];
             }
@@ -134,6 +138,9 @@ namespace BFIO
             // Add this point's contribution to the unscaled weights of B. 
             // We evaluate the Lagrangian polynomial on the reference grid, 
             // so we need to map p to it first.
+            cout << "wB: " << wB << endl;
+            cout << "p: " << p[0] << "," << p[1] << endl;
+            cout << "p0: " << p0[0] << "," << p0[1] << endl;
             Array<R,d> pRef;
             for( unsigned j=0; j<d; ++j )
                 pRef[j] = (p[j]-p0[j])/wB;
@@ -141,7 +148,11 @@ namespace BFIO
             const R alpha = TwoPi*N*Phi::Eval(x0,p);
             const C beta = C( cos(alpha), sin(alpha) ) * f;
             for( unsigned t=0; t<Power<q,d>::value; ++t )
+            {
+                cout << "L" << t << "( " << pRef[0] << "," << pRef[1] << " )"
+                     << Lagrange<R,d,q>( t, pRef, chebyNodes ) << endl;
                 weights[i][t] += beta*Lagrange<R,d,q>( t, pRef, chebyNodes );
+            }
         }
 
         // Loop over all of the boxes to compute the {p_t^B} and prefactors
@@ -153,10 +164,10 @@ namespace BFIO
         for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k ) 
         {
             // Compute the local integer coordinates of box k
+            unsigned log2LocalFreqBoxesUpToDim = 0;
             Array<unsigned,d> B;
             for( unsigned j=0; j<d; ++j )
             {
-                static unsigned log2LocalFreqBoxesUpToDim = 0;
                 // B[j] = (k/localFreqBoxesUpToDim) % localFreqBoxesPerDim[j]
                 B[j] = (k>>log2LocalFreqBoxesUpToDim) & 
                        ((1u<<log2LocalFreqBoxesPerDim[j])-1);
@@ -174,7 +185,7 @@ namespace BFIO
             {
                 // Compute the physical location of pt
                 Array<R,d> pt;
-                unsigned qToThej = q;
+                unsigned qToThej = 1;
                 for( unsigned j=0; j<d; ++j )
                 {
                     pt[j] = p0[j] + wB*chebyNodes[(t/qToThej)%q];

@@ -50,11 +50,11 @@ namespace BFIO
         for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
         {
             // Compute the coordinates and center of this spatial box
+            unsigned log2LocalSpatialBoxesUpToDim = 0;
             Array<R,d> x0A;
             Array<unsigned,d> A;
             for( unsigned j=0; j<d; ++j )
             {
-                static unsigned log2LocalSpatialBoxesUpToDim = 0;
                 // A[j] = (i/localSpatialBoxesUpToDim) % 
                 //        localSpatialBoxesPerDim[j]
                 A[j] = (i>>log2LocalSpatialBoxesUpToDim) &
@@ -65,7 +65,7 @@ namespace BFIO
                     log2LocalSpatialBoxesPerDim[j];
             }
 
-            static vector< Array<R,d> > xPoints( Power<q,d>::value );
+            vector< Array<R,d> > xPoints( Power<q,d>::value );
             for( unsigned t=0; t<Power<q,d>::value; ++t )
                 for( unsigned j=0; j<d; ++j )
                     xPoints[t][j] = x0A[j] + wA*chebyGrid[t][j];
@@ -73,11 +73,11 @@ namespace BFIO
             for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k )
             {
                 // Compute the coordinates and center of this freq box
+                unsigned log2LocalFreqBoxesUpToDim = 0;
                 Array<R,d> p0B;
                 Array<unsigned,d> B;
                 for( unsigned j=0; j<d; ++j )
                 {
-                    static unsigned log2LocalFreqBoxesUpToDim = 0;
                     B[j] = (k>>log2LocalFreqBoxesUpToDim) &
                            ((1u<<log2LocalFreqBoxesPerDim[j])-1);
                     p0B[j] = mySpatialBoxOffsets[j] + B[j]*wB + wB/2;
@@ -85,7 +85,7 @@ namespace BFIO
                     log2LocalFreqBoxesUpToDim += log2LocalFreqBoxesPerDim[j];
                 }
 
-                static vector< Array<R,d> > pPoints( Power<q,d>::value );
+                vector< Array<R,d> > pPoints( Power<q,d>::value );
                 for( unsigned t=0; t<Power<q,d>::value; ++t )
                     for( unsigned j=0; j<d; ++j )
                         pPoints[t][j] = p0B[j] + wB*chebyGrid[t][j];

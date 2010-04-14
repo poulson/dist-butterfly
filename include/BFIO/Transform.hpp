@@ -89,9 +89,9 @@ namespace BFIO
             log2FreqBoxesPerDim[j] = 0;
             log2SpatialBoxesPerDim[j] = 0;
         }
+        unsigned nextDim = 0;
         for( unsigned j=s; j>0; --j )
         {
-            static unsigned nextDim = 0;
             // Double our current coordinate in the 'nextDim' dimension 
             // and then choose the left/right position based on the (j-1)'th
             // bit of our rank
@@ -149,7 +149,7 @@ namespace BFIO
         vector< Array<R,d> > chebyGrid( Power<q,d>::value );
         for( unsigned t=0; t<Power<q,d>::value; ++t )
         {
-            unsigned qToThej = q;
+            unsigned qToThej = 1;
             for( unsigned j=0; j<d; ++j )
             {
                 unsigned i = (t/qToThej)%q;
@@ -224,10 +224,19 @@ namespace BFIO
         if( rank == 0 )
             cout << "Initializing weights...";
         vector< vector<C> > weights
-        ( 1<<log2LocalFreqBoxes, vector<C>(Power<q,d>::value) );
+        ( 1<<log2LocalFreqBoxes, vector<C>(Power<q,d>::value,0) );
         InitializeWeights<Phi,R,d,q>
         ( N, mySources, chebyNodes, myFreqBoxWidths, myFreqBox,
-          log2LocalFreqBoxes, log2FreqBoxesPerDim, weights      );
+          log2LocalFreqBoxes, log2LocalFreqBoxesPerDim, weights      );
+        for( unsigned r=0; r<weights.size(); ++r )
+        {
+            for( unsigned t=0; t<Power<q,d>::value; ++t )
+            {
+                cout << "weights[" << r << "][" << t << "]: " 
+                     << weights[r][t] << endl;
+            }
+        }
+
         if( rank == 0 )
         {
             cout << "done." << endl;
@@ -241,10 +250,22 @@ namespace BFIO
         {
             if( l == L/2 )
             {
+                if( rank == 0 )
+                    cout << "Switching to spatial interpolation...";
                 SwitchToSpatialInterp<Phi,R,d,q>
                 ( L, s, log2LocalFreqBoxes, log2LocalSpatialBoxes,
                   log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
                   myFreqBoxOffsets, mySpatialBoxOffsets, chebyGrid, weights );
+                if( rank == 0 )
+                    cout << "done." << endl;
+                for( unsigned r=0; r<weights.size(); ++r )
+                {
+                    for( unsigned t=0; t<Power<q,d>::value; ++t )
+                    {
+                        cout << "weights[" << r << "][" << t << "]: " 
+                             << weights[r][t] << endl;
+                    }
+                }
             }
 
             // Compute the width of the nodes at level l
@@ -280,11 +301,11 @@ namespace BFIO
                 for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
                 {
                     // Compute the coordinates and center of this spatial box
+                    unsigned log2LocalSpatialBoxesUpToDim = 0;
                     Array<R,d> x0A;
                     Array<unsigned,d> A;
                     for( unsigned j=0; j<d; ++j )
                     {
-                        static unsigned log2LocalSpatialBoxesUpToDim = 0;
                         // A[j] = (i/localSpatialBoxesUpToDim) % 
                         //        localSpatialBoxesPerDim[j]
                         A[j] = (i>>log2LocalSpatialBoxesUpToDim) &
@@ -299,11 +320,11 @@ namespace BFIO
                     for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k )
                     {
                         // Compute the coordinates and center of this freq box
+                        unsigned log2LocalFreqBoxesUpToDim = 0;
                         Array<R,d> p0B;
                         Array<unsigned,d> B;
                         for( unsigned j=0; j<d; ++j )
                         {
-                            static unsigned log2LocalFreqBoxesUpToDim = 0;
                             B[j] = (k>>log2LocalFreqBoxesUpToDim) &
                                    ((1u<<log2LocalFreqBoxesPerDim[j])-1);
                             p0B[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
@@ -353,6 +374,15 @@ namespace BFIO
                               ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                               parentOffset, oldWeights, weights[key] );
                         }
+                    }
+                }
+                cout << "Iteration: " << l << endl;
+                for( unsigned r=0; r<weights.size(); ++r )
+                {
+                    for( unsigned t=0; t<Power<q,d>::value; ++t )
+                    {
+                        cout << "weights[" << r << "][" << t << "]: " 
+                             << weights[r][t] << endl;
                     }
                 }
             }
@@ -439,11 +469,11 @@ namespace BFIO
                 for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
                 {
                     // Compute the coordinates and center of this spatial box
+                    unsigned log2LocalSpatialBoxesUpToDim = 0;
                     Array<R,d> x0A;
                     Array<unsigned,d> A;
                     for( unsigned j=0; j<d; ++j )
                     {
-                        static unsigned log2LocalSpatialBoxesUpToDim = 0;
                         // A[j] = (i/localSpatialBoxesUpToDim) % 
                         //        localSpatialBoxesPerDim[j]
                         A[j] = (i>>log2LocalSpatialBoxesUpToDim) &
@@ -458,11 +488,11 @@ namespace BFIO
                     for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k )
                     {
                         // Compute the coordinates and center of this freq box
+                        unsigned log2LocalFreqBoxesUpToDim = 0;
                         Array<R,d> p0B;
                         Array<unsigned,d> B;
                         for( unsigned j=0; j<d; ++j )
                         {
-                            static unsigned log2LocalFreqBoxesUpToDim = 0;
                             B[j] = (k>>log2LocalFreqBoxesUpToDim) &
                                    ((1u<<log2LocalFreqBoxesPerDim[j])-1);
                             p0B[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
@@ -544,22 +574,28 @@ namespace BFIO
             const R wA = static_cast<R>(1)/static_cast<R>(N);
 
             // Fill in the LRPs
+            cout << "Resizing to: " << (1<<(d*L-s)) << endl;
             myLRPs.resize( 1<<(d*L-s) );
             for( unsigned i=0; i<myLRPs.size(); ++i )
             {
                 myLRPs[i].N = N;
 
                 // Compute the coordinates and center of this spatial box
+                unsigned log2LocalSpatialBoxesUpToDim = 0;
                 Array<unsigned,d> A;
-                Array<unsigned,d> x0A;
+                Array<R,d> x0A;
                 for( unsigned j=0; j<d; ++j )
                 {
-                    static unsigned log2LocalSpatialBoxesUpToDim = 0;
                     // A[j] = (i/localSpatialBoxesUpToDim) % 
                     //        localSpatialBoxesPerDim[j]
                     A[j] = (i>>log2LocalSpatialBoxesUpToDim) &
                            ((1<<log2LocalSpatialBoxesPerDim[j])-1);
                     x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
+                    cout << i << " " << j << "wA, x0A[j] " 
+                         << wA << "," << x0A[j] << endl;
+                    cout << "A[j]: " << A[j] << endl;
+                    cout << "mySpatialBoxOffsets[j]: " << 
+                          mySpatialBoxOffsets[j] << endl << endl;
 
                     log2LocalSpatialBoxesUpToDim +=
                         log2LocalSpatialBoxesPerDim[j];

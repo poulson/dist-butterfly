@@ -37,13 +37,17 @@ struct Dot
     { return x[0]*p[0] + x[1]*p[1]; }
 };
 
+#define d 2
+#define q 5
+
 int
 main
 ( int argc, char* argv[] )
 {
-    int rank;
+    int rank, size;
     MPI_Init( &argc, &argv );
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+    MPI_Comm_size( MPI_COMM_WORLD, &size );
 
     if( argc != 2 )
     {
@@ -54,8 +58,8 @@ main
     }
     const unsigned N = atoi(argv[1]);
 
-    vector< Source<double,2> > mySources;
-    vector< LRP<Dot,double,2,5> > myLRPs;
+    vector< Source<double,d> > mySources;
+    vector< LRP<Dot,double,d,q> > myLRPs;
 
     // See what happens when we only put sources in the bottom-left corner
     if( rank == 0 )
@@ -78,6 +82,23 @@ main
     try
     {
         Transform( N, mySources, myLRPs, MPI_COMM_WORLD );
+
+        // Evaluate each processes' low rank potentials at their center
+        for( unsigned i=0; i<size; ++i )
+        {
+            if( i == rank )
+            {
+                cout << "Process " << i << ":" << endl;
+                for( unsigned k=0; k<myLRPs.size(); ++k )
+                {
+                    Array<double,d> x0 = myLRPs[i].x0;
+                    cout << "  x0: " << x0[0] << "," << x0[1] << endl;
+                    complex<double> u = myLRPs[i]( x0 );
+                    cout << "  u(x0): " << u << endl << endl;
+                }
+            }
+            MPI_Barrier( MPI_COMM_WORLD );
+        }
     }
     catch( const char* errorMsg )
     {

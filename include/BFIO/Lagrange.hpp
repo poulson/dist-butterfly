@@ -29,7 +29,7 @@ namespace BFIO
     ( const unsigned t, const Array<R,d>& z, const Array<R,q>& chebyNodes )
     {
         R product = static_cast<R>(1);
-        unsigned qToThej = q;
+        unsigned qToThej = 1;
         for( unsigned j=0; j<d; ++j )
         {
             const unsigned i = (t/qToThej) % q;
