@@ -31,6 +31,7 @@
 // Additional library headers
 #include "mpi.h"
 
+#include "BFIO/Data.hpp"
 #include "BFIO/MPI.hpp"
 
 namespace BFIO
@@ -52,6 +53,38 @@ namespace BFIO
     TwiddleBit
     ( unsigned N, unsigned l )
     { return N ^ (1<<l); }
+
+    template<unsigned d>
+    inline void
+    UnpackSpatialIndex
+    ( unsigned i, unsigned log2SpatialBoxes, Array<unsigned,d>& x )
+    {
+        for( unsigned j=0; j<d; ++j )
+            x[j] = 0;
+        unsigned dim = 0;
+        for( unsigned j=0; j<log2SpatialBoxes; ++j )
+        {
+            x[dim] <<= 1;
+            x[dim] |= (i>>j) & 1;
+            dim = (dim+1) % d;
+        }
+    }
+
+    template<unsigned d>
+    inline void
+    UnpackFreqIndex
+    ( unsigned i, unsigned log2FreqBoxes, Array<unsigned,d>& p )
+    {
+        for( unsigned j=0; j<d; ++j )
+            p[j] = 0;
+        unsigned dim = d-1;
+        for( unsigned j=0; j<log2FreqBoxes; ++j )
+        {
+            p[dim] <<= 1;
+            p[dim] |= (i>>j) & 1;
+            dim = (dim+d-1) % d;
+        }
+    }
 }
 
 #endif /* BFIO_UTIL_HPP */

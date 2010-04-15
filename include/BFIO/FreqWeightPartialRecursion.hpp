@@ -37,19 +37,19 @@ namespace BFIO
       const Array<R,d>& p0B,
       const R wB,
       const unsigned parentOffset,
-      const vector< vector< complex<R> > >& oldWeights,
-            vector< complex<R> >& weights               )
+      const WeightSetList<R,d,q>& oldWeightSetList,
+            WeightSet<R,d,q>& partialWeightSet      )
     {
         typedef complex<R> C;
 
         for( unsigned t=0; t<Power<q,d>::value; ++t )
         {
             // Compute the unscaled weight
-            weights[t] = 0;
+            partialWeightSet[t] = 0;
             for( unsigned cLocal=0; cLocal<(1u<<(d-log2Procs)); ++cLocal )
             {
-                const unsigned c = cLocal + myTeamRank*(1u<<(d-log2Procs));
-                const unsigned parentKey = parentOffset + c;
+                const unsigned c = (cLocal << log2Procs) + myTeamRank;
+                const unsigned parentKey = parentOffset + cLocal;
                 for( unsigned tp=0; tp<Power<q,d>::value; ++tp )        
                 {
                     // Map p_t'(Bc) to the reference domain of B
@@ -67,9 +67,9 @@ namespace BFIO
                         ptp[j] = p0B[j] + wB*ptpBcRefB[j];
 
                     const R alpha = TwoPi*N*Phi::Eval(x0A,ptp);
-                    weights[t] += lagrangeFreqLookup[t][c][tp] * 
-                                  C( cos(alpha), sin(alpha) ) * 
-                                  oldWeights[parentKey][tp];
+                    partialWeightSet[t] += lagrangeFreqLookup[t][c][tp] * 
+                                    C( cos(alpha), sin(alpha) ) * 
+                                    oldWeightSetList[parentKey][tp];
                 }
             }
 
@@ -78,7 +78,7 @@ namespace BFIO
             for( unsigned j=0; j<d; ++j )
                 ptB[j] = p0B[j] + wB*chebyGrid[t][j];
             const R alpha = -TwoPi*N*Phi::Eval(x0A,ptB);
-            weights[t] *= C( cos(alpha), sin(alpha) );
+            partialWeightSet[t] *= C( cos(alpha), sin(alpha) );
         }
     }
 }

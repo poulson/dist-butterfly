@@ -40,8 +40,8 @@ namespace BFIO
       const R wA,
       const R wB,
       const unsigned parentOffset,
-      const vector< vector< complex<R> > >& weights,
-            vector< complex<R> >& partialWeights    )
+      const WeightSetList<R,d,q>& oldWeightSetList,
+            WeightSet<R,d,q>& partialWeightSet      )
     {
         typedef complex<R> C;
 
@@ -53,11 +53,13 @@ namespace BFIO
                 xtA[j] = x0A[j] + wA*chebyGrid[t][j];
 
             // Compute the unscaled weight
-            partialWeights[t] = 0;
+            partialWeightSet[t] = 0;
             for( unsigned cLocal=0; cLocal<(1u<<(d-log2Procs)); ++cLocal )
             {
-                const unsigned c = cLocal + myTeamRank*(1u<<(d-log2Procs));
-                const unsigned parentKey = parentOffset + c;
+                const unsigned c = (cLocal << log2Procs) + myTeamRank;
+                const unsigned parentKey = parentOffset + cLocal;
+                cout << "  cLocal,c: " << cLocal << "," << c << endl;
+                cout << "  parentKey: " << parentKey << endl;
 
                 // Compute p0(Bc)
                 Array<R,d> p0Bc;
@@ -76,14 +78,15 @@ namespace BFIO
                         xtpAp[j] = x0Ap[j] + (wA*2)*chebyGrid[tp][j];
 
                     const R alpha = -TwoPi*N*Phi::Eval(xtpAp,p0Bc);
-                    partialWeights[t] += 
+                    partialWeightSet[t] += 
                         lagrangeSpatialLookup[t][ARelativeToAp][tp] * 
-                        C( cos(alpha), sin(alpha) ) * weights[parentKey][tp];
+                        C( cos(alpha), sin(alpha) ) * 
+                        oldWeightSetList[parentKey][tp];
                 }
                 
                 // Scale the weight
                 const R alpha = TwoPi*N*Phi::Eval(xtA,p0Bc);
-                partialWeights[t] *= C( cos(alpha), sin(alpha) );
+                partialWeightSet[t] *= C( cos(alpha), sin(alpha) );
             }
         }
     }

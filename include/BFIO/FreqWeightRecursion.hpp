@@ -35,15 +35,15 @@ namespace BFIO
       const Array<R,d>& p0B,
       const R wB,
       const unsigned parentOffset,
-      const vector< vector< complex<R> > >& oldWeights,
-            vector< complex<R> >& weights               )
+      const WeightSetList<R,d,q>& oldWeightSetList,
+            WeightSet<R,d,q>& weightSet            )
     {
         typedef complex<R> C;
 
         for( unsigned t=0; t<Power<q,d>::value; ++t )
         {
             // Compute the unscaled weight
-            weights[t] = 0;
+            weightSet[t] = 0;
             for( unsigned c=0; c<(1u<<d); ++c )
             {
                 const unsigned parentKey = parentOffset + c;
@@ -64,9 +64,9 @@ namespace BFIO
                         ptp[j] = p0B[j] + wB*ptpBcRefB[j];
 
                     const R alpha = TwoPi*N*Phi::Eval(x0A,ptp);
-                    weights[t] += lagrangeFreqLookup[t][c][tp] *
-                                  C( cos(alpha), sin(alpha) ) * 
-                                  oldWeights[parentKey][tp];
+                    weightSet[t] += lagrangeFreqLookup[t][c][tp] *
+                                    C( cos(alpha), sin(alpha) ) * 
+                                    oldWeightSetList[parentKey][tp];
                 }
             }
 
@@ -75,7 +75,7 @@ namespace BFIO
             for( unsigned j=0; j<d; ++j )
                 ptB[j] = p0B[j] + wB*chebyGrid[t][j];
             const R alpha = -TwoPi*N*Phi::Eval(x0A,ptB);
-            weights[t] *= C( cos(alpha), sin(alpha) );
+            weightSet[t] *= C( cos(alpha), sin(alpha) );
         }
     }
 }

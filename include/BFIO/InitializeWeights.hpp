@@ -61,9 +61,12 @@ namespace BFIO
       const Array<unsigned,d>& 
             log2LocalFreqBoxesPerDim,
 
+      const vector< Array<unsigned,d> >& 
+            freqUnpackingMap,
+
       // The resultant equivalent weights for a low-rank expansion in each box
-            vector< vector< complex<R> > >& 
-            weights 
+            WeightSetList<R,d,q>& 
+            weightSetList
     )
     {
         typedef complex<R> C;
@@ -114,7 +117,6 @@ namespace BFIO
                         leftBound = middle;
                     }
                 }
-                cout << "B[j]: " << B[j] << endl;
             }
 
             // Translate the local integer coordinates into the freq. center
@@ -135,9 +137,6 @@ namespace BFIO
             // Add this point's contribution to the unscaled weights of B. 
             // We evaluate the Lagrangian polynomial on the reference grid, 
             // so we need to map p to it first.
-            cout << "wB: " << wB << endl;
-            cout << "p: " << p[0] << "," << p[1] << endl;
-            cout << "p0: " << p0[0] << "," << p0[1] << endl;
             Array<R,d> pRef;
             for( unsigned j=0; j<d; ++j )
                 pRef[j] = (p[j]-p0[j])/wB;
@@ -146,9 +145,8 @@ namespace BFIO
             const C beta = C( cos(alpha), sin(alpha) ) * f;
             for( unsigned t=0; t<Power<q,d>::value; ++t )
             {
-                cout << "L" << t << "( " << pRef[0] << "," << pRef[1] << " )"
-                     << Lagrange<R,d,q>( t, pRef, chebyNodes ) << endl;
-                weights[k][t] += beta*Lagrange<R,d,q>( t, pRef, chebyNodes );
+                weightSetList[k][t] += 
+                    beta*Lagrange<R,d,q>( t, pRef, chebyNodes );
             }
         }
 
@@ -160,19 +158,9 @@ namespace BFIO
         // p_t^B lying in B \ B_loc.
         for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k ) 
         {
-            // Compute the local integer coordinates of box k
-            unsigned log2LocalFreqBoxesUpToDim = 0;
-            Array<unsigned,d> B;
-            for( unsigned j=0; j<d; ++j )
-            {
-                // B[j] = (k/localFreqBoxesUpToDim) % localFreqBoxesPerDim[j]
-                B[j] = (k>>log2LocalFreqBoxesUpToDim) & 
-                       ((1u<<log2LocalFreqBoxesPerDim[j])-1);
-                log2LocalFreqBoxesUpToDim += log2LocalFreqBoxesPerDim[j];
-            }
-
             // Translate the local integer coordinates into the freq. center 
             Array<R,d> p0;
+            const Array<unsigned,d>& B = freqUnpackingMap[k];
             for( unsigned j=0; j<d; ++j )
                 p0[j] = myFreqBoxWidths[j]*myFreqBox[j] + B[j]*wB + wB/2;
 
@@ -190,7 +178,7 @@ namespace BFIO
                 }
 
                 const R alpha = -TwoPi*N*Phi::Eval(x0,pt);
-                weights[k][t] *= C( cos(alpha), sin(alpha) );
+                weightSetList[k][t] *= C( cos(alpha), sin(alpha) );
             }
         }
     }

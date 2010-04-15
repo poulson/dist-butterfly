@@ -37,7 +37,9 @@ namespace BFIO
       const Array<R,d>& myFreqBoxOffsets,
       const Array<R,d>& mySpatialBoxOffsets,
       const vector< Array<R,d> >& chebyGrid,
-            vector< vector< complex<R> > >& weights         )
+      const vector< Array<unsigned,d> >& freqUnpackingMap,
+      const vector< Array<unsigned,d> >& spatialUnpackingMap,
+            WeightSetList<R,d,q>& weightSetList              )
     {
         typedef complex<R> C;
         const unsigned N = 1u<<L;
@@ -46,24 +48,14 @@ namespace BFIO
         const unsigned l = L/2;
         const R wA = static_cast<R>(1) / static_cast<R>(1u<<l);
         const R wB = static_cast<R>(1) / static_cast<R>(1u<<(L-l));
-        vector< vector< complex<R> > > oldWeights = weights;
+        WeightSetList<R,d,q> oldWeightSetList( weightSetList );
         for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
         {
             // Compute the coordinates and center of this spatial box
-            unsigned log2LocalSpatialBoxesUpToDim = 0;
             Array<R,d> x0A;
-            Array<unsigned,d> A;
+            const Array<unsigned,d>& A = spatialUnpackingMap[i];
             for( unsigned j=0; j<d; ++j )
-            {
-                // A[j] = (i/localSpatialBoxesUpToDim) % 
-                //        localSpatialBoxesPerDim[j]
-                A[j] = (i>>log2LocalSpatialBoxesUpToDim) &
-                       ((1u<<log2LocalSpatialBoxesPerDim[j])-1);
-                x0A[j] = myFreqBoxOffsets[j] + A[j]*wA + wA/2;
-
-                log2LocalSpatialBoxesUpToDim += 
-                    log2LocalSpatialBoxesPerDim[j];
-            }
+                x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
 
             vector< Array<R,d> > xPoints( Power<q,d>::value );
             for( unsigned t=0; t<Power<q,d>::value; ++t )
@@ -73,17 +65,10 @@ namespace BFIO
             for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k )
             {
                 // Compute the coordinates and center of this freq box
-                unsigned log2LocalFreqBoxesUpToDim = 0;
                 Array<R,d> p0B;
-                Array<unsigned,d> B;
+                const Array<unsigned,d>& B = freqUnpackingMap[k];
                 for( unsigned j=0; j<d; ++j )
-                {
-                    B[j] = (k>>log2LocalFreqBoxesUpToDim) &
-                           ((1u<<log2LocalFreqBoxesPerDim[j])-1);
-                    p0B[j] = mySpatialBoxOffsets[j] + B[j]*wB + wB/2;
-
-                    log2LocalFreqBoxesUpToDim += log2LocalFreqBoxesPerDim[j];
-                }
+                    p0B[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
 
                 vector< Array<R,d> > pPoints( Power<q,d>::value );
                 for( unsigned t=0; t<Power<q,d>::value; ++t )
@@ -93,12 +78,13 @@ namespace BFIO
                 const unsigned key = k+i*(1u<<log2LocalFreqBoxes);
                 for( unsigned t=0; t<Power<q,d>::value; ++t )
                 {
-                    weights[key][t] = 0;
+                    weightSetList[key][t] = 0;
                     for( unsigned tp=0; tp<Power<q,d>::value; ++tp )
                     {
                         R alpha = TwoPi*N*Phi::Eval(xPoints[t],pPoints[s]);
-                        weights[key][t] += C( cos(alpha), sin(alpha) ) *
-                                           oldWeights[key][tp];
+                        weightSetList[key][t] += 
+                            C(cos(alpha),sin(alpha)) * 
+                            oldWeightSetList[key][tp];
                     }
                 }
             }

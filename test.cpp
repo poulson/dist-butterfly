@@ -82,9 +82,10 @@ main
     try
     {
         Transform( N, mySources, myLRPs, MPI_COMM_WORLD );
-
+        cout << "Exited Transform." << endl;
+        MPI_Barrier( MPI_COMM_WORLD );
         // Evaluate each processes' low rank potentials at their center
-        for( unsigned i=0; i<size; ++i )
+        for( int i=0; i<size; ++i )
         {
             if( i == rank )
             {

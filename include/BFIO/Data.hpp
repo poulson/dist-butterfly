@@ -20,6 +20,7 @@
 #define BFIO_DATA_HPP 1
 
 #include <complex>
+#include "BFIO/Power.hpp"
 
 namespace BFIO
 {
@@ -29,13 +30,20 @@ namespace BFIO
 
     // A d-dimensional point over arbitrary datatype T
     template<typename T,unsigned d>
-    struct Array
+    class Array
     {
-    private:
-        T x[d];
+        T _x[d];
     public:
-        T& operator[]( unsigned j ) { return x[j]; }
-        T operator[]( unsigned j ) const { return x[j]; }
+        T& operator[]( unsigned j ) { return _x[j]; }
+        const T& operator[]( unsigned j ) const { return _x[j]; }
+
+        const Array<T,d>&
+        operator=( const Array<T,d>& array )
+        {
+            for( unsigned j=0; j<d; ++j )
+                _x[j] = array[j];
+            return *this;
+        }
     };
 
     // A d-dimensional coordinate in the frequency domain and the 
@@ -47,16 +55,86 @@ namespace BFIO
         complex<R> magnitude;
     };
 
+    template<typename R,unsigned d,unsigned q>
+    class WeightSet
+    {
+        Array< complex<R>, Power<q,d>::value > _weight;
+
+    public:
+        WeightSet() { }
+        ~WeightSet() { }
+
+        const complex<R>&
+        operator[] ( const unsigned i ) const
+        { return _weight[i]; }
+
+        complex<R>&
+        operator[] ( const unsigned i )
+        { return _weight[i]; }
+
+        const WeightSet<R,d,q>&
+        operator= ( const WeightSet<R,d,q>& weightSet )
+        { 
+            for( unsigned j=0; j<Power<q,d>::value; ++j )
+                _weight[j] = weightSet[j];
+            return *this;
+        }
+    };
+
+    template<typename R,unsigned d,unsigned q>
+    class WeightSetList
+    {
+        unsigned _length;
+        WeightSet<R,d,q>* _weightSetList;
+
+    public:
+        WeightSetList( unsigned length ) 
+            : _length(length), _weightSetList(new WeightSet<R,d,q>[length])
+        { }
+
+        WeightSetList( const WeightSetList<R,d,q>& weightSetList )
+            : _length(weightSetList.Length()),
+              _weightSetList(new WeightSet<R,d,q>[weightSetList.Length()])
+        {
+            for( unsigned j=0; j<_length; ++j )
+                _weightSetList[j] = weightSetList[j];
+        }
+
+        ~WeightSetList() 
+        { delete[] _weightSetList; }
+
+        const unsigned
+        Length() const
+        { return _length; }
+
+        const WeightSet<R,d,q>& 
+        operator[] ( unsigned i ) const
+        { return _weightSetList[i]; }
+
+        WeightSet<R,d,q>& 
+        operator[] ( unsigned i )
+        { return _weightSetList[i]; }
+
+        const WeightSetList<R,d,q>&
+        operator=  ( const WeightSetList<R,d,q>& weightSetList )
+        { 
+            _length = weightSetList.Length();
+            for( unsigned j=0; j<_length; ++j )
+                _weightSetList[j] = weightSetList[j];
+            return *this;
+        }
+    };
+
     // Low-rank potential
     template<typename Phi,typename R,unsigned d,unsigned q>
     struct LRP
     {
         unsigned N;
         Array<R,d> x0;
-        vector< Array<R,d> > points;
-        vector< complex<R> > weights;
+        Array< Array<R,d>, Power<q,d>::value > pointSet;
+        WeightSet<R,d,q> weightSet;
 
-        LRP() : points( Power<q,d>::value ), weights( Power<q,d>::value )
+        LRP() 
         { }
         
         complex<R> operator()( const Array<R,d>& x );
@@ -75,8 +153,8 @@ namespace BFIO
         C value(0.,0.);
         for( unsigned j=0; j<Power<q,d>::value; ++j )
         {
-            const R alpha = TwoPi*N*Phi::Eval(x,points[j]);
-            value += C( cos(alpha), sin(alpha) ) * weights[j];
+            const R alpha = TwoPi*N*Phi::Eval(x,pointSet[j]);
+            value += C( cos(alpha), sin(alpha) ) * weightSet[j];
         }
         return value;
     }
