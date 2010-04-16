@@ -20,7 +20,7 @@
 #define BFIO_DATA_HPP 1
 
 #include <complex>
-#include "BFIO/Power.hpp"
+#include "BFIO/Pow.hpp"
 
 namespace BFIO
 {
@@ -58,7 +58,7 @@ namespace BFIO
     template<typename R,unsigned d,unsigned q>
     class WeightSet
     {
-        Array< complex<R>, Power<q,d>::value > _weight;
+        Array< complex<R>, Pow<q,d>::val > _weight;
 
     public:
         WeightSet() { }
@@ -75,7 +75,7 @@ namespace BFIO
         const WeightSet<R,d,q>&
         operator= ( const WeightSet<R,d,q>& weightSet )
         { 
-            for( unsigned j=0; j<Power<q,d>::value; ++j )
+            for( unsigned j=0; j<Pow<q,d>::val; ++j )
                 _weight[j] = weightSet[j];
             return *this;
         }
@@ -124,40 +124,6 @@ namespace BFIO
             return *this;
         }
     };
-
-    // Low-rank potential
-    template<typename Phi,typename R,unsigned d,unsigned q>
-    struct LRP
-    {
-        unsigned N;
-        Array<R,d> x0;
-        Array< Array<R,d>, Power<q,d>::value > pointSet;
-        WeightSet<R,d,q> weightSet;
-
-        LRP() 
-        { }
-        
-        complex<R> operator()( const Array<R,d>& x );
-    };
-}
-
-// Inline implementations
-namespace BFIO
-{
-    template<typename Phi,typename R,unsigned d,unsigned q>
-    inline complex<R>
-    LRP<Phi,R,d,q>::operator()( const Array<R,d>& x )
-    {
-        typedef complex<R> C;
-
-        C value(0.,0.);
-        for( unsigned j=0; j<Power<q,d>::value; ++j )
-        {
-            const R alpha = TwoPi*N*Phi::Eval(x,pointSet[j]);
-            value += C( cos(alpha), sin(alpha) ) * weightSet[j];
-        }
-        return value;
-    }
 }
 
 #endif /* BFIO_DATA_HPP */

@@ -33,37 +33,14 @@ namespace BFIO
     void
     InitializeWeights
     ( 
-      // Number of frequency boxes in each dimension (must a power of 2)
-      const unsigned 
-            N,
-
-      // The sources in the frequency domain
-      const vector< Source<R,d> >& 
-            mySources,
-
-      // 1d Chebyshev nodes that we extend to d-dimensions with tensor product
-      const Array<R,q>& 
-            chebyNodes,
-
-      // The widths of the box in the freq. domain that this process owns
-      const Array<R,d>& 
-            myFreqBoxWidths,
-
-      // The d-dimensional coordinates of the frequency box for this process
-      const Array<unsigned,d>& 
-            myFreqBox,
-
-      // Log2 of number of frequency leaf boxes this process should init.
-      const unsigned 
-            log2LocalFreqBoxes,
-
-      // Log2 of number of local frequency leaf boxes in each dimension 
-      const Array<unsigned,d>& 
-            log2LocalFreqBoxesPerDim,
-
-      // The resultant equivalent weights for a low-rank expansion in each box
-            WeightSetList<R,d,q>& 
-            weightSetList
+      const unsigned N,
+      const vector< Source<R,d> >& mySources,
+      const vector< Array<R,d> >& chebyGrid,
+      const Array<R,d>& myFreqBoxWidths,
+      const Array<unsigned,d>& myFreqBox,
+      const unsigned log2LocalFreqBoxes,
+      const Array<unsigned,d>& log2LocalFreqBoxesPerDim,
+            WeightSetList<R,d,q>& weightSetList
     )
     {
         typedef complex<R> C;
@@ -138,12 +115,12 @@ namespace BFIO
             for( unsigned j=0; j<d; ++j )
                 pRef[j] = (p[j]-p0[j])/wB;
             const C f = mySources[i].magnitude;
-            const R alpha = TwoPi*N*Phi::Eval(x0,p);
+            const R alpha = TwoPi*Phi::Eval(x0,p);
             const C beta = C( cos(alpha), sin(alpha) ) * f;
-            for( unsigned t=0; t<Power<q,d>::value; ++t )
+            for( unsigned t=0; t<Pow<q,d>::val; ++t )
             {
                 weightSetList[k][t] += 
-                    beta*Lagrange<R,d,q>( t, pRef, chebyNodes );
+                    beta*Lagrange<R,d,q>( t, pRef );
             }
         }
 
@@ -164,18 +141,14 @@ namespace BFIO
 
             // Compute the prefactors given this p0 and multiply it by 
             // the corresponding weights
-            for( unsigned t=0; t<Power<q,d>::value; ++t )
+            for( unsigned t=0; t<Pow<q,d>::val; ++t )
             {
                 // Compute the physical location of pt
                 Array<R,d> pt;
-                unsigned qToThej = 1;
                 for( unsigned j=0; j<d; ++j )
-                {
-                    pt[j] = p0[j] + wB*chebyNodes[(t/qToThej)%q];
-                    qToThej *= q;
-                }
+                    pt[j] = p0[j] + wB*chebyGrid[t][j];
 
-                const R alpha = -TwoPi*N*Phi::Eval(x0,pt);
+                const R alpha = -TwoPi*Phi::Eval(x0,pt);
                 weightSetList[k][t] *= C( cos(alpha), sin(alpha) );
             }
         }

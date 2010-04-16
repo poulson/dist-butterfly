@@ -24,24 +24,43 @@
 namespace BFIO
 {
     template<typename R,unsigned d,unsigned q>
-    inline R
+    R
     Lagrange
-    ( const unsigned t, const Array<R,d>& z, const Array<R,q>& chebyNodes )
+    ( const unsigned t, const Array<R,d>& z )
     {
+        static bool initialized = false;
+        static Array<R,q> chebyNodes;
+        static vector< Array<unsigned,d> > chebyIndex( Pow<q,d>::val );
+
+        if( !initialized )
+        {
+            for( unsigned i=0; i<q; ++i )
+                chebyNodes[i] = 0.5*cos(i*Pi/(q-1));
+            for( unsigned tp=0; tp<Pow<q,d>::val; ++tp )
+            {
+                unsigned qToThej = 1;
+                for( unsigned j=0; j<d; ++j )
+                {
+                    unsigned i = (tp/qToThej) % q;
+                    chebyIndex[tp][j] = i;
+                    qToThej *= q;
+                }
+            }
+            initialized = true;
+        }
+
         R product = static_cast<R>(1);
-        unsigned qToThej = 1;
         for( unsigned j=0; j<d; ++j )
         {
-            const unsigned i = (t/qToThej) % q;
+            unsigned i = chebyIndex[t][j];
             for( unsigned k=0; k<q; ++k )
             {
                 if( i != k )
                 {
-                    product *= (z[j]-chebyNodes[k]) / 
-                               (chebyNodes[i]-chebyNodes[k]);
+                    product *= 
+                        (z[j]-chebyNodes[k]) / (chebyNodes[i]-chebyNodes[k]);
                 }
             }
-            qToThej *= q;
         }
         return product;
     }

@@ -22,14 +22,11 @@
 #include <bitset>
 
 #include "BFIO/Util.hpp"
-#include "BFIO/Power.hpp"
-#include "BFIO/Lagrange.hpp"
+#include "BFIO/LRP.hpp"
 #include "BFIO/InitializeWeights.hpp"
 #include "BFIO/FreqWeightRecursion.hpp"
-#include "BFIO/FreqWeightPartialRecursion.hpp"
 #include "BFIO/SwitchToSpatialInterp.hpp"
 #include "BFIO/SpatialWeightRecursion.hpp"
-#include "BFIO/SpatialWeightPartialRecursion.hpp"
 
 namespace BFIO
 {
@@ -132,102 +129,21 @@ namespace BFIO
             log2LocalFreqBoxes += log2LocalFreqBoxesPerDim[j];
         }
 
-        // Compute {zi} for the Chebyshev nodes of order q over [-1/2,+1/2]
-        Array<R,q> chebyNodes;
-        for( unsigned i=0; i<q; ++i )
-            chebyNodes[i] = 0.5*cos(i*Pi/(q-1));
-
         // Compute the Chebyshev grid over [-1/2,+1/2]^d
         if( rank == 0 )
         {
             cout << MPI_Wtime()-startTime << " seconds." << endl;
             cout << "Initializing Chebyshev grid...";
         }
-        vector< Array<R,d> > chebyGrid( Power<q,d>::value );
-        for( unsigned t=0; t<Power<q,d>::value; ++t )
+        vector< Array<R,d> > chebyGrid( Pow<q,d>::val );
+        for( unsigned t=0; t<Pow<q,d>::val; ++t )
         {
             unsigned qToThej = 1;
             for( unsigned j=0; j<d; ++j )
             {
                 unsigned i = (t/qToThej)%q;
-                chebyGrid[t][j] = chebyNodes[i];
+                chebyGrid[t][j] = 0.5*cos(i*Pi/(q-1));
                 qToThej *= q;
-            }
-        }
-        if( rank == 0 )
-        {
-            cout << "done." << endl;
-            cout << MPI_Wtime()-startTime << " seconds." << endl;
-        }
-
-        // Compute the evaluation of each of the q^d Lagrangian polynomials
-        // over the 2^d sub boxes' q^d points. This version is stored such that
-        // stride 1 access will be used during the frequency weight recursion
-        if( rank == 0 )
-        {
-            cout << "Creating Lagrange lookup table for frequency recursion...";
-            cout.flush();
-        }
-        vector< vector< vector<R> > > lagrangeFreqLookup
-        ( Power<q,d>::value, 
-          vector< vector<R> >
-          ( (1<<d), vector<R>( Power<q,d>::value ) ) );
-        for( unsigned t=0; t<Power<q,d>::value; ++t )
-        {
-            for( unsigned c=0; c<(1u<<d); ++c )
-            {
-                for( unsigned tp=0; tp<Power<q,d>::value; ++tp )
-                {
-                    // Map p_t'(Bc) to the reference domain of its parent, B
-                    Array<R,d> ptpBcRefB;
-                    for( unsigned j=0; j<d; ++j )
-                    {
-                        ptpBcRefB[j] = 
-                            ( (c>>j) & 1 ? (2*chebyGrid[tp][j]+1)/4 :
-                                           (2*chebyGrid[tp][j]-1)/4  );
-                    }
-                    // Store the evaluation of L_t^B(p_t'(Bc))
-                    lagrangeFreqLookup[t][c][tp] = 
-                        Lagrange<R,d,q>( t, ptpBcRefB, chebyNodes );
-                }
-            }
-        }
-        if( rank == 0 )
-        {
-            cout << "done." << endl;
-            cout << MPI_Wtime()-startTime << " seconds." << endl;
-        }
-        
-        // Compute the evaluation of each of the q^d Lagrangian polynomials
-        // over the 2^d sub boxes' q^d points. This version is stored such that
-        // stride 1 access will be used during the spatial weight recursion
-        if( rank == 0 )
-        {
-            cout << "Creating Lagrange lookup table for spatial recursion...";
-            cout.flush();
-        }
-        vector< vector< vector<R> > > lagrangeSpatialLookup
-        ( Power<q,d>::value,
-          vector< vector<R> >
-          ( (1<<d), vector<R>( Power<q,d>::value ) ) );
-        for( unsigned t=0; t<Power<q,d>::value; ++t )
-        {
-            for( unsigned k=0; k<(1u<<d); ++k )
-            {
-                // Map x_t(A) to the reference domain of its parent
-                Array<R,d> xtARefAp;
-                for( unsigned j=0; j<d; ++j )
-                {
-                    xtARefAp[j] = 
-                        ( (k>>j) & 1 ? (2*chebyGrid[t][j]+1)/4 :
-                                       (2*chebyGrid[t][j]-1)/4   );
-                }
-                for( unsigned tp=0; tp<Power<q,d>::value; ++tp )
-                {
-                    // Store the evalutation of L_t'^Ap(x_t(A))
-                    lagrangeSpatialLookup[t][k][tp] = 
-                        Lagrange<R,d,q>( tp, xtARefAp, chebyNodes );     
-                }
             }
         }
         if( rank == 0 )
@@ -245,26 +161,12 @@ namespace BFIO
         }
         WeightSetList<R,d,q> weightSetList( 1<<log2LocalFreqBoxes );
         InitializeWeights<Phi,R,d,q>
-        ( N, mySources, chebyNodes, myFreqBoxWidths, myFreqBox,
+        ( N, mySources, chebyGrid, myFreqBoxWidths, myFreqBox,
           log2LocalFreqBoxes, log2LocalFreqBoxesPerDim, weightSetList );
         if( rank == 0 )
         {
             cout << "done." << endl;
             cout << MPI_Wtime()-startTime << " seconds." << endl;
-        }
-
-        for( int i=0; i<S; ++i )
-        {
-            if( rank == i )
-            {
-                cout << "Rank " << i << endl;
-                for( unsigned j=0; j<weightSetList.Length(); ++j )
-                    for( unsigned t=0; t<Power<q,d>::value; ++t )
-                        cout << "  [" << j << "," << t << "]: " 
-                             << weightSetList[j][t] << endl;
-                cout << endl;
-            }
-            MPI_Barrier( comm );
         }
 
         // Start the main recursion loop
@@ -280,12 +182,6 @@ namespace BFIO
 
             if( log2LocalFreqBoxes >= d )
             {
-                if( rank == 0 )
-                {
-                    cout<<"  "<<MPI_Wtime()-startTime<<" seconds."<<endl;
-                    cout<<"  l="<<l<<" (serial)"<<endl;
-                }
-                
                 // Refine the spatial domain and coursen the frequency domain
                 for( unsigned j=0; j<d; ++j )
                 {
@@ -322,11 +218,6 @@ namespace BFIO
                         UnpackIndex( k, log2LocalFreqBoxesPerDim, B );
                         for( unsigned j=0; j<d; ++j )
                             p0B[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
-                        cout << "l=" << l << ",rank=" << rank << ": "
-                             << "p0B=" << p0B[0] << "," << p0B[1] << "  "
-                             << "B=" << B[0] << "," << B[1] << "  "
-                             << "log2LocalFreqBoxes=" << log2LocalFreqBoxes 
-                             << endl;
 
                         const unsigned key = k + (i<<log2LocalFreqBoxes);
                         const unsigned parentOffset = 
@@ -334,7 +225,7 @@ namespace BFIO
                         if( l <= L/2 )
                         {
                             FreqWeightRecursion<Phi,R,d,q>
-                            ( N, chebyGrid, lagrangeFreqLookup,
+                            ( 0, 0, N, chebyGrid, 
                               x0A, p0B, wB, parentOffset,
                               oldWeightSetList, weightSetList[key] );
                         }
@@ -351,40 +242,17 @@ namespace BFIO
                                 x0Ap[j] = (globalA[j]/2)*2*wA + wA;
                                 ARelativeToAp |= (globalA[j]&1)<<j;
                             }
-                            cout << "x0Ap: " << x0Ap[0] << "," << x0Ap[1] 
-                                 << endl;
                             SpatialWeightRecursion<Phi,R,d,q>
-                            ( N, chebyGrid, lagrangeSpatialLookup,
+                            ( 0, 0, N, chebyGrid, 
                               ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                               parentOffset, oldWeightSetList, 
                               weightSetList[key] );
                         }
                     }
                 }
-                if( rank == 0 )
-                    cout << "End of Level " << l << endl;
-                for( int i=0; i<S; ++i )
-                {
-                    if( rank == i )
-                    {
-                        cout << "Rank " << i << endl;
-                        for( unsigned j=0; j<weightSetList.Length(); ++j )
-                            for( unsigned t=0; t<Power<q,d>::value; ++t )
-                                cout << "  [" << j << "," << t << "]: " 
-                                     << weightSetList[j][t] << endl;
-                        cout << endl;
-                    }
-                    MPI_Barrier( comm );
-                }
             }
             else 
             {
-                if( rank == 0 )
-                {
-                    cout<<"  "<<MPI_Wtime()-startTime<<" secs."<<endl;
-                    cout << "  l=" << l << " (parallel)" << endl;
-                }
-
                 // There are currently 2^(d*(L-l)) leaves. The frequency 
                 // partitioning is implied by reading the rank bits left-to-
                 // right starting with bit s-1, but the spatial partitioning 
@@ -438,7 +306,6 @@ namespace BFIO
                 Array<R,d> p0B;
                 for( unsigned j=0; j<d; ++j )
                     p0B[j] = myFreqBoxOffsets[j] + wB/2;
-                cout << rank << ": p0B is " << p0B[0] << "," << p0B[1] << endl;
                 
                 // Form the partial weights. 
                 //
@@ -468,11 +335,10 @@ namespace BFIO
                     }
                     if( l <= L/2 )
                     {
-                        FreqWeightPartialRecursion<Phi,R,d,q>
+                        FreqWeightRecursion<Phi,R,d,q>
                         ( log2Procs, myTeamRank, 
-                          N, chebyGrid, lagrangeFreqLookup,
-                          x0A, p0B, wB, parentOffset,
-                          weightSetList, partialWeightSetList[i] );
+                          N, chebyGrid, x0A, p0B, wB, parentOffset,
+                          weightSetList, partialWeightSetList[i]   );
                     }
                     else
                     {
@@ -487,27 +353,11 @@ namespace BFIO
                             x0Ap[j] = (globalA[j]/2)*2*wA + wA;
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
-                        SpatialWeightPartialRecursion<Phi,R,d,q>
+                        SpatialWeightRecursion<Phi,R,d,q>
                         ( log2Procs, myTeamRank,
-                          N, chebyGrid, lagrangeSpatialLookup,
-                          ARelativeToAp, x0A, x0Ap, p0B, wA, wB, parentOffset,
-                          weightSetList, partialWeightSetList[i]              );
-                        MPI_Barrier( comm );
-                        if( rank == 0 )
-                            cout << "Partial weights " << i << "..." << endl;
-                        for( int m=0; m<S; ++m )
-                        {
-                            if( rank == m )
-                            {
-                                cout << "Rank " << m << endl;
-                                for( unsigned t=0; t<Power<q,d>::value; ++t )
-                                    cout << "  [" << i << "," << t << "]: " 
-                                         << partialWeightSetList[i][t] << endl;
-                                cout << endl;
-                            }
-                            MPI_Barrier( comm );
-                        }
-
+                          N, chebyGrid, ARelativeToAp,
+                          x0A, x0Ap, p0B, wA, wB, parentOffset,
+                          weightSetList, partialWeightSetList[i] );
                     }
                     MPI_Barrier( comm );
                     if( rank == 0 )
@@ -523,8 +373,7 @@ namespace BFIO
                 // Scatter the summation of the weights
                 vector<int> recvCounts( 1<<log2Procs );
                 for( unsigned j=0; j<(1u<<log2Procs); ++j )
-                    recvCounts[j] = weightSetList.Length()*Power<q,d>::value;
-                cout << "Size: " << recvCounts[0] << endl;
+                    recvCounts[j] = weightSetList.Length()*Pow<q,d>::val;
                 SumScatter
                 ( &(partialWeightSetList[0][0]), &(weightSetList[0][0]), 
                   &recvCounts[0], teamComm                              );
@@ -532,22 +381,6 @@ namespace BFIO
                 if( rank == 0 )
                     cout << "done." << endl;
  
-                if( rank == 0 )
-                    cout << "Weights after SumScatter..." << endl;
-                for( int m=0; m<S; ++m )
-                {
-                    if( rank == m )
-                    {
-                        cout << "Rank " << m << endl;
-                        for( unsigned j=0; j<weightSetList.Length(); ++j )
-                            for( unsigned t=0; t<Power<q,d>::value; ++t )
-                                cout << "  [" << j << "," << t << "]: " 
-                                     << weightSetList[j][t] << endl;
-                        cout << endl;
-                    }
-                    MPI_Barrier( comm );
-                }
-               
                 // There is at most 1 case where multiple processes communicate
                 // with a team size not equal to 2^d, so we can wrap backwards
                 // over the d dimensions by always starting this loop from d
@@ -572,26 +405,8 @@ namespace BFIO
                 MPI_Group_free( &group );
             }
 
-
             if( l == L/2 )
             {
-                MPI_Barrier( comm );
-                if( rank == 0 )
-                    cout << "Weights just before the switch..." << endl;
-                for( int i=0; i<S; ++i )
-                {
-                    if( rank == i )
-                    {
-                        cout << "Rank " << i << endl;
-                        for( unsigned j=0; j<weightSetList.Length(); ++j )
-                            for( unsigned t=0; t<Power<q,d>::value; ++t )
-                                cout << "  [" << j << "," << t << "]: " 
-                                     << weightSetList[j][t] << endl;
-                        cout << endl;
-                    }
-                    MPI_Barrier( comm );
-                }
-
                 if( rank == 0 )
                     cout << "Switching to spatial interpolation...";
                 SwitchToSpatialInterp<Phi,R,d,q>
@@ -601,52 +416,19 @@ namespace BFIO
                   weightSetList  );
                 if( rank == 0 )
                     cout << "done." << endl;
-                
-                MPI_Barrier( comm );
-                if( rank == 0 )
-                    cout << "Weights just before the switch..." << endl;
-                for( int i=0; i<S; ++i )
-                {
-                    if( rank == i )
-                    {
-                        cout << "Rank " << i << endl;
-                        for( unsigned j=0; j<weightSetList.Length(); ++j )
-                            for( unsigned t=0; t<Power<q,d>::value; ++t )
-                                cout << "  [" << j << "," << t << "]: " 
-                                 << weightSetList[j][t] << endl;
-                        cout << endl;
-                    }
-                    MPI_Barrier( comm );
-                }
             }
         }
         if( rank == 0 )
         {
-            cout << "Finished recursion." << endl;
+            cout << "Finished forming low-rank approximations." << endl;
             cout<<"  "<<MPI_Wtime()-startTime<<" seconds."<<endl;
         }
         
-        MPI_Barrier( comm );
-        for( int i=0; i<S; ++i )
-        {
-            if( rank == i )
-            {
-                cout << "Rank " << i << endl;
-                for( unsigned j=0; j<weightSetList.Length(); ++j )
-                    for( unsigned t=0; t<Power<q,d>::value; ++t )
-                        cout << "  [" << j << "," << t << "]: " 
-                             << weightSetList[j][t] << endl;
-                cout << endl;
-            }
-            MPI_Barrier( comm );
-        }
-
         // Construct Low-Rank Potentials (LRPs) from weights
         {
             const R wA = static_cast<R>(1)/N;
 
             // Fill in the LRPs
-            cout << "Resizing to: " << (1<<(d*L-s)) << endl;
             myLRPs.resize( 1<<(d*L-s) );
             for( unsigned i=0; i<myLRPs.size(); ++i )
             {
@@ -661,7 +443,7 @@ namespace BFIO
                     myLRPs[i].x0[j] = x0A[j];
     
                 // Fill in the grid points of the box
-                for( unsigned t=0; t<Power<q,d>::value; ++t )             
+                for( unsigned t=0; t<Pow<q,d>::val; ++t )             
                     for( unsigned j=0; j<d; ++j )    
                         myLRPs[i].pointSet[t][j] = x0A[j] + wA*chebyGrid[t][j];
 

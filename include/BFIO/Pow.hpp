@@ -16,24 +16,24 @@
    You should have received a copy of the GNU Lesser General Public License
    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_POWER_HPP
-#define BFIO_POWER_HPP 1
+#ifndef BFIO_POW_HPP
+#define BFIO_POW_HPP 1
 
 namespace BFIO
 {
-    // Power<x,y>::value returns x to the y'th power at compile-time
+    // Pow<x,y>::val returns x to the y'th power at compile-time
     template<unsigned x,unsigned y>
-    struct Power
-    { enum { value = x * Power<x,y-1>::value }; };
+    struct Pow
+    { enum { val = x * Pow<x,y-1>::val }; };
 
     template<unsigned x>
-    struct Power<x,1>
-    { enum { value = x }; };
+    struct Pow<x,1>
+    { enum { val = x }; };
 
     template<unsigned x>
-    struct Power<x,0>
-    { enum { value = 1 }; };
+    struct Pow<x,0>
+    { enum { val = 1 }; };
 }
 
-#endif /* BFIO_POWER_HPP */
+#endif /* BFIO_POW_HPP */
 

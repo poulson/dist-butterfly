@@ -28,9 +28,10 @@ namespace BFIO
     template<typename Phi,typename R,unsigned d,unsigned q>
     inline void
     SpatialWeightRecursion
-    ( const unsigned N, 
+    ( const unsigned log2Procs,
+      const unsigned myTeamRank,
+      const unsigned N, 
       const vector< Array<R,d> >& chebyGrid,
-      const vector< vector< vector<R> > >& lagrangeSpatialLookup,
       const unsigned ARelativeToAp,
       const Array<R,d>& x0A,
       const Array<R,d>& x0Ap,
@@ -43,7 +44,34 @@ namespace BFIO
     {
         typedef complex<R> C;
 
-        for( unsigned t=0; t<Power<q,d>::value; ++t )
+        static bool initialized = false;
+        static R lagrangeSpatialLookup[Pow<q,d>::val][1<<d][Pow<q,d>::val];
+
+        if( !initialized )
+        {
+            for( unsigned t=0; t<Pow<q,d>::val; ++t )
+            {
+                for( unsigned c=0; c<(1u<<d); ++c )
+                {
+                    // Map x_t(A) to the reference domain of its parent
+                    Array<R,d> xtARefAp;
+                    for( unsigned j=0; j<d; ++j )
+                    {
+                        xtARefAp[j] = 
+                            ( (c>>j)&1 ? (2*chebyGrid[t][j]+1)/4 :
+                                         (2*chebyGrid[t][j]-1)/4  );
+                    }
+                    for( unsigned tp=0; tp<Pow<q,d>::val; ++tp )
+                    {
+                        lagrangeSpatialLookup[t][c][tp] = 
+                            Lagrange<R,d,q>( tp, xtARefAp );
+                    }
+                }
+            }
+            initialized = true;
+        }
+
+        for( unsigned t=0; t<Pow<q,d>::val; ++t )
         {
             // Compute xt(A)
             Array<R,d> xtA;
@@ -52,28 +80,25 @@ namespace BFIO
 
             // Compute the unscaled weight
             weightSet[t] = 0;
-            for( unsigned c=0; c<(1u<<d); ++c )
+            for( unsigned cLocal=0; cLocal<(1u<<(d-log2Procs)); ++cLocal )
             {
-                const unsigned parentKey = parentOffset + c;
+                const unsigned c = (cLocal<<log2Procs) + myTeamRank;
+                const unsigned parentKey = parentOffset + cLocal;
                 C childContribution( 0, 0 );
 
                 // Compute p0(Bc)
                 Array<R,d> p0Bc;
                 for( unsigned j=0; j<d; ++j )
-                {
-                    p0Bc[j] = p0B[j] + wB*( (c>>j) & 1 ?
-                                            (2*chebyGrid[t][j]+1)/4 :
-                                            (2*chebyGrid[t][j]-1)/4  );
-                }
+                    p0Bc[j] = p0B[j] + ( (c>>j)&1 ? wB/4 : -wB/4 );
 
-                for( unsigned tp=0; tp<Power<q,d>::value; ++tp )        
+                for( unsigned tp=0; tp<Pow<q,d>::val; ++tp )        
                 {
                     // Compute xtp(Ap)
                     Array<R,d> xtpAp;
                     for( unsigned j=0; j<d; ++j )
                         xtpAp[j] = x0Ap[j] + (wA*2)*chebyGrid[tp][j];
 
-                    const R alpha = -TwoPi*N*Phi::Eval(xtpAp,p0Bc);
+                    const R alpha = -TwoPi*Phi::Eval(xtpAp,p0Bc);
                     childContribution +=
                         lagrangeSpatialLookup[t][ARelativeToAp][tp] *
                         C( cos(alpha), sin(alpha) ) * 
@@ -81,7 +106,7 @@ namespace BFIO
                 }
                 
                 // Scale the child contribution and add to weightSet[t]
-                const R alpha = TwoPi*N*Phi::Eval(xtA,p0Bc);
+                const R alpha = TwoPi*Phi::Eval(xtA,p0Bc);
                 childContribution *= C( cos(alpha), sin(alpha) );
                 weightSet[t] += childContribution;
             }

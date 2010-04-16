@@ -39,7 +39,6 @@ namespace BFIO
             WeightSetList<R,d,q>& weightSetList              )
     {
         typedef complex<R> C;
-        const unsigned N = 1u<<L;
 
         // Compute the width of the nodes at level l
         const unsigned l = L/2;
@@ -55,8 +54,8 @@ namespace BFIO
             for( unsigned j=0; j<d; ++j )
                 x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
 
-            vector< Array<R,d> > xPoints( Power<q,d>::value );
-            for( unsigned t=0; t<Power<q,d>::value; ++t )
+            vector< Array<R,d> > xPoints( Pow<q,d>::val );
+            for( unsigned t=0; t<Pow<q,d>::val; ++t )
                 for( unsigned j=0; j<d; ++j )
                     xPoints[t][j] = x0A[j] + wA*chebyGrid[t][j];
 
@@ -69,18 +68,18 @@ namespace BFIO
                 for( unsigned j=0; j<d; ++j )
                     p0B[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
 
-                vector< Array<R,d> > pPoints( Power<q,d>::value );
-                for( unsigned t=0; t<Power<q,d>::value; ++t )
+                vector< Array<R,d> > pPoints( Pow<q,d>::val );
+                for( unsigned t=0; t<Pow<q,d>::val; ++t )
                     for( unsigned j=0; j<d; ++j )
                         pPoints[t][j] = p0B[j] + wB*chebyGrid[t][j];
 
                 const unsigned key = k+(i<<log2LocalFreqBoxes);
-                for( unsigned t=0; t<Power<q,d>::value; ++t )
+                for( unsigned t=0; t<Pow<q,d>::val; ++t )
                 {
                     weightSetList[key][t] = 0;
-                    for( unsigned tp=0; tp<Power<q,d>::value; ++tp )
+                    for( unsigned tp=0; tp<Pow<q,d>::val; ++tp )
                     {
-                        R alpha = TwoPi*N*Phi::Eval(xPoints[t],pPoints[tp]);
+                        R alpha = TwoPi*Phi::Eval(xPoints[t],pPoints[tp]);
                         weightSetList[key][t] += 
                             C(cos(alpha),sin(alpha)) * 
                             oldWeightSetList[key][tp];
