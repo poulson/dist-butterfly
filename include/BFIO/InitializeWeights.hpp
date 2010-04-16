@@ -61,9 +61,6 @@ namespace BFIO
       const Array<unsigned,d>& 
             log2LocalFreqBoxesPerDim,
 
-      const vector< Array<unsigned,d> >& 
-            freqUnpackingMap,
-
       // The resultant equivalent weights for a low-rank expansion in each box
             WeightSetList<R,d,q>& 
             weightSetList
@@ -160,7 +157,8 @@ namespace BFIO
         {
             // Translate the local integer coordinates into the freq. center 
             Array<R,d> p0;
-            const Array<unsigned,d>& B = freqUnpackingMap[k];
+            Array<unsigned,d> B;
+            UnpackIndex( k, log2LocalFreqBoxesPerDim, B );
             for( unsigned j=0; j<d; ++j )
                 p0[j] = myFreqBoxWidths[j]*myFreqBox[j] + B[j]*wB + wB/2;
 

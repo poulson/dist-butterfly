@@ -56,10 +56,9 @@ namespace BFIO
             partialWeightSet[t] = 0;
             for( unsigned cLocal=0; cLocal<(1u<<(d-log2Procs)); ++cLocal )
             {
-                const unsigned c = (cLocal << log2Procs) + myTeamRank;
+                const unsigned c = (cLocal<<log2Procs) + myTeamRank;
                 const unsigned parentKey = parentOffset + cLocal;
-                cout << "  cLocal,c: " << cLocal << "," << c << endl;
-                cout << "  parentKey: " << parentKey << endl;
+                C childContribution( 0, 0 );
 
                 // Compute p0(Bc)
                 Array<R,d> p0Bc;
@@ -78,15 +77,16 @@ namespace BFIO
                         xtpAp[j] = x0Ap[j] + (wA*2)*chebyGrid[tp][j];
 
                     const R alpha = -TwoPi*N*Phi::Eval(xtpAp,p0Bc);
-                    partialWeightSet[t] += 
+                    childContribution += 
                         lagrangeSpatialLookup[t][ARelativeToAp][tp] * 
                         C( cos(alpha), sin(alpha) ) * 
                         oldWeightSetList[parentKey][tp];
                 }
                 
-                // Scale the weight
+                // Scale the child contribution and add to partial weight t
                 const R alpha = TwoPi*N*Phi::Eval(xtA,p0Bc);
-                partialWeightSet[t] *= C( cos(alpha), sin(alpha) );
+                childContribution *= C( cos(alpha), sin(alpha) );
+                partialWeightSet[t] += childContribution;
             }
         }
     }

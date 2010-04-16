@@ -29,7 +29,6 @@ namespace BFIO
     void
     SwitchToSpatialInterp
     ( const unsigned L, 
-      const unsigned s,
       const unsigned log2LocalFreqBoxes,
       const unsigned log2LocalSpatialBoxes,
       const Array<unsigned,d>& log2LocalFreqBoxesPerDim,
@@ -37,8 +36,6 @@ namespace BFIO
       const Array<R,d>& myFreqBoxOffsets,
       const Array<R,d>& mySpatialBoxOffsets,
       const vector< Array<R,d> >& chebyGrid,
-      const vector< Array<unsigned,d> >& freqUnpackingMap,
-      const vector< Array<unsigned,d> >& spatialUnpackingMap,
             WeightSetList<R,d,q>& weightSetList              )
     {
         typedef complex<R> C;
@@ -46,14 +43,15 @@ namespace BFIO
 
         // Compute the width of the nodes at level l
         const unsigned l = L/2;
-        const R wA = static_cast<R>(1) / static_cast<R>(1u<<l);
-        const R wB = static_cast<R>(1) / static_cast<R>(1u<<(L-l));
+        const R wA = static_cast<R>(1)/(1<<l);
+        const R wB = static_cast<R>(1)/(1<<(L-l));
         WeightSetList<R,d,q> oldWeightSetList( weightSetList );
         for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
         {
             // Compute the coordinates and center of this spatial box
             Array<R,d> x0A;
-            const Array<unsigned,d>& A = spatialUnpackingMap[i];
+            Array<unsigned,d> A;
+            UnpackIndex( i, log2LocalSpatialBoxesPerDim, A );
             for( unsigned j=0; j<d; ++j )
                 x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
 
@@ -66,7 +64,8 @@ namespace BFIO
             {
                 // Compute the coordinates and center of this freq box
                 Array<R,d> p0B;
-                const Array<unsigned,d>& B = freqUnpackingMap[k];
+                Array<unsigned,d> B;
+                UnpackIndex( k, log2LocalFreqBoxesPerDim, B );
                 for( unsigned j=0; j<d; ++j )
                     p0B[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
 
@@ -75,13 +74,13 @@ namespace BFIO
                     for( unsigned j=0; j<d; ++j )
                         pPoints[t][j] = p0B[j] + wB*chebyGrid[t][j];
 
-                const unsigned key = k+i*(1u<<log2LocalFreqBoxes);
+                const unsigned key = k+(i<<log2LocalFreqBoxes);
                 for( unsigned t=0; t<Power<q,d>::value; ++t )
                 {
                     weightSetList[key][t] = 0;
                     for( unsigned tp=0; tp<Power<q,d>::value; ++tp )
                     {
-                        R alpha = TwoPi*N*Phi::Eval(xPoints[t],pPoints[s]);
+                        R alpha = TwoPi*N*Phi::Eval(xPoints[t],pPoints[tp]);
                         weightSetList[key][t] += 
                             C(cos(alpha),sin(alpha)) * 
                             oldWeightSetList[key][tp];

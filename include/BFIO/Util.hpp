@@ -56,33 +56,15 @@ namespace BFIO
 
     template<unsigned d>
     inline void
-    UnpackSpatialIndex
-    ( unsigned i, unsigned log2SpatialBoxes, Array<unsigned,d>& x )
+    UnpackIndex
+    ( unsigned i, 
+      const Array<unsigned,d>& log2BoxesPerDim, Array<unsigned,d>& x )
     {
+        unsigned log2BoxesUpToDim = 0;
         for( unsigned j=0; j<d; ++j )
-            x[j] = 0;
-        unsigned dim = 0;
-        for( unsigned j=0; j<log2SpatialBoxes; ++j )
         {
-            x[dim] <<= 1;
-            x[dim] |= (i>>j) & 1;
-            dim = (dim+1) % d;
-        }
-    }
-
-    template<unsigned d>
-    inline void
-    UnpackFreqIndex
-    ( unsigned i, unsigned log2FreqBoxes, Array<unsigned,d>& p )
-    {
-        for( unsigned j=0; j<d; ++j )
-            p[j] = 0;
-        unsigned dim = d-1;
-        for( unsigned j=0; j<log2FreqBoxes; ++j )
-        {
-            p[dim] <<= 1;
-            p[dim] |= (i>>j) & 1;
-            dim = (dim+d-1) % d;
+            x[j] = (i>>log2BoxesUpToDim)&((1<<log2BoxesPerDim[j])-1);
+            log2BoxesUpToDim += log2BoxesPerDim[j];
         }
     }
 }
