@@ -34,6 +34,10 @@ namespace BFIO
     {
         T _x[d];
     public:
+        Array() { }
+        Array( T val ) { for( unsigned j=0; j<d; ++j ) _x[j] = val; }
+        ~Array() { }
+
         T& operator[]( unsigned j ) { return _x[j]; }
         const T& operator[]( unsigned j ) const { return _x[j]; }
 

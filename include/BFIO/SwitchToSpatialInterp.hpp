@@ -45,12 +45,11 @@ namespace BFIO
         const R wA = static_cast<R>(1)/(1<<l);
         const R wB = static_cast<R>(1)/(1<<(L-l));
         WeightSetList<R,d,q> oldWeightSetList( weightSetList );
+        Array<unsigned,d> A( 0 );
         for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
         {
             // Compute the coordinates and center of this spatial box
             Array<R,d> x0A;
-            Array<unsigned,d> A;
-            UnpackIndex( i, log2LocalSpatialBoxesPerDim, A );
             for( unsigned j=0; j<d; ++j )
                 x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
 
@@ -59,12 +58,12 @@ namespace BFIO
                 for( unsigned j=0; j<d; ++j )
                     xPoints[t][j] = x0A[j] + wA*chebyGrid[t][j];
 
+            Array<unsigned,d> B( 0 );
             for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k )
             {
                 // Compute the coordinates and center of this freq box
                 Array<R,d> p0B;
-                Array<unsigned,d> B;
-                UnpackIndex( k, log2LocalFreqBoxesPerDim, B );
+
                 for( unsigned j=0; j<d; ++j )
                     p0B[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
 
@@ -85,7 +84,9 @@ namespace BFIO
                             oldWeightSetList[key][tp];
                     }
                 }
+                TraverseHTree( log2LocalFreqBoxesPerDim, B );
             }
+            TraverseHTree( log2LocalSpatialBoxesPerDim, A );
         }
     }
 }

@@ -180,6 +180,84 @@ namespace BFIO
             if( rank == 0 )
                 cout << "(wA,wB)=(" << wA << "," << wB << ")" << endl;
 
+            // Print the state at the beginning of the loop
+            MPI_Barrier( comm );
+            if( rank == 0 )
+            {
+                cout << "At the beginning of level " << l << endl;
+                cout << "=========================================" << endl;
+            }
+            for( int m=0; m<S; ++m )
+            {
+                if( rank == m )
+                {
+                    cout << "  Rank: " << m << endl;
+                    cout << "  mySpatialBox:        ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << mySpatialBox[j] << " ";
+                    cout << endl;
+                    cout << "  mySpatialBoxOffsets: ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << mySpatialBoxOffsets[j] << " ";
+                    cout << endl;
+                    cout << "  mySpatialBoxWidths:  ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << mySpatialBoxWidths[j] << " ";
+                    cout << endl;
+                    cout << "  log2LocalSpatialBoxesPerDim: ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << log2LocalSpatialBoxesPerDim[j] << " ";
+                    cout << endl << endl;
+                }
+                MPI_Barrier( comm );
+            }
+            for( int m=0; m<S; ++m )
+            {
+                if( rank == m )
+                {
+                    cout << "  Rank: " << m << endl;
+                    cout << "  myFreqBox:        ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << myFreqBox[j] << " ";
+                    cout << endl;
+                    cout << "  myFreqBoxOffsets: ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << myFreqBoxOffsets[j] << " ";
+                    cout << endl;
+                    cout << "  myFreqBoxWidths:  ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << myFreqBoxWidths[j] << " ";
+                    cout << endl;
+                    cout << "  log2LocalFreqBoxesPerDim: ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << log2LocalFreqBoxesPerDim[j] << " ";
+                    cout << endl << endl;
+                }
+                MPI_Barrier( comm );
+            }
+            for( int m=0; m<S; ++m )
+            {
+                if( rank == m )
+                {
+                    cout << "  Rank: " << m << endl; 
+                    for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
+                    {
+                        cout << "  Space box: " << i << endl;
+                        for( unsigned j=0; j<(1u<<log2LocalFreqBoxes); ++j )
+                        {
+                            cout << "    Freq box: " << j << endl;
+                            for( unsigned t=0; t<Pow<q,d>::val; ++t )
+                            {
+                                unsigned index = j+(i<<log2LocalFreqBoxes);
+                                cout << "      Weight " << t << ": " 
+                                     << weightSetList[index][t] << endl;
+                            }
+                        }
+                    }
+                }
+                MPI_Barrier( comm );
+            }
+
             if( log2LocalFreqBoxes >= d )
             {
                 // Refine the spatial domain and coursen the frequency domain
@@ -200,22 +278,21 @@ namespace BFIO
                 // the d dimensions, then the ReduceScatter will not require 
                 // any packing or unpacking.
                 WeightSetList<R,d,q> oldWeightSetList( weightSetList );
+                Array<unsigned,d> A( 0 );
                 for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
                 {
                     // Compute the coordinates and center of this spatial box
                     Array<R,d> x0A;
-                    Array<unsigned,d> A;
-                    UnpackIndex( i, log2LocalSpatialBoxesPerDim, A );
+
                     for( unsigned j=0; j<d; ++j )
                         x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
 
                     // Loop over the B boxes in frequency domain
+                    Array<unsigned,d> B( 0 );
                     for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k )
                     {
                         // Compute the coordinates and center of this freq box
                         Array<R,d> p0B;
-                        Array<unsigned,d> B;
-                        UnpackIndex( k, log2LocalFreqBoxesPerDim, B );
                         for( unsigned j=0; j<d; ++j )
                             p0B[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
 
@@ -248,7 +325,9 @@ namespace BFIO
                               parentOffset, oldWeightSetList, 
                               weightSetList[key] );
                         }
+                        TraverseHTree( log2LocalFreqBoxesPerDim, B );
                     }
+                    TraverseHTree( log2LocalSpatialBoxesPerDim, A );
                 }
             }
             else 
@@ -275,12 +354,40 @@ namespace BFIO
                 // Construct the group for our local team
                 static unsigned numSpaceCuts = 0;
                 MPI_Group teamGroup;
-                const int myTeamRank = (rank>>numSpaceCuts)&((1<<log2Procs)-1);
-                const int startRank = rank-(myTeamRank<<numSpaceCuts);
+                unsigned myTeamRank = 0; // initialize to avoid warnings
+                const int startRank = rank-
+                    (((rank>>numSpaceCuts)&((1<<log2Procs)-1))<<numSpaceCuts);
                 vector<int> ranks( 1<<log2Procs );
                 for( unsigned j=0; j<(1u<<log2Procs); ++j )
-                    ranks[j] = startRank+(j<<numSpaceCuts);
+                {
+                    // We need to reverse the order of the last log2Procs
+                    // bits of j and add the result onto the startRank
+                    unsigned jReversed = 0;
+                    for( unsigned k=0; k<log2Procs; ++k )
+                        jReversed |= ((j>>k)&1)<<(log2Procs-1-k);
+                    ranks[j] = startRank+jReversed;
+                    if( ranks[j] == rank )
+                        myTeamRank = j;
+                }
                 MPI_Group_incl( group, 1<<log2Procs, &ranks[0], &teamGroup );
+
+                MPI_Barrier( comm );
+                if( rank == 0 )
+                {
+                    cout << "Team ranks:" << endl;
+                    cout << "==========================" << endl;
+                }
+                for( int m=0; m<S; ++m )
+                {
+                    if( rank == m )
+                    {
+                        cout << "Rank " << m << ": ";
+                        for( unsigned a=0; a<(1u<<log2Procs); ++a )
+                            cout << ranks[a] << " ";
+                        cout << endl;
+                    }
+                    MPI_Barrier( comm );
+                }
                 
                 // Construct the local team communicator from the team group
                 MPI_Comm  teamComm;
@@ -317,12 +424,11 @@ namespace BFIO
                 // any packing or unpacking.
                 WeightSetList<R,d,q> partialWeightSetList
                 ( 1<<log2LocalSpatialBoxes );
+                Array<unsigned,d> A( 0 );
                 for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
                 {
                     // Compute the coordinates and center of this spatial box
                     Array<R,d> x0A;
-                    Array<unsigned,d> A;
-                    UnpackIndex( i, log2LocalSpatialBoxesPerDim, A );
                     for( unsigned j=0; j<d; ++j )
                         x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
 
@@ -362,6 +468,7 @@ namespace BFIO
                     MPI_Barrier( comm );
                     if( rank == 0 )
                         cout << "done." << endl;
+                    TraverseHTree( log2LocalSpatialBoxesPerDim, A );
                 }
 
                 MPI_Barrier( comm );
@@ -407,6 +514,36 @@ namespace BFIO
 
             if( l == L/2 )
             {
+                MPI_Barrier( comm );
+                if( rank == 0 )
+                {
+                    cout << "Right before switching: " << endl;
+                    cout << "=====================================" << endl;
+                }
+                for( int m=0; m<S; ++m )
+                {
+                    if( rank == m )
+                    {
+                        cout << "  Rank: " << m << endl; 
+                        for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
+                        {
+                            cout << "  Space box: " << i << endl;
+                            for( unsigned j=0; j<(1u<<log2LocalFreqBoxes); ++j )
+                            {
+                                cout << "    Freq box: " << j << endl;
+                                for( unsigned t=0; t<Pow<q,d>::val; ++t )
+                                {
+                                    unsigned index = 
+                                        j+(i<<log2LocalFreqBoxes);
+                                    cout << "      Weight " << t << ": " 
+                                         << weightSetList[index][t] << endl;
+                                }
+                            }
+                        }
+                    }
+                    MPI_Barrier( comm );
+                }
+
                 if( rank == 0 )
                     cout << "Switching to spatial interpolation...";
                 SwitchToSpatialInterp<Phi,R,d,q>
@@ -416,6 +553,84 @@ namespace BFIO
                   weightSetList  );
                 if( rank == 0 )
                     cout << "done." << endl;
+            }
+            
+            // Print the state at the end of the loop
+            MPI_Barrier( comm );
+            if( rank == 0 )
+            {
+                cout << "At the end of level " << l << endl;
+                cout << "=========================================" << endl;
+            }
+            for( int m=0; m<S; ++m )
+            {
+                if( rank == m )
+                {
+                    cout << "  Rank: " << m << endl;
+                    cout << "  mySpatialBox:        ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << mySpatialBox[j] << " ";
+                    cout << endl;
+                    cout << "  mySpatialBoxOffsets: ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << mySpatialBoxOffsets[j] << " ";
+                    cout << endl;
+                    cout << "  mySpatialBoxWidths:  ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << mySpatialBoxWidths[j] << " ";
+                    cout << endl;
+                    cout << "  log2LocalSpatialBoxesPerDim: ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << log2LocalSpatialBoxesPerDim[j] << " ";
+                    cout << endl << endl;
+                }
+                MPI_Barrier( comm );
+            }
+            for( int m=0; m<S; ++m )
+            {
+                if( rank == m )
+                {
+                    cout << "  Rank: " << m << endl;
+                    cout << "  myFreqBox:        ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << myFreqBox[j] << " ";
+                    cout << endl;
+                    cout << "  myFreqBoxOffsets: ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << myFreqBoxOffsets[j] << " ";
+                    cout << endl;
+                    cout << "  myFreqBoxWidths:  ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << myFreqBoxWidths[j] << " ";
+                    cout << endl;
+                    cout << "  log2LocalFreqBoxesPerDim: ";
+                    for( unsigned j=0; j<d; ++j )
+                        cout << log2LocalFreqBoxesPerDim[j] << " ";
+                    cout << endl << endl;
+                }
+                MPI_Barrier( comm );
+            }
+            for( int m=0; m<S; ++m )
+            {
+                if( rank == m )
+                {
+                    cout << "  Rank: " << m << endl; 
+                    for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
+                    {
+                        cout << "  Space box: " << i << endl;
+                        for( unsigned j=0; j<(1u<<log2LocalFreqBoxes); ++j )
+                        {
+                            cout << "    Freq box: " << j << endl;
+                            for( unsigned t=0; t<Pow<q,d>::val; ++t )
+                            {
+                                unsigned index = j+(i<<log2LocalFreqBoxes);
+                                cout << "      Weight " << t << ": " 
+                                     << weightSetList[index][t] << endl;
+                            }
+                        }
+                    }
+                }
+                MPI_Barrier( comm );
             }
         }
         if( rank == 0 )
@@ -428,27 +643,57 @@ namespace BFIO
         {
             const R wA = static_cast<R>(1)/N;
 
-            // Fill in the LRPs
-            myLRPs.resize( 1<<(d*L-s) );
-            for( unsigned i=0; i<myLRPs.size(); ++i )
+            MPI_Barrier( comm );
+            if( rank == 0 )
             {
-                myLRPs[i].N = N;
+                cout << "Low Rank Potentials" << endl;
+                cout << "============================" << endl;
+            }
+            for( int m=0; m<S; ++m )
+            {
+                if( rank == m )
+                {
+                    cout << "Rank " << rank << ":" << endl;
+                    // Fill in the LRPs
+                    myLRPs.resize( 1<<(d*L-s) );
+                    Array<unsigned,d> A( 0 );
+                    for( unsigned i=0; i<myLRPs.size(); ++i )
+                    {
+                        cout << "  i=" << i << endl;
+                        myLRPs[i].N = N;
+                        cout << "  N=" << myLRPs[i].N << endl;
 
-                Array<R,d> x0A;
-                Array<unsigned,d> A;
-                UnpackIndex( i, log2LocalSpatialBoxesPerDim, A );
-                for( unsigned j=0; j<d; ++j )
-                    x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
-                for( unsigned j=0; j<d; ++j )
-                    myLRPs[i].x0[j] = x0A[j];
+                        Array<R,d> x0A;
+
+                        cout << "  A=";
+                        for( unsigned j=0; j<d; ++j )
+                            cout << A[j] << " ";
+                        cout << endl;
+                        for( unsigned j=0; j<d; ++j )
+                            x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
+                        for( unsigned j=0; j<d; ++j )
+                            myLRPs[i].x0[j] = x0A[j];
+                        cout << "  x0=";
+                        for( unsigned j=0; j<d; ++j )
+                            cout << myLRPs[i].x0[j] << " ";
+                        cout << endl;
     
-                // Fill in the grid points of the box
-                for( unsigned t=0; t<Pow<q,d>::val; ++t )             
-                    for( unsigned j=0; j<d; ++j )    
-                        myLRPs[i].pointSet[t][j] = x0A[j] + wA*chebyGrid[t][j];
+                        // Fill in the grid points of the box
+                        for( unsigned t=0; t<Pow<q,d>::val; ++t )             
+                            for( unsigned j=0; j<d; ++j )    
+                                myLRPs[i].pointSet[t][j] = 
+                                    x0A[j] + wA*chebyGrid[t][j];
 
-                // Fill in the weights for the grid points
-                myLRPs[i].weightSet = weightSetList[i];
+                        // Fill in the weights for the grid points
+                        myLRPs[i].weightSet = weightSetList[i];
+                        cout << "  weights:" << endl;
+                        for( unsigned t=0; t<Pow<q,d>::val; ++t )
+                            cout << "    " << myLRPs[i].weightSet[t] << endl;
+                        cout << endl;
+
+                        TraverseHTree( log2LocalSpatialBoxesPerDim, A );
+                    }
+                }
             }
         }
     }

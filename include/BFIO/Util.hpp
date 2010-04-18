@@ -49,23 +49,15 @@ namespace BFIO
         return j;
     }
 
-    inline unsigned
-    TwiddleBit
-    ( unsigned N, unsigned l )
-    { return N ^ (1<<l); }
-
+    // Update the coordinates of x to be the next location in the fractal
     template<unsigned d>
     inline void
-    UnpackIndex
-    ( unsigned i, 
-      const Array<unsigned,d>& log2BoxesPerDim, Array<unsigned,d>& x )
+    TraverseHTree
+    ( const Array<unsigned,d>& log2BoxesPerDim, Array<unsigned,d>& x )
     {
-        unsigned log2BoxesUpToDim = 0;
-        for( unsigned j=0; j<d; ++j )
-        {
-            x[j] = (i>>log2BoxesUpToDim)&((1<<log2BoxesPerDim[j])-1);
-            log2BoxesUpToDim += log2BoxesPerDim[j];
-        }
+        // This needs to be written        
+        throw "Code for constrained traversal of a d-dimensional H-Tree "
+              "needs to be written.";
     }
 }
 

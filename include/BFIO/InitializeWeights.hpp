@@ -130,12 +130,11 @@ namespace BFIO
         // our local boxes, say B_loc, are subsets of a B, but we still need 
         // to consider our contribution to the weights corresponding to 
         // p_t^B lying in B \ B_loc.
+        Array<unsigned,d> B( 0 );
         for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k ) 
         {
             // Translate the local integer coordinates into the freq. center 
             Array<R,d> p0;
-            Array<unsigned,d> B;
-            UnpackIndex( k, log2LocalFreqBoxesPerDim, B );
             for( unsigned j=0; j<d; ++j )
                 p0[j] = myFreqBoxWidths[j]*myFreqBox[j] + B[j]*wB + wB/2;
 
@@ -151,6 +150,7 @@ namespace BFIO
                 const R alpha = -TwoPi*Phi::Eval(x0,pt);
                 weightSetList[k][t] *= C( cos(alpha), sin(alpha) );
             }
+            TraverseHTree( log2LocalFreqBoxesPerDim, B );
         }
     }
 }
