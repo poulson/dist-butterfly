@@ -23,6 +23,7 @@
 
 #include "BFIO/Util.hpp"
 #include "BFIO/LRP.hpp"
+#include "BFIO/HTree.hpp"
 #include "BFIO/InitializeWeights.hpp"
 #include "BFIO/FreqWeightRecursion.hpp"
 #include "BFIO/SwitchToSpatialInterp.hpp"
@@ -277,20 +278,27 @@ namespace BFIO
                 // distribute the data cyclically in the _reverse_ order over 
                 // the d dimensions, then the ReduceScatter will not require 
                 // any packing or unpacking.
+                CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
                 WeightSetList<R,d,q> oldWeightSetList( weightSetList );
-                Array<unsigned,d> A( 0 );
-                for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
+                for( unsigned i=0; 
+                     i<(1u<<log2LocalSpatialBoxes); 
+                     ++i, AWalker.Walk()           )
                 {
+                    const Array<unsigned,d> A = AWalker.State();
+
                     // Compute the coordinates and center of this spatial box
                     Array<R,d> x0A;
-
                     for( unsigned j=0; j<d; ++j )
                         x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
 
                     // Loop over the B boxes in frequency domain
-                    Array<unsigned,d> B( 0 );
-                    for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k )
+                    CHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
+                    for( unsigned k=0; 
+                         k<(1u<<log2LocalFreqBoxes); 
+                         ++k, BWalker.Walk()        )
                     {
+                        const Array<unsigned,d> B = BWalker.State();
+
                         // Compute the coordinates and center of this freq box
                         Array<R,d> p0B;
                         for( unsigned j=0; j<d; ++j )
@@ -325,9 +333,7 @@ namespace BFIO
                               parentOffset, oldWeightSetList, 
                               weightSetList[key] );
                         }
-                        TraverseHTree( log2LocalFreqBoxesPerDim, B );
                     }
-                    TraverseHTree( log2LocalSpatialBoxesPerDim, A );
                 }
             }
             else 
@@ -422,11 +428,15 @@ namespace BFIO
                 // distribute the data cyclically in the _reverse_ order over 
                 // the d dimensions, then the ReduceScatter will not require 
                 // any packing or unpacking.
+                CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
                 WeightSetList<R,d,q> partialWeightSetList
                 ( 1<<log2LocalSpatialBoxes );
-                Array<unsigned,d> A( 0 );
-                for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
+                for( unsigned i=0; 
+                     i<(1u<<log2LocalSpatialBoxes); 
+                     ++i, AWalker.Walk()           )
                 {
+                    const Array<unsigned,d> A = AWalker.State();
+
                     // Compute the coordinates and center of this spatial box
                     Array<R,d> x0A;
                     for( unsigned j=0; j<d; ++j )
@@ -468,7 +478,6 @@ namespace BFIO
                     MPI_Barrier( comm );
                     if( rank == 0 )
                         cout << "done." << endl;
-                    TraverseHTree( log2LocalSpatialBoxesPerDim, A );
                 }
 
                 MPI_Barrier( comm );
@@ -656,9 +665,11 @@ namespace BFIO
                     cout << "Rank " << rank << ":" << endl;
                     // Fill in the LRPs
                     myLRPs.resize( 1<<(d*L-s) );
-                    Array<unsigned,d> A( 0 );
-                    for( unsigned i=0; i<myLRPs.size(); ++i )
+                    CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
+                    for( unsigned i=0; i<myLRPs.size(); ++i, AWalker.Walk() )
                     {
+                        const Array<unsigned,d> A = AWalker.State();
+
                         cout << "  i=" << i << endl;
                         myLRPs[i].N = N;
                         cout << "  N=" << myLRPs[i].N << endl;
@@ -690,8 +701,6 @@ namespace BFIO
                         for( unsigned t=0; t<Pow<q,d>::val; ++t )
                             cout << "    " << myLRPs[i].weightSet[t] << endl;
                         cout << endl;
-
-                        TraverseHTree( log2LocalSpatialBoxesPerDim, A );
                     }
                 }
             }

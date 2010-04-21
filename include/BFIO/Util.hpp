@@ -49,15 +49,47 @@ namespace BFIO
         return j;
     }
 
-    // Update the coordinates of x to be the next location in the fractal
-    template<unsigned d>
-    inline void
-    TraverseHTree
-    ( const Array<unsigned,d>& log2BoxesPerDim, Array<unsigned,d>& x )
+    // This is a modification of Sean Eron Anderson's binary search algorithm
+    // for counting the trailing zeros of a 32-bit integer. It was found at
+    //     http://graphics.stanford.edu/~seander/bithacks.html
+    // and is in the public domain.
+    //
+    // The main difference is that I switched the algorithm to count ones and 
+    // ignore the case where N=2^32-1 rather than N=0
+    inline unsigned
+    NumberOfTrailingOnes( unsigned N )
     {
-        // This needs to be written        
-        throw "Code for constrained traversal of a d-dimensional H-Tree "
-              "needs to be written.";
+        unsigned int c;
+        if( (N & 0x1)==0 )
+        {
+            c = 0;
+        }
+        else
+        {
+            c = 1; 
+            if( (N & 0xffff)==0xffff )
+            {
+                N >>= 16; 
+                c += 16;
+            }
+            if( (N & 0xff) == 0xff )
+            {
+                N >>= 8;
+                c += 8;
+            }
+            if( (N & 0xf) == 0xf )
+            {
+                N >>= 4;
+                c += 4;
+            }
+            if( (N & 0x3) == 0x3 )
+            {
+                N >>= 2;
+                c += 2;
+            }
+            c -= !(N & 0x1);
+        }
+        return c;
     }
 }
 

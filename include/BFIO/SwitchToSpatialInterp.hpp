@@ -44,10 +44,12 @@ namespace BFIO
         const unsigned l = L/2;
         const R wA = static_cast<R>(1)/(1<<l);
         const R wB = static_cast<R>(1)/(1<<(L-l));
+        CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
         WeightSetList<R,d,q> oldWeightSetList( weightSetList );
-        Array<unsigned,d> A( 0 );
-        for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i )
+        for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i, AWalker.Walk() )
         {
+            const Array<unsigned,d> A = AWalker.State();
+
             // Compute the coordinates and center of this spatial box
             Array<R,d> x0A;
             for( unsigned j=0; j<d; ++j )
@@ -58,9 +60,11 @@ namespace BFIO
                 for( unsigned j=0; j<d; ++j )
                     xPoints[t][j] = x0A[j] + wA*chebyGrid[t][j];
 
-            Array<unsigned,d> B( 0 );
-            for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k )
+            CHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
+            for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k, BWalker.Walk() )
             {
+                const Array<unsigned,d> B = BWalker.State();
+
                 // Compute the coordinates and center of this freq box
                 Array<R,d> p0B;
 
@@ -84,9 +88,7 @@ namespace BFIO
                             oldWeightSetList[key][tp];
                     }
                 }
-                TraverseHTree( log2LocalFreqBoxesPerDim, B );
             }
-            TraverseHTree( log2LocalSpatialBoxesPerDim, A );
         }
     }
 }
