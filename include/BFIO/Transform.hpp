@@ -360,18 +360,23 @@ namespace BFIO
                 // Construct the group for our local team
                 static unsigned numSpaceCuts = 0;
                 MPI_Group teamGroup;
-                unsigned myTeamRank = 0; // initialize to avoid warnings
-                const int startRank = rank-
-                    (((rank>>numSpaceCuts)&((1<<log2Procs)-1))<<numSpaceCuts);
+                int myTeamRank = 0;
+                // Mask log2Procs bits offset by numSpaceCuts bits
+                const int startRank = 
+                    rank & ~(((1<<log2Procs)-1)<<numSpaceCuts);
+                const unsigned log2Stride = numSpaceCuts;
+
+                cout << "rank/startRank: " << rank << "," << startRank << endl;
                 vector<int> ranks( 1<<log2Procs );
                 for( unsigned j=0; j<(1u<<log2Procs); ++j )
                 {
                     // We need to reverse the order of the last log2Procs
-                    // bits of j and add the result onto the startRank
+                    // bits of j and add the result multiplied by the stride
+                    // onto the startRank
                     unsigned jReversed = 0;
                     for( unsigned k=0; k<log2Procs; ++k )
                         jReversed |= ((j>>k)&1)<<(log2Procs-1-k);
-                    ranks[j] = startRank+jReversed;
+                    ranks[j] = startRank+(jReversed<<log2Stride);
                     if( ranks[j] == rank )
                         myTeamRank = j;
                 }
@@ -663,6 +668,7 @@ namespace BFIO
                 if( rank == m )
                 {
                     cout << "Rank " << rank << ":" << endl;
+                    cout << "  wA=" << wA << endl;
                     // Fill in the LRPs
                     myLRPs.resize( 1<<(d*L-s) );
                     CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
@@ -688,6 +694,9 @@ namespace BFIO
                         for( unsigned j=0; j<d; ++j )
                             cout << myLRPs[i].x0[j] << " ";
                         cout << endl;
+
+                        for( unsigned j=0; j<d; ++j )
+                            myLRPs[i].p0[j] = static_cast<R>(1)/2;
     
                         // Fill in the grid points of the box
                         for( unsigned t=0; t<Pow<q,d>::val; ++t )             
