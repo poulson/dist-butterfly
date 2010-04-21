@@ -51,6 +51,10 @@ namespace BFIO
         for( unsigned j=0; j<d; ++j )
             x0[j] = 0.5;
 
+        int rank, size;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+        MPI_Comm_size( MPI_COMM_WORLD, &size );
+
         // Compute the unscaled weights for each local box by looping over 
         // our sources and sorting them into the appropriate local box one 
         // at a time. Bombs if a source is outside of our frequency box.
@@ -67,11 +71,13 @@ namespace BFIO
                 R rightBound = myFreqBoxWidths[j]*(myFreqBox[j]+1);
                 if( pj < leftBound || pj >= rightBound )
                 {
-                    cerr << "Source " << i << " was at " << pj
-                         << " in dimension " << j << ", but our frequency box"
-                         << " in this dim. is [" << leftBound << "," 
-                         << rightBound << ")." << endl;
-                    throw 0;
+                    ostringstream msg;
+                    msg << "Source " << i << " was at " << pj
+                        << " in dimension " << j << ", but our frequency box"
+                        << " in this dim. is [" << leftBound << "," 
+                        << rightBound << ").";
+                    const string& s = msg.str();
+                    throw s.c_str();
                 }
 
                 // We must be in the box, so bitwise determine the coord index
@@ -100,6 +106,10 @@ namespace BFIO
                 p0[j] = myFreqBoxWidths[j]*myFreqBox[j] + B[j]*wB + wB/2;
 
             // Flatten the integer coordinates of B_loc into a single index
+            //
+            // TODO: This logic is incorrect. A more intelligent routine needs
+            //       to be written to flatten coordinates in a constrained 
+            //       H Tree into their flat indices.
             unsigned k = 0;
             unsigned log2LocalFreqBoxesUpToDim = 0;
             for( unsigned j=0; j<d; ++j )

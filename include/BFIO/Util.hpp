@@ -40,13 +40,26 @@ namespace BFIO
     IsPowerOfTwo( unsigned N )
     { return N && !(N & (N-1)); }
 
+    // This is a slight modification of Sean Eron Anderson's 
+    // 'Find the log2 base 2 of an N-bit integer in O(lg(N)) operations 
+    //  with multiply and lookup'. It was found at
+    //    http://graphics.stanford.edu/~seander/bithacks.html
+    // and is in the public domain.
     inline unsigned
     Log2( unsigned N )
-    { 
-        unsigned j = 0;
-        while( (N>>j) > 1 )
-            ++j;
-        return j;
+    {
+        static const unsigned MultiplyDeBruijnBitPosition[32] = 
+        {
+          0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
+          8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31
+        };
+
+        N |= N >> 1;
+        N |= N >> 2;
+        N |= N >> 4;
+        N |= N >> 8;
+        N |= N >> 16;
+        return MultiplyDeBruijnBitPosition[(unsigned)(N*0x07C4ACDDU)>>27];
     }
 
     // This is a modification of Sean Eron Anderson's binary search algorithm
