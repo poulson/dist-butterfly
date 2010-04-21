@@ -105,18 +105,8 @@ namespace BFIO
             for( unsigned j=0; j<d; ++j )
                 p0[j] = myFreqBoxWidths[j]*myFreqBox[j] + B[j]*wB + wB/2;
 
-            // Flatten the integer coordinates of B_loc into a single index
-            //
-            // TODO: This logic is incorrect. A more intelligent routine needs
-            //       to be written to flatten coordinates in a constrained 
-            //       H Tree into their flat indices.
-            unsigned k = 0;
-            unsigned log2LocalFreqBoxesUpToDim = 0;
-            for( unsigned j=0; j<d; ++j )
-            {
-                k |= (B[j]<<log2LocalFreqBoxesUpToDim);
-                log2LocalFreqBoxesUpToDim += log2LocalFreqBoxesPerDim[j];
-            }
+            // Flatten the integer coordinates of B
+            unsigned k = FlattenCHTreeIndex( B, log2LocalFreqBoxesPerDim );
 
             // Add this point's contribution to the unscaled weights of B. 
             // We evaluate the Lagrangian polynomial on the reference grid, 

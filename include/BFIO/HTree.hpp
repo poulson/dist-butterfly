@@ -24,6 +24,64 @@
 namespace BFIO
 {
     template<unsigned d>
+    unsigned
+    FlattenHTreeIndex
+    ( const Array<unsigned,d>& x )
+    {
+        // We will accumulate the index into this variable
+        unsigned index = 0;
+
+        // Compute the maximum recursion height reached by searching for the
+        // maximum log2 of the coordinates
+        unsigned maxLog2 = 0;
+        for( unsigned j=0; j<d; ++j )
+            maxLog2 = std::max( Log2(x[j]), maxLog2 );
+
+        // Now unroll the coordinates into the index
+        for( unsigned i=0; i<=maxLog2; ++i )
+            for( unsigned j=0; j<d; ++j )
+                index |= ((x[j]>>i)&1)<<(i*d+j);
+
+        return index;
+    }
+
+    template<unsigned d>
+    unsigned
+    FlattenCHTreeIndex
+    ( const Array<unsigned,d>& x, const Array<unsigned,d>& log2BoxesPerDim )
+    {
+        // We will accumulate the index into this variable
+        unsigned index = 0;
+
+        // Compute the maximum recursion height reached by searching for the
+        // maximum log2 of the coordinates
+        unsigned maxLog2 = 0;
+        for( unsigned j=0; j<d; ++j )
+            maxLog2 = std::max( Log2(x[j]), maxLog2 );
+
+        // Now unroll the coordinates into the index
+        for( unsigned i=0; i<=maxLog2; ++i )
+        {
+            // Sum the total number of levels i is 'above' the maximum for 
+            // each dimension
+            unsigned log2BoxesUpToLevel = 0;
+            for( unsigned j=0; j<d; ++j )
+                log2BoxesUpToLevel += std::min( i, log2BoxesPerDim[j] );
+            
+            // Now unroll for each dimension
+            unsigned unfilledBefore = 0;
+            for( unsigned j=0; j<d; ++j )
+            {
+                index |= ((x[j]>>i)&1)<<(log2BoxesUpToLevel+unfilledBefore);
+                if( log2BoxesPerDim[j] > i )
+                    ++unfilledBefore;
+            }
+        }
+
+        return index;
+    }
+
+    template<unsigned d>
     class HTreeWalker
     {
         unsigned _nextZeroDim;
@@ -128,7 +186,7 @@ namespace BFIO
             const unsigned zeroDim = _nextZeroDim;
             const unsigned zeroLevel = _nextZeroLevel;
 
-            if( zeroDim == 0 )
+            if( zeroDim == _firstOpenDim )
             {
                 // Zero the first (zeroLevel-1) bits of all coordinates
                 // and then increment at level zeroLevel

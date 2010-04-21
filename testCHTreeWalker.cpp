@@ -63,7 +63,8 @@ main
                 cout << i << ": ";
                 for( unsigned j=0; j<d; ++j )
                     cout << A[j] << " ";
-                cout << endl;
+                cout << "; flattened=" 
+                     << FlattenCHTreeIndex( A, log2BoxesPerDim ) << endl;
             }
         }
     }
