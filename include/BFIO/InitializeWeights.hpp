@@ -130,15 +130,10 @@ namespace BFIO
         // our local boxes, say B_loc, are subsets of a B, but we still need 
         // to consider our contribution to the weights corresponding to 
         // p_t^B lying in B \ B_loc.
-        cout << "log2LocalFreqBoxes: " << log2LocalFreqBoxes << endl;
         CHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
         for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k, BWalker.Walk() ) 
         {
             const Array<unsigned,d> B = BWalker.State();
-            cout << k << ": ";
-            for( unsigned j=0; j<d; ++j )
-                cout << B[j] << " ";
-            cout << endl;
 
             // Translate the local integer coordinates into the freq. center 
             Array<R,d> p0;

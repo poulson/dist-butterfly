@@ -70,6 +70,8 @@ namespace BFIO
             {
                 for( unsigned j=0; j<=zeroDim; ++j )
                     _state[j] &= ~((1u<<(zeroLevel+1))-1);
+                for( unsigned j=zeroDim+1; j<d; ++j )
+                    _state[j] &= ~((1u<<zeroLevel)-1);
                 _state[zeroDim] |= 1u<<zeroLevel;
 
                 // Set up for the next walk
@@ -157,6 +159,8 @@ namespace BFIO
             {
                 for( unsigned j=0; j<=zeroDim; ++j )
                     _state[j] &= ~((1u<<(zeroLevel+1))-1);
+                for( unsigned j=zeroDim+1; j<d; ++j )
+                    _state[j] &= ~((1u<<zeroLevel)-1);
                 _state[zeroDim] |= 1u<<zeroLevel;
 
                 // Set up for the next walk

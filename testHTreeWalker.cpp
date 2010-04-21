@@ -28,7 +28,7 @@ Usage()
     cout << endl;
 }
 
-#define d 2
+#define d 3
 
 int
 main
