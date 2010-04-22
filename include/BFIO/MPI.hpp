@@ -1,20 +1,20 @@
 /*
-   Copyright 2010 Jack Poulson
+  Copyright 2010 Jack Poulson
 
-   This file is part of ButterflyFIO.
+  This file is part of ButterflyFIO.
 
-   This program is free software: you can redistribute it and/or modify it under
-   the terms of the GNU Lesser General Public License as published by the
-   Free Software Foundation; either version 3 of the License, or 
-   (at your option) any later version.
+  This program is free software: you can redistribute it and/or modify it under
+  the terms of the GNU Lesser General Public License as published by the
+  Free Software Foundation; either version 3 of the License, or 
+  (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful, but 
-   WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU Lesser General Public License for more details.
+  This program is distributed in the hope that it will be useful, but 
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU Lesser General Public License
-   along with this program. If not, see <http://www.gnu.org/licenses/>.
+  You should have received a copy of the GNU Lesser General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef BFIO_MPI_HPP
 #define BFIO_MPI_HPP 1
@@ -27,11 +27,6 @@ namespace BFIO
 {
     template<typename T>
     void
-    Sum
-    ( T* sendBuf, T* recvBuf, int count, MPI_Comm comm );
-
-    template<typename T>
-    void
     SumScatter
     ( T* sendBuf, T* recvBuf, int* recvCounts, MPI_Comm comm );
 }
@@ -40,41 +35,6 @@ namespace BFIO
 namespace BFIO
 {
     using namespace std;
-
-    template<>
-    void
-    Sum<float>
-    ( float* sendBuf, float* recvBuf, int count, MPI_Comm comm )
-    {
-        MPI_Allreduce( sendBuf, recvBuf, count, MPI_FLOAT, MPI_SUM, comm );
-    }
-
-    template<>
-    void
-    Sum<double>
-    ( double* sendBuf, double* recvBuf, int count, MPI_Comm comm )
-    {
-        MPI_Allreduce( sendBuf, recvBuf, count, MPI_DOUBLE, MPI_SUM, comm );
-    }
-
-    template<>
-    void
-    Sum< complex<float> >
-    ( complex<float>* sendBuf, complex<float>* recvBuf, int count,
-      MPI_Comm comm )
-    {
-        MPI_Allreduce( sendBuf, recvBuf, count, MPI_COMPLEX, MPI_SUM, comm );
-    }
-
-    template<>
-    void
-    Sum< complex<double> >
-    ( complex<double>* sendBuf, complex<double>* recvBuf, int count,
-      MPI_Comm comm )
-    {
-        MPI_Allreduce
-        ( sendBuf, recvBuf, count, MPI_DOUBLE_COMPLEX, MPI_SUM, comm );
-    }
 
     template<>
     void

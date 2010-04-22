@@ -1,20 +1,20 @@
 /*
-   Copyright 2010 Jack Poulson
+  Copyright 2010 Jack Poulson
 
-   This file is part of ButterflyFIO.
+  This file is part of ButterflyFIO.
 
-   This program is free software: you can redistribute it and/or modify it under
-   the terms of the GNU Lesser General Public License as published by the
-   Free Software Foundation; either version 3 of the License, or 
-   (at your option) any later version.
+  This program is free software: you can redistribute it and/or modify it under
+  the terms of the GNU Lesser General Public License as published by the
+  Free Software Foundation; either version 3 of the License, or 
+  (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful, but 
-   WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU Lesser General Public License for more details.
+  This program is distributed in the hope that it will be useful, but 
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU Lesser General Public License
-   along with this program. If not, see <http://www.gnu.org/licenses/>.
+  You should have received a copy of the GNU Lesser General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef BFIO_SPATIAL_WEIGHT_RECURSION_HPP
 #define BFIO_SPATIAL_WEIGHT_RECURSION_HPP 1
@@ -51,19 +51,19 @@ namespace BFIO
         {
             for( unsigned t=0; t<Pow<q,d>::val; ++t )
             {
-                for( unsigned c=0; c<(1u<<d); ++c )
+                for( unsigned p=0; p<(1u<<d); ++p )
                 {
                     // Map x_t(A) to the reference domain of its parent
                     Array<R,d> xtARefAp;
                     for( unsigned j=0; j<d; ++j )
                     {
                         xtARefAp[j] = 
-                            ( (c>>j)&1 ? (2*chebyGrid[t][j]+1)/4 :
+                            ( (p>>j)&1 ? (2*chebyGrid[t][j]+1)/4 :
                                          (2*chebyGrid[t][j]-1)/4  );
                     }
                     for( unsigned tp=0; tp<Pow<q,d>::val; ++tp )
                     {
-                        lagrangeSpatialLookup[t][c][tp] = 
+                        lagrangeSpatialLookup[t][p][tp] = 
                             Lagrange<R,d,q>( tp, xtARefAp );
                     }
                 }

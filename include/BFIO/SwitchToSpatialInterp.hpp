@@ -67,7 +67,6 @@ namespace BFIO
 
                 // Compute the coordinates and center of this freq box
                 Array<R,d> p0B;
-
                 for( unsigned j=0; j<d; ++j )
                     p0B[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
 
