@@ -101,7 +101,7 @@ main
                     complex<double> uTruth(0.,0.);
                     for( unsigned m=0; m<globalSources.size(); ++m )
                     {
-                        double alpha = TwoPi*N*Dot::Eval(x0,globalSources[m].p);
+                        double alpha = TwoPi*Dot::Eval(x0,globalSources[m].p);
                         uTruth += complex<double>(cos(alpha),sin(alpha))*
                                   globalSources[m].magnitude;
                     }
