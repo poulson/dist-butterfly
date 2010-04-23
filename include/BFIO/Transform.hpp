@@ -153,7 +153,7 @@ namespace BFIO
         // Start the main recursion loop
         if( rank == 0 )
             cout << "Starting algorithm." << endl;
-        if( L == 0 )
+        if( L == 0 || L == 1 )
         {
             if( rank == 0 )
                 cout << "Switching to spatial interpolation...";
@@ -165,205 +165,61 @@ namespace BFIO
             if( rank == 0 )
                 cout << "done." << endl;
         }
-        else
+        for( unsigned l=1; l<=L; ++l )
         {
-            if( L==1 )
-            {
-                if( rank == 0 )
-                    cout << "Switching to spatial interpolation...";
-                SwitchToSpatialInterp<Phi,R,d,q>
-                ( L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
-                  log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
-                  myFreqBoxOffsets, mySpatialBoxOffsets, chebyGrid, 
-                  weightSetList  );
-                if( rank == 0 )
-                    cout << "done." << endl;
-            }
-            for( unsigned l=1; l<=L; ++l )
-            {
+            // Compute the width of the nodes at level l
+            const R wA = static_cast<R>(1) / (1<<l);
+            const R wB = static_cast<R>(1) / (1<<(L-l));
 
-                // Compute the width of the nodes at level l
-                const R wA = static_cast<R>(1) / (1<<l);
-                const R wB = static_cast<R>(1) / (1<<(L-l));
-
-                if( log2LocalFreqBoxes >= d )
+            if( log2LocalFreqBoxes >= d )
+            {
+                // Refine spatial domain and coursen the frequency domain
+                for( unsigned j=0; j<d; ++j )
                 {
-                    // Refine spatial domain and coursen the frequency domain
-                    for( unsigned j=0; j<d; ++j )
-                    {
-                        --log2LocalFreqBoxesPerDim[j];
-                        ++log2LocalSpatialBoxesPerDim[j];
-                    }
-                    log2LocalFreqBoxes -= d;
-                    log2LocalSpatialBoxes += d;
-
-                    // Loop over boxes in spatial domain. 'i' will represent the
-                    // leaf # w.r.t. the tree implied by cyclically assigning
-                    // the spatial bisections across the d dims.
-                    CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
-                    WeightSetList<R,d,q> oldWeightSetList( weightSetList );
-                    for( unsigned i=0; 
-                         i<(1u<<log2LocalSpatialBoxes); 
-                         ++i, AWalker.Walk()           )
-                    {
-                        const Array<unsigned,d> A = AWalker.State();
-
-                        // Compute coordinates and center of this spatial box
-                        Array<R,d> x0A;
-                        for( unsigned j=0; j<d; ++j )
-                            x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
-
-                        // Loop over the B boxes in frequency domain
-                        CHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
-                        for( unsigned k=0; 
-                             k<(1u<<log2LocalFreqBoxes); 
-                             ++k, BWalker.Walk()        )
-                        {
-                            const Array<unsigned,d> B = BWalker.State();
-
-                            // Compute coordinates and center of this freq box
-                            Array<R,d> p0B;
-                            for( unsigned j=0; j<d; ++j )
-                                p0B[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
-
-                            const unsigned key = k + (i<<log2LocalFreqBoxes);
-                            const unsigned parentOffset = 
-                                ((i>>d)<<(log2LocalFreqBoxes+d)) + (k<<d);
-                            if( l <= L/2 )
-                            {
-                                FreqWeightRecursion<Phi,R,d,q>
-                                ( 0, 0, N, chebyGrid, 
-                                  x0A, p0B, wB, parentOffset,
-                                  oldWeightSetList, weightSetList[key] );
-                            }
-                            else
-                            {
-                                Array<R,d> x0Ap;
-                                Array<unsigned,d> globalA;
-                                unsigned ARelativeToAp = 0;
-                                for( unsigned j=0; j<d; ++j )
-                                {
-                                    globalA[j] = 
-                                        (mySpatialBox[j]<<
-                                         log2LocalSpatialBoxesPerDim[j])+A[j];
-                                    x0Ap[j] = (globalA[j]/2)*2*wA + wA;
-                                    ARelativeToAp |= (globalA[j]&1)<<j;
-                                }
-                                SpatialWeightRecursion<Phi,R,d,q>
-                                ( 0, 0, N, chebyGrid, 
-                                  ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
-                                  parentOffset, oldWeightSetList, 
-                                  weightSetList[key] );
-                            }
-                        }
-                    }
+                    --log2LocalFreqBoxesPerDim[j];
+                    ++log2LocalSpatialBoxesPerDim[j];
                 }
-                else 
+                log2LocalFreqBoxes -= d;
+                log2LocalSpatialBoxes += d;
+
+                // Loop over boxes in spatial domain. 'i' will represent the
+                // leaf # w.r.t. the tree implied by cyclically assigning
+                // the spatial bisections across the d dims.
+                CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
+                WeightSetList<R,d,q> oldWeightSetList( weightSetList );
+                for( unsigned i=0; 
+                     i<(1u<<log2LocalSpatialBoxes); 
+                     ++i, AWalker.Walk()           )
                 {
-                    // There are currently 2^(d*(L-l)) leaves. The frequency 
-                    // partitioning is implied by reading the rank bits left-to-
-                    // right starting with bit s-1, but the spatial partitioning
-                    // is implied by reading the rank bits right-to-left. 
-                    //
-                    // We notice that our consistency in the cyclic bisection of
-                    // the frequency domain means that if log2Procs=a, then 
-                    // we communicate with 1 other process in each of the first 
-                    // a of d dimensions. Getting these ranks is implicit in the
-                    // tree structure.
-                    const unsigned log2Procs = d-log2LocalFreqBoxes;
-                    log2LocalFreqBoxes = 0; 
+                    const Array<unsigned,d> A = AWalker.State();
+
+                    // Compute coordinates and center of this spatial box
+                    Array<R,d> x0A;
                     for( unsigned j=0; j<d; ++j )
-                        log2LocalFreqBoxesPerDim[j] = 0;
+                        x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
 
-                    // Pull the group out of the global communicator
-                    MPI_Group group;
-                    MPI_Comm_group( comm, &group );
-
-                    // Construct the group for our local team
-                    static unsigned numSpaceCuts = 0;
-                    MPI_Group teamGroup;
-                    int myTeamRank = 0;
-                    // Mask log2Procs bits offset by numSpaceCuts bits
-                    const int startRank = 
-                        rank & ~(((1<<log2Procs)-1)<<numSpaceCuts);
-                    const unsigned log2Stride = numSpaceCuts;
-
-                    vector<int> ranks( 1<<log2Procs );
-                    for( unsigned j=0; j<(1u<<log2Procs); ++j )
+                    // Loop over the B boxes in frequency domain
+                    CHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
+                    for( unsigned k=0; 
+                         k<(1u<<log2LocalFreqBoxes); 
+                         ++k, BWalker.Walk()        )
                     {
-                        // We need to reverse the order of the last log2Procs
-                        // bits of j and add the result multiplied by the stride
-                        // onto the startRank
-                        unsigned jReversed = 0;
-                        for( unsigned k=0; k<log2Procs; ++k )
-                            jReversed |= ((j>>k)&1)<<(log2Procs-1-k);
-                        ranks[j] = startRank+(jReversed<<log2Stride);
-                        if( ranks[j] == rank )
-                            myTeamRank = j;
-                    }
-                    MPI_Group_incl
-                    ( group, 1<<log2Procs, &ranks[0], &teamGroup );
+                        const Array<unsigned,d> B = BWalker.State();
 
-                    // Construct the local team communicator from the team group
-                    MPI_Comm  teamComm;
-                    MPI_Comm_create( comm, teamGroup, &teamComm );
-
-                    // Fully refine spatial domain and coarsen frequency domain.
-                    // We partition the spatial domain after the SumScatter.
-                    for( unsigned j=0; j<d; ++j )
-                    {
-                        ++log2LocalSpatialBoxesPerDim[j];
-                        ++log2LocalSpatialBoxes;
-                    
-                        if( myFreqBox[j] & 1 )
-                        {
-                            myFreqBoxOffsets[j] *= 
-                                static_cast<R>(myFreqBox[j]-1)/myFreqBox[j];
-                        }
-                        myFreqBox[j] >>= 1;
-                        myFreqBoxWidths[j] *= 2;
-                    }
-                
-                    // Compute the coordinates and center of this freq box
-                    Array<R,d> p0B;
-                    for( unsigned j=0; j<d; ++j )
-                        p0B[j] = myFreqBoxOffsets[j] + wB/2;
-                
-                    // Form the partial weights. 
-                    //
-                    // Loop over boxes in spatial domain. 'i' will represent the
-                    // leaf # w.r.t. the tree implied by cyclically assigning
-                    // the spatial bisections across the d dims. Thus if we 
-                    // distribute the data cyclically in the reverse order over 
-                    // the d dims, then the ReduceScatter will not require any
-                    // packing or unpacking.
-                    CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
-                    WeightSetList<R,d,q> partialWeightSetList
-                    ( 1<<log2LocalSpatialBoxes );
-                    for( unsigned i=0; 
-                         i<(1u<<log2LocalSpatialBoxes); 
-                         ++i, AWalker.Walk()           )
-                    {
-                        const Array<unsigned,d> A = AWalker.State();
-    
-                        // Compute coordinates and center of this spatial box
-                        Array<R,d> x0A;
+                        // Compute coordinates and center of this freq box
+                        Array<R,d> p0B;
                         for( unsigned j=0; j<d; ++j )
-                            x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
+                            p0B[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
 
-                        const unsigned parentOffset = ((i>>d)<<(d-log2Procs));
-                        MPI_Barrier( comm );
-                        if( rank == 0 )
-                        {
-                            cout << "Entering partial recursion...";    
-                            cout.flush();
-                        }
+                        const unsigned key = k + (i<<log2LocalFreqBoxes);
+                        const unsigned parentOffset = 
+                            ((i>>d)<<(log2LocalFreqBoxes+d)) + (k<<d);
                         if( l <= L/2 )
                         {
                             FreqWeightRecursion<Phi,R,d,q>
-                            ( log2Procs, myTeamRank, 
-                              N, chebyGrid, x0A, p0B, wB, parentOffset,
-                              weightSetList, partialWeightSetList[i]   );
+                            ( 0, 0, N, chebyGrid, 
+                              x0A, p0B, wB, parentOffset,
+                              oldWeightSetList, weightSetList[key] );
                         }
                         else
                         {
@@ -379,67 +235,195 @@ namespace BFIO
                                 ARelativeToAp |= (globalA[j]&1)<<j;
                             }
                             SpatialWeightRecursion<Phi,R,d,q>
-                            ( log2Procs, myTeamRank,
-                              N, chebyGrid, ARelativeToAp,
-                              x0A, x0Ap, p0B, wA, wB, parentOffset,
-                              weightSetList, partialWeightSetList[i] );
+                            ( 0, 0, N, chebyGrid, 
+                              ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
+                              parentOffset, oldWeightSetList, 
+                              weightSetList[key] );
                         }
-                        MPI_Barrier( comm );
-                        if( rank == 0 )
-                            cout << "done." << endl;
                     }
+                }
+            }
+            else 
+            {
+                // There are currently 2^(d*(L-l)) leaves. The frequency 
+                // partitioning is implied by reading the rank bits left-to-
+                // right starting with bit s-1, but the spatial partitioning
+                // is implied by reading the rank bits right-to-left. 
+                //
+                // We notice that our consistency in the cyclic bisection of
+                // the frequency domain means that if log2Procs=a, then 
+                // we communicate with 1 other process in each of the first 
+                // a of d dimensions. Getting these ranks is implicit in the
+                // tree structure.
+                const unsigned log2Procs = d-log2LocalFreqBoxes;
+                log2LocalFreqBoxes = 0; 
+                for( unsigned j=0; j<d; ++j )
+                    log2LocalFreqBoxesPerDim[j] = 0;
 
+                // Pull the group out of the global communicator
+                MPI_Group group;
+                MPI_Comm_group( comm, &group );
+
+                // Construct the group for our local team
+                static unsigned numSpaceCuts = 0;
+                MPI_Group teamGroup;
+                int myTeamRank = 0;
+                // Mask log2Procs bits offset by numSpaceCuts bits
+                const int startRank = 
+                    rank & ~(((1<<log2Procs)-1)<<numSpaceCuts);
+                const unsigned log2Stride = numSpaceCuts;
+
+                vector<int> ranks( 1<<log2Procs );
+                for( unsigned j=0; j<(1u<<log2Procs); ++j )
+                {
+                    // We need to reverse the order of the last log2Procs
+                    // bits of j and add the result multiplied by the stride
+                    // onto the startRank
+                    unsigned jReversed = 0;
+                    for( unsigned k=0; k<log2Procs; ++k )
+                        jReversed |= ((j>>k)&1)<<(log2Procs-1-k);
+                    ranks[j] = startRank+(jReversed<<log2Stride);
+                    if( ranks[j] == rank )
+                        myTeamRank = j;
+                }
+                MPI_Group_incl
+                ( group, 1<<log2Procs, &ranks[0], &teamGroup );
+
+                // Construct the local team communicator from the team group
+                MPI_Comm  teamComm;
+                MPI_Comm_create( comm, teamGroup, &teamComm );
+
+                // Fully refine spatial domain and coarsen frequency domain.
+                // We partition the spatial domain after the SumScatter.
+                for( unsigned j=0; j<d; ++j )
+                {
+                    ++log2LocalSpatialBoxesPerDim[j];
+                    ++log2LocalSpatialBoxes;
+                
+                    if( myFreqBox[j] & 1 )
+                    {
+                        myFreqBoxOffsets[j] *= 
+                            static_cast<R>(myFreqBox[j]-1)/myFreqBox[j];
+                    }
+                    myFreqBox[j] >>= 1;
+                    myFreqBoxWidths[j] *= 2;
+                }
+            
+                // Compute the coordinates and center of this freq box
+                Array<R,d> p0B;
+                for( unsigned j=0; j<d; ++j )
+                    p0B[j] = myFreqBoxOffsets[j] + wB/2;
+            
+                // Form the partial weights. 
+                //
+                // Loop over boxes in spatial domain. 'i' will represent the
+                // leaf # w.r.t. the tree implied by cyclically assigning
+                // the spatial bisections across the d dims. Thus if we 
+                // distribute the data cyclically in the reverse order over 
+                // the d dims, then the ReduceScatter will not require any
+                // packing or unpacking.
+                CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
+                WeightSetList<R,d,q> partialWeightSetList
+                ( 1<<log2LocalSpatialBoxes );
+                for( unsigned i=0; 
+                     i<(1u<<log2LocalSpatialBoxes); 
+                     ++i, AWalker.Walk()           )
+                {
+                    const Array<unsigned,d> A = AWalker.State();
+
+                    // Compute coordinates and center of this spatial box
+                    Array<R,d> x0A;
+                    for( unsigned j=0; j<d; ++j )
+                        x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
+
+                    const unsigned parentOffset = ((i>>d)<<(d-log2Procs));
                     MPI_Barrier( comm );
                     if( rank == 0 )
                     {
-                        cout << "About to communicate...";    
+                        cout << "Entering partial recursion...";    
                         cout.flush();
                     }
-                    // Scatter the summation of the weights
-                    vector<int> recvCounts( 1<<log2Procs );
-                    for( unsigned j=0; j<(1u<<log2Procs); ++j )
-                        recvCounts[j] = weightSetList.Length()*Pow<q,d>::val;
-                    SumScatter
-                    ( &(partialWeightSetList[0][0]), &(weightSetList[0][0]), 
-                      &recvCounts[0], teamComm                              );
+                    if( l <= L/2 )
+                    {
+                        FreqWeightRecursion<Phi,R,d,q>
+                        ( log2Procs, myTeamRank, 
+                          N, chebyGrid, x0A, p0B, wB, parentOffset,
+                          weightSetList, partialWeightSetList[i]   );
+                    }
+                    else
+                    {
+                        Array<R,d> x0Ap;
+                        Array<unsigned,d> globalA;
+                        unsigned ARelativeToAp = 0;
+                        for( unsigned j=0; j<d; ++j )
+                        {
+                            globalA[j] = 
+                                (mySpatialBox[j]<<
+                                 log2LocalSpatialBoxesPerDim[j])+A[j];
+                            x0Ap[j] = (globalA[j]/2)*2*wA + wA;
+                            ARelativeToAp |= (globalA[j]&1)<<j;
+                        }
+                        SpatialWeightRecursion<Phi,R,d,q>
+                        ( log2Procs, myTeamRank,
+                          N, chebyGrid, ARelativeToAp,
+                          x0A, x0Ap, p0B, wA, wB, parentOffset,
+                          weightSetList, partialWeightSetList[i] );
+                    }
                     MPI_Barrier( comm );
                     if( rank == 0 )
                         cout << "done." << endl;
- 
-                    // There is at most 1 case where mult processes communicate
-                    // with a team size not = to 2^d, so we can wrap backwards
-                    // over the d dims by always starting this loop from d
-                    for( unsigned j=0; j<log2Procs; ++j )
-                    {
-                        const unsigned dim = d-j-1;
-                        mySpatialBoxWidths[dim] /= 2;
-                        mySpatialBox[dim] <<= 1;
-                        if( rankBits[numSpaceCuts++] ) 
-                        {
-                            mySpatialBox[dim] |= 1;
-                            mySpatialBoxOffsets[dim] += mySpatialBoxWidths[dim];
-                        }
-                        --log2LocalSpatialBoxesPerDim[dim];
-                        --log2LocalSpatialBoxes;
-                    }
+                }
 
-                    // Tear down the new communicator
-                    MPI_Comm_free( &teamComm );
-                    MPI_Group_free( &teamGroup );
-                    MPI_Group_free( &group );
-                }
-                if( l==L/2 )
+                MPI_Barrier( comm );
+                if( rank == 0 )
                 {
-                    if( rank == 0 )
-                        cout << "Switching to spatial interpolation...";
-                    SwitchToSpatialInterp<Phi,R,d,q>
-                    ( L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
-                      log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
-                      myFreqBoxOffsets, mySpatialBoxOffsets, chebyGrid, 
-                      weightSetList  );
-                    if( rank == 0 )
-                        cout << "done." << endl;
+                    cout << "About to communicate...";    
+                    cout.flush();
                 }
+                // Scatter the summation of the weights
+                vector<int> recvCounts( 1<<log2Procs );
+                for( unsigned j=0; j<(1u<<log2Procs); ++j )
+                    recvCounts[j] = weightSetList.Length()*Pow<q,d>::val;
+                SumScatter
+                ( &(partialWeightSetList[0][0]), &(weightSetList[0][0]), 
+                  &recvCounts[0], teamComm                              );
+                MPI_Barrier( comm );
+                if( rank == 0 )
+                    cout << "done." << endl;
+
+                // There is at most 1 case where mult processes communicate
+                // with a team size not = to 2^d, so we can wrap backwards
+                // over the d dims by always starting this loop from d
+                for( unsigned j=0; j<log2Procs; ++j )
+                {
+                    const unsigned dim = d-j-1;
+                    mySpatialBoxWidths[dim] /= 2;
+                    mySpatialBox[dim] <<= 1;
+                    if( rankBits[numSpaceCuts++] ) 
+                    {
+                        mySpatialBox[dim] |= 1;
+                        mySpatialBoxOffsets[dim] += mySpatialBoxWidths[dim];
+                    }
+                    --log2LocalSpatialBoxesPerDim[dim];
+                    --log2LocalSpatialBoxes;
+                }
+
+                // Tear down the new communicator
+                MPI_Comm_free( &teamComm );
+                MPI_Group_free( &teamGroup );
+                MPI_Group_free( &group );
+            }
+            if( l==L/2 )
+            {
+                if( rank == 0 )
+                    cout << "Switching to spatial interpolation...";
+                SwitchToSpatialInterp<Phi,R,d,q>
+                ( L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
+                  log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
+                  myFreqBoxOffsets, mySpatialBoxOffsets, chebyGrid, 
+                  weightSetList  );
+                if( rank == 0 )
+                    cout << "done." << endl;
             }
         }
         if( rank == 0 )
