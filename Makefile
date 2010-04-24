@@ -1,6 +1,6 @@
 #
-# ButterflyFIO: A distribute-memory implementation of the butterfly
-#               algorithm for Fourier Integral Operators
+# ButterflyFIO: An abstract distributed-memory implementation of the
+#               butterfly algorithm for discrete Fourier Integral Operators
 #
 # Copyright 2010 Jack Poulson
 #
