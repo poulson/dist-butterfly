@@ -76,36 +76,27 @@ namespace BFIO
         // Determine the number of boxes in each dimension of the frequency
         // domain by applying the partitions cyclically over the d dimensions.
         // We can simultaneously compute the indices of our box.
-        Array<unsigned,d> myFreqBox;
-        Array<unsigned,d> mySpatialBox;
-        Array<unsigned,d> log2FreqBoxesPerDim;
-        Array<unsigned,d> log2SpatialBoxesPerDim;
-        for( unsigned j=0; j<d; ++j )
-        {
-            myFreqBox[j] = mySpatialBox[j] = 0;
-            log2FreqBoxesPerDim[j] = log2SpatialBoxesPerDim[j] = 0;
-        }
         unsigned nextDim = 0;
+        Array<unsigned,d> myFreqBox(0);
+        Array<unsigned,d> mySpatialBox(0);
+        Array<unsigned,d> log2FreqBoxesPerDim(0);
+        Array<unsigned,d> log2SpatialBoxesPerDim(0);
         for( unsigned j=s; j>0; --j )
         {
             // Double our current coordinate in the 'nextDim' dimension 
             // and then choose the left/right position based on the (j-1)'th
             // bit of our rank
             myFreqBox[nextDim] = (myFreqBox[nextDim]<<1)+rankBits[j-1];
-
-            log2FreqBoxesPerDim[nextDim]++;
+            ++log2FreqBoxesPerDim[nextDim];
             nextDim = (nextDim+1) % d;
         }
 
         // Initialize the widths of the boxes in the spatial and frequency 
         // domains that our process is responsible for
         Array<R,d> myFreqBoxWidths;
-        Array<R,d> mySpatialBoxWidths;
+        Array<R,d> mySpatialBoxWidths(1);
         for( unsigned j=0; j<d; ++j )
-        {
             myFreqBoxWidths[j] = static_cast<R>(1)/(1<<log2FreqBoxesPerDim[j]);
-            mySpatialBoxWidths[j] = static_cast<R>(1);
-        }
         
         // Compute the offsets for our frequency and spatial box
         Array<R,d> myFreqBoxOffsets;
@@ -122,11 +113,10 @@ namespace BFIO
         unsigned log2LocalFreqBoxes = 0;
         unsigned log2LocalSpatialBoxes = 0;
         Array<unsigned,d> log2LocalFreqBoxesPerDim;
-        Array<unsigned,d> log2LocalSpatialBoxesPerDim;
+        Array<unsigned,d> log2LocalSpatialBoxesPerDim(0);
         for( unsigned j=0; j<d; ++j )
         {
             log2LocalFreqBoxesPerDim[j] = L-log2FreqBoxesPerDim[j];
-            log2LocalSpatialBoxesPerDim[j] = 0;
             log2LocalFreqBoxes += log2LocalFreqBoxesPerDim[j];
         }
 
@@ -152,11 +142,11 @@ namespace BFIO
 
         // Start the main recursion loop
         if( rank == 0 )
-            cout << "Starting algorithm." << endl;
+            cout << "Starting spatial-refinement/frequency-coarsening." << endl;
         if( L == 0 || L == 1 )
         {
             if( rank == 0 )
-                cout << "Switching to spatial interpolation...";
+                cout << "  Switching to spatial interpolation...";
             SwitchToSpatialInterp<Phi,R,d,q>
             ( L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
               log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
@@ -167,6 +157,11 @@ namespace BFIO
         }
         for( unsigned l=1; l<=L; ++l )
         {
+            if( rank == 0 )
+            {
+                cout << "  Beginning level " << l << ": t=" 
+                     << MPI_Wtime()-startTime << " seconds." << endl;
+            }
             // Compute the width of the nodes at level l
             const R wA = static_cast<R>(1) / (1<<l);
             const R wB = static_cast<R>(1) / (1<<(L-l));
@@ -337,12 +332,6 @@ namespace BFIO
                         x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
 
                     const unsigned parentOffset = ((i>>d)<<(d-log2Procs));
-                    MPI_Barrier( comm );
-                    if( rank == 0 )
-                    {
-                        cout << "Entering partial recursion...";    
-                        cout.flush();
-                    }
                     if( l <= L/2 )
                     {
                         FreqWeightRecursion<Phi,R,d,q>
@@ -369,17 +358,8 @@ namespace BFIO
                           x0A, x0Ap, p0B, wA, wB, parentOffset,
                           weightSetList, partialWeightSetList[i] );
                     }
-                    MPI_Barrier( comm );
-                    if( rank == 0 )
-                        cout << "done." << endl;
                 }
 
-                MPI_Barrier( comm );
-                if( rank == 0 )
-                {
-                    cout << "About to communicate...";    
-                    cout.flush();
-                }
                 // Scatter the summation of the weights
                 vector<int> recvCounts( 1<<log2Procs );
                 for( unsigned j=0; j<(1u<<log2Procs); ++j )
@@ -387,9 +367,6 @@ namespace BFIO
                 SumScatter
                 ( &(partialWeightSetList[0][0]), &(weightSetList[0][0]), 
                   &recvCounts[0], teamComm                              );
-                MPI_Barrier( comm );
-                if( rank == 0 )
-                    cout << "done." << endl;
 
                 // There is at most 1 case where mult processes communicate
                 // with a team size not = to 2^d, so we can wrap backwards
@@ -416,7 +393,7 @@ namespace BFIO
             if( l==L/2 )
             {
                 if( rank == 0 )
-                    cout << "Switching to spatial interpolation...";
+                    cout << "  Switching to spatial interpolation...";
                 SwitchToSpatialInterp<Phi,R,d,q>
                 ( L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
                   log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
@@ -428,7 +405,7 @@ namespace BFIO
         }
         if( rank == 0 )
         {
-            cout << "Finished forming low-rank approximations." << endl;
+            cout << "Finished spatial-refinement/frequency-coarsening." << endl;
             cout<<"  "<<MPI_Wtime()-startTime<<" seconds."<<endl;
         }
         
@@ -436,7 +413,6 @@ namespace BFIO
         {
             const R wA = static_cast<R>(1)/N;
 
-            MPI_Barrier( comm );
             for( int m=0; m<S; ++m )
             {
                 if( rank == m )

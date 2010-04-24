@@ -78,7 +78,7 @@ namespace BFIO
             for( unsigned j=0; j<d; ++j )
                 xtA[j] = x0A[j] + wA*chebyGrid[t][j];
 
-            // Compute the unscaled weight
+
             weightSet[t] = 0;
             for( unsigned cLocal=0; cLocal<(1u<<(d-log2Procs)); ++cLocal )
             {
@@ -91,6 +91,7 @@ namespace BFIO
                 for( unsigned j=0; j<d; ++j )
                     p0Bc[j] = p0B[j] + ( (c>>j)&1 ? wB/4 : -wB/4 );
 
+                // Compute the unscaled contribution of child c
                 for( unsigned tp=0; tp<Pow<q,d>::val; ++tp )        
                 {
                     // Compute xtp(Ap)

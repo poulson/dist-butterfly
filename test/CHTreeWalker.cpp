@@ -23,7 +23,7 @@ using namespace BFIO;
 void 
 Usage()
 {
-    cout << "testHTreeWalker <N> <log2Dim[0]> ... <log2Dim[d-1]>" << endl;
+    cout << "HTreeWalker <N> <log2Dim[0]> ... <log2Dim[d-1]>" << endl;
     cout << "  N: number of indices of the HTree to iterate over" << endl;
     cout << "  log2Dim[j]: log2 of the number of boxes in dimension j" << endl;
     cout << endl;

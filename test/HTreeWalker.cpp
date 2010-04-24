@@ -23,7 +23,7 @@ using namespace BFIO;
 void 
 Usage()
 {
-    cout << "testHTreeWalker <N>" << endl;
+    cout << "HTreeWalker <N>" << endl;
     cout << "  N: the number of indices of the HTree to iterate over" << endl;
     cout << endl;
 }
