@@ -19,6 +19,7 @@
 #ifndef BFIO_SPATIAL_WEIGHT_RECURSION_HPP
 #define BFIO_SPATIAL_WEIGHT_RECURSION_HPP 1
 
+#include "BFIO/BLAS.hpp"
 #include "BFIO/Lagrange.hpp"
 
 namespace BFIO
@@ -45,26 +46,27 @@ namespace BFIO
         typedef complex<R> C;
 
         static bool initialized = false;
-        static R lagrangeSpatialLookup[Pow<q,d>::val][1<<d][Pow<q,d>::val];
+        static R LSpatial[1<<d][Pow<q,2*d>::val];
 
         if( !initialized )
         {
-            for( unsigned t=0; t<Pow<q,d>::val; ++t )
+            for( unsigned p=0; p<(1u<<d); ++p )
             {
-                for( unsigned p=0; p<(1u<<d); ++p )
+                for( unsigned tPrime=0; tPrime<Pow<q,d>::val; ++tPrime )
                 {
-                    // Map x_t(A) to the reference domain of its parent
-                    Array<R,d> xtARefAp;
-                    for( unsigned j=0; j<d; ++j )
+                    for( unsigned t=0; t<Pow<q,d>::val; ++t )
                     {
-                        xtARefAp[j] = 
-                            ( (p>>j)&1 ? (2*chebyGrid[t][j]+1)/4 :
-                                         (2*chebyGrid[t][j]-1)/4  );
-                    }
-                    for( unsigned tp=0; tp<Pow<q,d>::val; ++tp )
-                    {
-                        lagrangeSpatialLookup[t][p][tp] = 
-                            Lagrange<R,d,q>( tp, xtARefAp );
+                        // Map x_t(A) to the reference domain of its parent
+                        Array<R,d> xtARefAp;
+                        for( unsigned j=0; j<d; ++j )
+                        {
+                            xtARefAp[j] = 
+                                ( (p>>j)&1 ? (2*chebyGrid[t][j]+1)/4 :
+                                             (2*chebyGrid[t][j]-1)/4  );
+                        }
+
+                        LSpatial[p][t+tPrime*Pow<q,d>::val] = 
+                            Lagrange<R,d,q>( tPrime, xtARefAp );
                     }
                 }
             }
@@ -72,44 +74,51 @@ namespace BFIO
         }
 
         for( unsigned t=0; t<Pow<q,d>::val; ++t )
-        {
-            // Compute xt(A)
-            Array<R,d> xtA;
-            for( unsigned j=0; j<d; ++j )
-                xtA[j] = x0A[j] + wA*chebyGrid[t][j];
-
-
             weightSet[t] = 0;
-            for( unsigned cLocal=0; cLocal<(1u<<(d-log2Procs)); ++cLocal )
+
+        // We seek performance by isolating the Lagrangian interpolation as 
+        // a matrix-vector multiplication.
+        //
+        // To do so, the spatial weight recursion is broken into three updates:
+        // For each child c:
+        //  1) scale the old weights with the appropriate exponentials
+        //  2) multiply the lagrangian matrix against the scaled weights
+        //  3) scale and accumulate the result of the lagrangian mat-vec
+        for( unsigned cLocal=0; cLocal<(1u<<(d-log2Procs)); ++cLocal )
+        {
+            // Step 1: scale the old weights
+            WeightSet<R,d,q> scaledWeightSet;
+            const unsigned c = (cLocal<<log2Procs) + myTeamRank;
+            const unsigned key = parentOffset + cLocal;
+            Array<R,d> p0Bc;
+            for( unsigned j=0; j<d; ++j )
+                p0Bc[j] = p0B[j] + ( (c>>j)&1 ? wB/4 : -wB/4 );
+            for( unsigned tPrime=0; tPrime<Pow<q,d>::val; ++tPrime )
             {
-                const unsigned c = (cLocal<<log2Procs) + myTeamRank;
-                const unsigned parentKey = parentOffset + cLocal;
-                C childContribution( 0, 0 );
-
-                // Compute p0(Bc)
-                Array<R,d> p0Bc;
+                Array<R,d> xtPrimeAp;
                 for( unsigned j=0; j<d; ++j )
-                    p0Bc[j] = p0B[j] + ( (c>>j)&1 ? wB/4 : -wB/4 );
+                    xtPrimeAp[j] = x0Ap[j] + (2*wA)*chebyGrid[tPrime][j];
+                const R alpha = -TwoPi*Phi::Eval( xtPrimeAp, p0Bc );
+                scaledWeightSet[tPrime] = 
+                    C(cos(alpha),sin(alpha))*oldWeightSetList[key][tPrime];
+            }
 
-                // Compute the unscaled contribution of child c
-                for( unsigned tp=0; tp<Pow<q,d>::val; ++tp )        
-                {
-                    // Compute xtp(Ap)
-                    Array<R,d> xtpAp;
-                    for( unsigned j=0; j<d; ++j )
-                        xtpAp[j] = x0Ap[j] + (wA*2)*chebyGrid[tp][j];
+            // Step 2: perform the matrix-vector multiply
+            WeightSet<R,d,q> expandedWeightSet;
+            RealMatrixComplexVec
+            ( Pow<q,d>::val, Pow<q,d>::val, 
+              (R)1, LSpatial[ARelativeToAp], Pow<q,d>::val, 
+                    &scaledWeightSet[0],
+              (R)0, &expandedWeightSet[0]                  );
 
-                    const R alpha = -TwoPi*Phi::Eval(xtpAp,p0Bc);
-                    childContribution +=
-                        lagrangeSpatialLookup[t][ARelativeToAp][tp] *
-                        C( cos(alpha), sin(alpha) ) * 
-                        oldWeightSetList[parentKey][tp];
-                }
-                
-                // Scale the child contribution and add to weightSet[t]
-                const R alpha = TwoPi*Phi::Eval(xtA,p0Bc);
-                childContribution *= C( cos(alpha), sin(alpha) );
-                weightSet[t] += childContribution;
+            // Step 3: scale the result
+            for( unsigned t=0; t<Pow<q,d>::val; ++t )
+            {
+                Array<R,d> xtA;
+                for( unsigned j=0; j<d; ++j )
+                    xtA[j] = x0A[j] + wA*chebyGrid[t][j];
+                const R alpha = TwoPi*Phi::Eval( xtA, p0Bc );
+                weightSet[t] += C(cos(alpha),sin(alpha))*expandedWeightSet[t];
             }
         }
     }

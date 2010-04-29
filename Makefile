@@ -10,10 +10,10 @@ testdir = test
 bindir = bin
 
 CXX = mpicxx.mpich2
-CXXFLAGS = -I$(incdir)
+CXXFLAGS = -I$(incdir) -DFUNDERSCORE
 CXXFLAGS_DEBUG = -g -Wall $(CXXFLAGS)
 CXXFLAGS_RELEASE = -O3 -Wall -DRELEASE $(CXXFLAGS)
-LDFLAGS = 
+LDFLAGS = -L/usr/lib -lblas
 AR = ar
 ARFLAGS = rc
 
@@ -22,6 +22,7 @@ ARFLAGS = rc
 ################################################################################
 
 includefiles = BFIO.hpp \
+               BFIO/BLAS.hpp \
                BFIO/Data.hpp \
                BFIO/FreqWeightRecursion.hpp \
                BFIO/HTree.hpp \

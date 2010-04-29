@@ -126,10 +126,6 @@ namespace BFIO
 
         // Loop over all of the boxes to compute the {p_t^B} and prefactors
         // for each delta weight {delta_t^AB}, exp(-2 Pi i N Phi(x0,p_t^B) ).
-        // Notice that if we are sharing a box with one or more processes, then
-        // our local boxes, say B_loc, are subsets of a B, but we still need 
-        // to consider our contribution to the weights corresponding to 
-        // p_t^B lying in B \ B_loc.
         CHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
         for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k, BWalker.Walk() ) 
         {
