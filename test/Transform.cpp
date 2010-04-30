@@ -31,19 +31,34 @@ Usage()
     cout << endl;
 }
 
-// Create a functor that performs a dot product in R^3. 
-// This will serve as the phase function over the original spatial domain, 
-// [0,1]^d, but with the frequency domain mapped to [0,1]^d
-struct Dot
+// Create the left-half of the kernel used in the analytical solution of the
+// wave equation in 3d for a particular time, t=0.5
+struct LeftWave
 { 
+    static const double t = 0.5;
     static inline double
     Eval
     ( const Array<double,3>& x, const Array<double,3>& p )
-    { return x[0]*p[0] + x[1]*p[1] + x[2]*p[2]; }
+    { return x[0]*p[0] + x[1]*p[1] + x[2]*p[2] +
+             t*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]); }
 };
 
+// Create the right-half of the kernel used in the analytical solution of the
+// wave equation in 3d for a particular time, t=0.5
+/*
+struct RightWave
+{ 
+    static const double t = 0.5;
+    static inline double
+    Eval
+    ( const Array<double,3>& x, const Array<double,3>& p )
+    { return x[0]*p[0] + x[1]*p[1] + x[2]*p[2] -
+             t*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]); }
+};
+*/
+
 #define d 3
-#define q 7
+#define q 5
 
 double
 Uniform()
@@ -138,10 +153,10 @@ main
                 mySources.push_back( globalSources[i] );
         }
 
-        // Create a vector for storing the results and then run the algorithm
-        vector< LRP<Dot,double,d,q> > myLRPs;
+        // Create vectors for storing the results and then run the algorithm
+        vector< LRP<LeftWave,double,d,q> > myLeftLRPs;
         MPI_Barrier( MPI_COMM_WORLD );
-        Transform( N, mySources, myLRPs, MPI_COMM_WORLD );
+        Transform( N, mySources, myLeftLRPs, MPI_COMM_WORLD );
 
         // Evaluate each processes' low rank potentials at their center
         for( int i=0; i<size; ++i )
@@ -149,15 +164,16 @@ main
             if( i == rank )
             {
                 cout << "Process " << i << ":" << endl;
-                for( unsigned k=0; k<myLRPs.size(); ++k )
+                for( unsigned k=0; k<myLeftLRPs.size(); ++k )
                 {
-                    Array<double,d> x0 = myLRPs[k].x0;
-                    complex<double> u = myLRPs[k]( x0 );
+                    Array<double,d> x0 = myLeftLRPs[k].x0;
+                    complex<double> u = myLeftLRPs[k]( x0 );
 
                     complex<double> uTruth(0.,0.);
                     for( unsigned m=0; m<globalSources.size(); ++m )
                     {
-                        double alpha = TwoPi*Dot::Eval(x0,globalSources[m].p);
+                        double alpha = 
+                            TwoPi*LeftWave::Eval(x0,globalSources[m].p);
                         uTruth += complex<double>(cos(alpha),sin(alpha))*
                                   globalSources[m].magnitude;
                     }
