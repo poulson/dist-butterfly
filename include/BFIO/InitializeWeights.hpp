@@ -85,7 +85,7 @@ namespace BFIO
                 B[j] = 0;
                 for( unsigned k=log2LocalFreqBoxesPerDim[j]; k>0; --k )
                 {
-                    const R middle = (rightBound-leftBound)/2.;
+                    const R middle = leftBound + (rightBound-leftBound)/2.;
                     if( pj < middle )
                     {
                         // implicitly setting bit k-1 of B[j] to 0

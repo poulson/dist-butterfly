@@ -43,7 +43,7 @@ struct Dot
 };
 
 #define d 3
-#define q 5
+#define q 7
 
 double
 Uniform()
