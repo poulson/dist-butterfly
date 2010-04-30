@@ -9,7 +9,7 @@ incdir = include
 testdir = test
 bindir = bin
 
-CXX = mpicxx.mpich2
+CXX = mpicxx
 CXXFLAGS = -I$(incdir) -DFUNDERSCORE
 CXXFLAGS_DEBUG = -g -Wall $(CXXFLAGS)
 CXXFLAGS_RELEASE = -O3 -Wall -DRELEASE $(CXXFLAGS)
@@ -43,9 +43,9 @@ includes = $(addprefix $(incdir)/,$(includefiles))
 bindir_debug = $(bindir)/debug
 bindir_release = $(bindir)/release
 
-tests = CHTreeWalker \
-        HTreeWalker \
-        Transform
+tests = Transform/Accuracy \
+        Tree/CHTreeWalker \
+        Tree/HTreeWalker
 testobjs = $(addsuffix .o, $(tests))
 
 tests_debug = $(addprefix $(bindir_debug)/, $(tests))

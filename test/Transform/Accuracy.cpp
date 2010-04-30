@@ -25,35 +25,33 @@ using namespace BFIO;
 void 
 Usage()
 {
-    cout << "Transform <N> <M>" << endl;
+    cout << "Accuracy <N> <M>" << endl;
     cout << "  N: power of 2, the frequency spread in each dimension" << endl;
     cout << "  M: number of random sources to instantiate" << endl;
     cout << endl;
 }
 
-// Create the left-half of the kernel used in the analytical solution of the
+// Create the left kernel used in the analytical solution of the
 // wave equation in 3d for a particular time, t=0.5
-struct LeftWave
+struct UpWave
 { 
-    static const double t = 0.5;
     static inline double
     Eval
     ( const Array<double,3>& x, const Array<double,3>& p )
     { return x[0]*p[0] + x[1]*p[1] + x[2]*p[2] +
-             t*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]); }
+             0.5*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]); }
 };
 
-// Create the right-half of the kernel used in the analytical solution of the
+// Create the right kernel used in the analytical solution of the
 // wave equation in 3d for a particular time, t=0.5
 /*
-struct RightWave
+struct DownWave
 { 
-    static const double t = 0.5;
     static inline double
     Eval
     ( const Array<double,3>& x, const Array<double,3>& p )
     { return x[0]*p[0] + x[1]*p[1] + x[2]*p[2] -
-             t*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]); }
+             0.5*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]); }
 };
 */
 
@@ -154,7 +152,7 @@ main
         }
 
         // Create vectors for storing the results and then run the algorithm
-        vector< LRP<LeftWave,double,d,q> > myLeftLRPs;
+        vector< LRP<UpWave,double,d,q> > myLeftLRPs;
         MPI_Barrier( MPI_COMM_WORLD );
         Transform( N, mySources, myLeftLRPs, MPI_COMM_WORLD );
 
@@ -173,7 +171,7 @@ main
                     for( unsigned m=0; m<globalSources.size(); ++m )
                     {
                         double alpha = 
-                            TwoPi*LeftWave::Eval(x0,globalSources[m].p);
+                            TwoPi*UpWave::Eval(x0,globalSources[m].p);
                         uTruth += complex<double>(cos(alpha),sin(alpha))*
                                   globalSources[m].magnitude;
                     }
