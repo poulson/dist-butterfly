@@ -19,7 +19,9 @@
 #ifndef BFIO_INITIALIZE_WEIGHTS_HPP
 #define BFIO_INITIALIZE_WEIGHTS_HPP 1
 
-#include "BFIO/Util.hpp"
+#include "BFIO/Structures/Data.hpp"
+#include "BFIO/Structures/HTree.hpp"
+#include "BFIO/Tools/MPI.hpp"
 
 namespace BFIO
 {
@@ -29,10 +31,11 @@ namespace BFIO
     // R:   type for real variables (e.g., float or double)
     // d:   dimension of problem
     // q:   number of Chebyshev gridpoints per dimension
-    template<typename Phi,typename R,unsigned d,unsigned q>
+    template<typename R,unsigned d,unsigned q>
     void
     InitializeWeights
     ( 
+      const PhaseFunctor<R,d>& Phi,
       const unsigned N,
       const vector< Source<R,d> >& mySources,
       const vector< Array<R,d> >& chebyGrid,
@@ -115,7 +118,7 @@ namespace BFIO
             for( unsigned j=0; j<d; ++j )
                 pRef[j] = (p[j]-p0[j])/wB;
             const C f = mySources[i].magnitude;
-            const R alpha = TwoPi*Phi::Eval(x0,p);
+            const R alpha = TwoPi*Phi(x0,p);
             const C beta = C( cos(alpha), sin(alpha) ) * f;
             for( unsigned t=0; t<Pow<q,d>::val; ++t )
             {
@@ -145,7 +148,7 @@ namespace BFIO
                 for( unsigned j=0; j<d; ++j )
                     pt[j] = p0[j] + wB*chebyGrid[t][j];
 
-                const R alpha = -TwoPi*Phi::Eval(x0,pt);
+                const R alpha = -TwoPi*Phi(x0,pt);
                 weightSetList[k][t] *= C( cos(alpha), sin(alpha) );
             }
         }

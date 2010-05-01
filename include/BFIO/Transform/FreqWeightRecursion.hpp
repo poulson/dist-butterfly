@@ -19,16 +19,17 @@
 #ifndef BFIO_FREQ_WEIGHT_RECURSION_HPP
 #define BFIO_FREQ_WEIGHT_RECURSION_HPP 1
 
-#include "BFIO/Lagrange.hpp"
+#include "BFIO/Tools/Lagrange.hpp"
 
 namespace BFIO
 {
     using namespace std;
 
-    template<typename Phi,typename R,unsigned d,unsigned q>
+    template<typename R,unsigned d,unsigned q>
     inline void
     FreqWeightRecursion
-    ( const unsigned log2Procs,
+    ( const PhaseFunctor<R,d>& Phi,
+      const unsigned log2Procs,
       const unsigned myTeamRank,
       const unsigned N, 
       const vector< Array<R,d> >& chebyGrid,
@@ -97,7 +98,7 @@ namespace BFIO
                 for( unsigned j=0; j<d; ++j )
                     ptPrime[j] = p0B[j] + wB*pRefB[c][tPrime][j];
 
-                const R alpha = TwoPi*Phi::Eval( x0A, ptPrime );
+                const R alpha = TwoPi*Phi( x0A, ptPrime );
                 scaledWeightSet[tPrime] = 
                     C( cos(alpha), sin(alpha) )*oldWeightSetList[key][tPrime];
             }
@@ -117,7 +118,7 @@ namespace BFIO
             for( unsigned j=0; j<d; ++j )
                 ptB[j] = p0B[j] + wB*chebyGrid[t][j];
 
-            const R alpha = -TwoPi*Phi::Eval( x0A, ptB );
+            const R alpha = -TwoPi*Phi( x0A, ptB );
             weightSet[t] *= C( cos(alpha), sin(alpha) );
         }
     }

@@ -22,19 +22,21 @@ ARFLAGS = rc
 ################################################################################
 
 includefiles = BFIO.hpp \
-               BFIO/BLAS.hpp \
-               BFIO/Data.hpp \
-               BFIO/FreqWeightRecursion.hpp \
-               BFIO/HTree.hpp \
-               BFIO/InitializeWeights.hpp \
-               BFIO/Lagrange.hpp \
-               BFIO/LRP.hpp \
-               BFIO/MPI.hpp \
-               BFIO/Pow.hpp \
-               BFIO/SpatialWeightRecursion.hpp \
-               BFIO/SwitchToSpatialInterp.hpp \
+               BFIO/Structures/Data.hpp \
+               BFIO/Structures/HTree.hpp \
+               BFIO/Structures/LRP.hpp \
+               BFIO/Structures/PhaseFunctor.hpp \
+               BFIO/Tools/BLAS.hpp \
+               BFIO/Tools/Lagrange.hpp \
+               BFIO/Tools/MPI.hpp \
+               BFIO/Tools/Pow.hpp \
+               BFIO/Tools/Twiddle.hpp \
                BFIO/Transform.hpp \
-               BFIO/Util.hpp
+               BFIO/Transform/FreqWeightRecursion.hpp \
+               BFIO/Transform/InitializeWeights.hpp \
+               BFIO/Transform/SpatialWeightRecursion.hpp \
+               BFIO/Transform/SwitchToSpatialInterp.hpp 
+
 includes = $(addprefix $(incdir)/,$(includefiles))
 
 ################################################################################
@@ -43,7 +45,8 @@ includes = $(addprefix $(incdir)/,$(includefiles))
 bindir_debug = $(bindir)/debug
 bindir_release = $(bindir)/release
 
-tests = Transform/Accuracy \
+tests = Transform/3DWave \
+        Transform/Accuracy \
         Tree/CHTreeWalker \
         Tree/HTreeWalker
 testobjs = $(addsuffix .o, $(tests))

@@ -19,7 +19,8 @@
 #ifndef BFIO_HTREE_HPP
 #define BFIO_HTREE_HPP 1
 
-#include "BFIO/Util.hpp"
+#include "BFIO/Structures/Data.hpp"
+#include "BFIO/Tools/Twiddle.hpp"
 
 namespace BFIO
 {

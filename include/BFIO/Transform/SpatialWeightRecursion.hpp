@@ -19,17 +19,18 @@
 #ifndef BFIO_SPATIAL_WEIGHT_RECURSION_HPP
 #define BFIO_SPATIAL_WEIGHT_RECURSION_HPP 1
 
-#include "BFIO/BLAS.hpp"
-#include "BFIO/Lagrange.hpp"
+#include "BFIO/Tools/BLAS.hpp"
+#include "BFIO/Tools/Lagrange.hpp"
 
 namespace BFIO
 {
     using namespace std;
 
-    template<typename Phi,typename R,unsigned d,unsigned q>
+    template<typename R,unsigned d,unsigned q>
     inline void
     SpatialWeightRecursion
-    ( const unsigned log2Procs,
+    ( const PhaseFunctor<R,d>& Phi,
+      const unsigned log2Procs,
       const unsigned myTeamRank,
       const unsigned N, 
       const vector< Array<R,d> >& chebyGrid,
@@ -98,7 +99,7 @@ namespace BFIO
                 Array<R,d> xtPrimeAp;
                 for( unsigned j=0; j<d; ++j )
                     xtPrimeAp[j] = x0Ap[j] + (2*wA)*chebyGrid[tPrime][j];
-                const R alpha = -TwoPi*Phi::Eval( xtPrimeAp, p0Bc );
+                const R alpha = -TwoPi*Phi( xtPrimeAp, p0Bc );
                 scaledWeightSet[tPrime] = 
                     C(cos(alpha),sin(alpha))*oldWeightSetList[key][tPrime];
             }
@@ -117,7 +118,7 @@ namespace BFIO
                 Array<R,d> xtA;
                 for( unsigned j=0; j<d; ++j )
                     xtA[j] = x0A[j] + wA*chebyGrid[t][j];
-                const R alpha = TwoPi*Phi::Eval( xtA, p0Bc );
+                const R alpha = TwoPi*Phi( xtA, p0Bc );
                 weightSet[t] += C(cos(alpha),sin(alpha))*expandedWeightSet[t];
             }
         }

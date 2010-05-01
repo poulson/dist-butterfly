@@ -19,7 +19,8 @@
 #ifndef BFIO_LAGRANGE_HPP
 #define BFIO_LAGRANGE_HPP 1
 
-#include "BFIO/Data.hpp"
+#include <vector>
+#include "BFIO/Structures/Data.hpp"
 
 namespace BFIO
 {
@@ -30,7 +31,7 @@ namespace BFIO
     {
         static bool initialized = false;
         static Array<R,q> chebyNodes;
-        static vector< Array<unsigned,d> > chebyIndex( Pow<q,d>::val );
+        static std::vector< Array<unsigned,d> > chebyIndex( Pow<q,d>::val );
 
         if( !initialized )
         {

@@ -19,16 +19,17 @@
 #ifndef BFIO_SWITCH_TO_SPATIAL_INTERP_HPP
 #define BFIO_SWITCH_TO_SPATIAL_INTERP_HPP 1
 
-#include "BFIO/Lagrange.hpp"
+#include "BFIO/Tools/Lagrange.hpp"
 
 namespace BFIO
 {
     using namespace std;
 
-    template<typename Phi,typename R,unsigned d,unsigned q>
+    template<typename R,unsigned d,unsigned q>
     void
     SwitchToSpatialInterp
-    ( const unsigned L, 
+    ( const PhaseFunctor<R,d>& Phi,
+      const unsigned L, 
       const unsigned log2LocalFreqBoxes,
       const unsigned log2LocalSpatialBoxes,
       const Array<unsigned,d>& log2LocalFreqBoxesPerDim,
@@ -81,7 +82,7 @@ namespace BFIO
                     weightSetList[key][t] = 0;
                     for( unsigned tp=0; tp<Pow<q,d>::val; ++tp )
                     {
-                        R alpha = TwoPi*Phi::Eval(xPoints[t],pPoints[tp]);
+                        R alpha = TwoPi*Phi(xPoints[t],pPoints[tp]);
                         weightSetList[key][t] += 
                             C(cos(alpha),sin(alpha)) * 
                             oldWeightSetList[key][tp];

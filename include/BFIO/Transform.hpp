@@ -19,93 +19,67 @@
 #ifndef BFIO_TRANSFORM_HPP
 #define BFIO_TRANSFORM_HPP 1
 
-#include <bitset>
-
-#include "BFIO/Util.hpp"
-#include "BFIO/LRP.hpp"
-#include "BFIO/HTree.hpp"
-#include "BFIO/InitializeWeights.hpp"
-#include "BFIO/FreqWeightRecursion.hpp"
-#include "BFIO/SwitchToSpatialInterp.hpp"
-#include "BFIO/SpatialWeightRecursion.hpp"
+#include <iostream>
+#include "BFIO/Structures/LRP.hpp"
+#include "BFIO/Structures/HTree.hpp"
+#include "BFIO/Tools/LocalData.hpp"
+#include "BFIO/Tools/Twiddle.hpp"
+#include "BFIO/Transform/InitializeWeights.hpp"
+#include "BFIO/Transform/FreqWeightRecursion.hpp"
+#include "BFIO/Transform/SwitchToSpatialInterp.hpp"
+#include "BFIO/Transform/SpatialWeightRecursion.hpp"
 
 namespace BFIO
 {
-    using namespace std;
-
     // Applies the butterfly algorithm for the Fourier integral operator 
     // defined by the mapped phase function, Phi. This allows one to call the 
     // function with their own functor with potentially no performance penalty. 
     // R is the datatype for representing a Real and d is the spatial and 
     // frequency dimension. q is the number of points in each dimension of the 
     // Chebyshev tensor-product grid (q^d points total).
-    template<typename Phi,typename R,unsigned d,unsigned q>
+    template<typename R,unsigned d,unsigned q>
     void
     Transform
-    ( const unsigned N, 
-      const vector< Source<R,d> >& mySources,
-            vector< LRP<Phi,R,d,q> >& myLRPs,
-            MPI_Comm comm                    )
+    ( const PhaseFunctor<R,d>& Phi,
+      const unsigned N,
+      const std::vector< Source<R,d> >& mySources,
+            std::vector< LRP<R,d,q> >& myLRPs,
+            MPI_Comm comm )
     {
-        typedef complex<R> C;
+        typedef std::complex<R> C;
 
         int rank, S;
         MPI_Comm_rank( comm, &rank );
         MPI_Comm_size( comm, &S    ); 
-        bitset<sizeof(int)*8> rankBits(rank); 
-
-        double startTime = MPI_Wtime();
+        std::bitset<sizeof(int)*8> rankBits(rank); 
 
         // Assert that N and size are powers of 2
         if( ! IsPowerOfTwo(N) )
             throw "Must use a power of 2 problem size.";
         if( ! IsPowerOfTwo(S) ) 
             throw "Must use a power of 2 number of processes.";
+        if( myLRPs.size() != NumLocalLRPs<d>( N, comm ) )
+            throw "Incorrect length for vector of LRPs.";
         const unsigned L = Log2( N );
         const unsigned s = Log2( S );
         if( s > d*L )
             throw "Cannot use more than N^d processes.";
 
-        if( rank == 0 )
-        {
-            cout << MPI_Wtime()-startTime << " seconds." << endl;
-            cout << "L = " << L << endl;
-            cout << "s = " << s << endl;
-        }
-
         // Determine the number of boxes in each dimension of the frequency
         // domain by applying the partitions cyclically over the d dimensions.
         // We can simultaneously compute the indices of our box.
-        unsigned nextDim = 0;
-        Array<unsigned,d> myFreqBox(0);
-        Array<unsigned,d> mySpatialBox(0);
-        Array<unsigned,d> log2FreqBoxesPerDim(0);
-        Array<unsigned,d> log2SpatialBoxesPerDim(0);
-        for( unsigned j=s; j>0; --j )
-        {
-            // Double our current coordinate in the 'nextDim' dimension 
-            // and then choose the left/right position based on the (j-1)'th
-            // bit of our rank
-            myFreqBox[nextDim] = (myFreqBox[nextDim]<<1)+rankBits[j-1];
-            ++log2FreqBoxesPerDim[nextDim];
-            nextDim = (nextDim+1) % d;
-        }
-
-        // Initialize the widths of the boxes in the spatial and frequency 
-        // domains that our process is responsible for
+        Array<unsigned,d> myFreqBox;
+        Array<unsigned,d> log2FreqBoxesPerDim;
         Array<R,d> myFreqBoxWidths;
-        Array<R,d> mySpatialBoxWidths(1);
-        for( unsigned j=0; j<d; ++j )
-            myFreqBoxWidths[j] = static_cast<R>(1)/(1<<log2FreqBoxesPerDim[j]);
-        
-        // Compute the offsets for our frequency and spatial box
         Array<R,d> myFreqBoxOffsets;
-        Array<R,d> mySpatialBoxOffsets;
-        for( unsigned j=0; j<d; ++j )
-        {
-            myFreqBoxOffsets[j] = myFreqBox[j]*myFreqBoxWidths[j];
-            mySpatialBoxOffsets[j] = mySpatialBox[j]*mySpatialBoxWidths[j];
-        }
+        InitialLocalFreqData
+        ( myFreqBox, log2FreqBoxesPerDim, 
+          myFreqBoxWidths, myFreqBoxOffsets, comm );
+
+        Array<unsigned,d> mySpatialBox(0);
+        Array<unsigned,d> log2SpatialBoxesPerDim(0);
+        Array<R,d> mySpatialBoxWidths(1);
+        Array<R,d> mySpatialBoxOffsets(0);
 
         // Compute the number of 1/N width boxes in the frequency domain that 
         // our process is responsible for initializing the weights in. Also
@@ -121,7 +95,7 @@ namespace BFIO
         }
 
         // Compute the Chebyshev grid over [-1/2,+1/2]^d
-        vector< Array<R,d> > chebyGrid( Pow<q,d>::val );
+        std::vector< Array<R,d> > chebyGrid( Pow<q,d>::val );
         for( unsigned t=0; t<Pow<q,d>::val; ++t )
         {
             unsigned qToThej = 1;
@@ -136,32 +110,21 @@ namespace BFIO
         // Initialize the weights using Lagrangian interpolation on the 
         // smooth component of the kernel.
         WeightSetList<R,d,q> weightSetList( 1<<log2LocalFreqBoxes );
-        InitializeWeights<Phi,R,d,q>
-        ( N, mySources, chebyGrid, myFreqBoxWidths, myFreqBox,
+        InitializeWeights<R,d,q>
+        ( Phi, N, mySources, chebyGrid, myFreqBoxWidths, myFreqBox,
           log2LocalFreqBoxes, log2LocalFreqBoxesPerDim, weightSetList );
 
         // Start the main recursion loop
-        if( rank == 0 )
-            cout << "Starting spatial-refinement/frequency-coarsening." << endl;
         if( L == 0 || L == 1 )
         {
-            if( rank == 0 )
-                cout << "  Switching to spatial interpolation...";
-            SwitchToSpatialInterp<Phi,R,d,q>
-            ( L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
+            SwitchToSpatialInterp<R,d,q>
+            ( Phi, L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
               log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
                myFreqBoxOffsets, mySpatialBoxOffsets, chebyGrid, 
                weightSetList  );
-            if( rank == 0 )
-                cout << "done." << endl;
         }
         for( unsigned l=1; l<=L; ++l )
         {
-            if( rank == 0 )
-            {
-                cout << "  Beginning level " << l << ": t=" 
-                     << MPI_Wtime()-startTime << " seconds." << endl;
-            }
             // Compute the width of the nodes at level l
             const R wA = static_cast<R>(1) / (1<<l);
             const R wB = static_cast<R>(1) / (1<<(L-l));
@@ -211,8 +174,8 @@ namespace BFIO
                             ((i>>d)<<(log2LocalFreqBoxes+d)) + (k<<d);
                         if( l <= L/2 )
                         {
-                            FreqWeightRecursion<Phi,R,d,q>
-                            ( 0, 0, N, chebyGrid, 
+                            FreqWeightRecursion<R,d,q>
+                            ( Phi, 0, 0, N, chebyGrid, 
                               x0A, p0B, wB, parentOffset,
                               oldWeightSetList, weightSetList[key] );
                         }
@@ -229,8 +192,8 @@ namespace BFIO
                                 x0Ap[j] = (globalA[j]/2)*2*wA + wA;
                                 ARelativeToAp |= (globalA[j]&1)<<j;
                             }
-                            SpatialWeightRecursion<Phi,R,d,q>
-                            ( 0, 0, N, chebyGrid, 
+                            SpatialWeightRecursion<R,d,q>
+                            ( Phi, 0, 0, N, chebyGrid, 
                               ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                               parentOffset, oldWeightSetList, 
                               weightSetList[key] );
@@ -268,7 +231,7 @@ namespace BFIO
                     rank & ~(((1<<log2Procs)-1)<<numSpaceCuts);
                 const unsigned log2Stride = numSpaceCuts;
 
-                vector<int> ranks( 1<<log2Procs );
+                std::vector<int> ranks( 1<<log2Procs );
                 for( unsigned j=0; j<(1u<<log2Procs); ++j )
                 {
                     // We need to reverse the order of the last log2Procs
@@ -334,10 +297,10 @@ namespace BFIO
                     const unsigned parentOffset = ((i>>d)<<(d-log2Procs));
                     if( l <= L/2 )
                     {
-                        FreqWeightRecursion<Phi,R,d,q>
-                        ( log2Procs, myTeamRank, 
+                        FreqWeightRecursion<R,d,q>
+                        ( Phi, log2Procs, myTeamRank, 
                           N, chebyGrid, x0A, p0B, wB, parentOffset,
-                          weightSetList, partialWeightSetList[i]   );
+                          weightSetList, partialWeightSetList[i]    );
                     }
                     else
                     {
@@ -352,8 +315,8 @@ namespace BFIO
                             x0Ap[j] = (globalA[j]/2)*2*wA + wA;
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
-                        SpatialWeightRecursion<Phi,R,d,q>
-                        ( log2Procs, myTeamRank,
+                        SpatialWeightRecursion<R,d,q>
+                        ( Phi, log2Procs, myTeamRank,
                           N, chebyGrid, ARelativeToAp,
                           x0A, x0Ap, p0B, wA, wB, parentOffset,
                           weightSetList, partialWeightSetList[i] );
@@ -361,7 +324,7 @@ namespace BFIO
                 }
 
                 // Scatter the summation of the weights
-                vector<int> recvCounts( 1<<log2Procs );
+                std::vector<int> recvCounts( 1<<log2Procs );
                 for( unsigned j=0; j<(1u<<log2Procs); ++j )
                     recvCounts[j] = weightSetList.Length()*Pow<q,d>::val;
                 SumScatter
@@ -392,21 +355,12 @@ namespace BFIO
             }
             if( l==L/2 )
             {
-                if( rank == 0 )
-                    cout << "  Switching to spatial interpolation...";
-                SwitchToSpatialInterp<Phi,R,d,q>
-                ( L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
+                SwitchToSpatialInterp<R,d,q>
+                ( Phi, L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
                   log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
                   myFreqBoxOffsets, mySpatialBoxOffsets, chebyGrid, 
                   weightSetList  );
-                if( rank == 0 )
-                    cout << "done." << endl;
             }
-        }
-        if( rank == 0 )
-        {
-            cout << "Finished spatial-refinement/frequency-coarsening." << endl;
-            cout<<"  "<<MPI_Wtime()-startTime<<" seconds."<<endl;
         }
         
         // Construct Low-Rank Potentials (LRPs) from weights
@@ -418,31 +372,28 @@ namespace BFIO
                 if( rank == m )
                 {
                     // Fill in the LRPs
-                    myLRPs.resize( 1<<(d*L-s) );
                     CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
                     for( unsigned i=0; i<myLRPs.size(); ++i, AWalker.Walk() )
                     {
                         const Array<unsigned,d> A = AWalker.State();
 
-                        myLRPs[i].N = N;
-
                         Array<R,d> x0A;
                         for( unsigned j=0; j<d; ++j )
                             x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
-                        for( unsigned j=0; j<d; ++j )
-                            myLRPs[i].x0[j] = x0A[j];
+                        myLRPs[i].SetSpatialCenter( x0A );
 
+                        Array<R,d> p0B;
                         for( unsigned j=0; j<d; ++j )
-                            myLRPs[i].p0[j] = static_cast<R>(1)/2;
+                            p0B[j] = static_cast<R>(1)/2;
+                        myLRPs[i].SetFreqCenter( p0B );
     
-                        // Fill in the grid points of the box
+                        PointSet<R,d,q> pointSet;
                         for( unsigned t=0; t<Pow<q,d>::val; ++t )             
                             for( unsigned j=0; j<d; ++j )    
-                                myLRPs[i].pointSet[t][j] = 
-                                    x0A[j] + wA*chebyGrid[t][j];
+                                pointSet[t][j] = x0A[j] + wA*chebyGrid[t][j];
+                        myLRPs[i].SetPointSet( pointSet );
 
-                        // Fill in the weights for the grid points
-                        myLRPs[i].weightSet = weightSetList[i];
+                        myLRPs[i].SetWeightSet( weightSetList[i] );
                     }
                 }
             }

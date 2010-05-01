@@ -16,12 +16,23 @@
   You should have received a copy of the GNU Lesser General Public License
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_HPP
-#define BFIO_HPP 1
+#ifndef BFIO_PHASE_FUNCTOR_HPP
+#define BFIO_PHASE_FUNCTOR_HPP 1
 
-#include "BFIO/Constants.hpp"
-#include "BFIO/Transform.hpp"
-#include "BFIO/Tools/Uniform.hpp"
+#include "BFIO/Structures/Data.hpp"
 
-#endif 
+namespace BFIO
+{
+    // You will need to derive from this class and override the operator()
+    template<typename R,unsigned d>
+    class PhaseFunctor
+    {
+    public:
+        virtual inline ~PhaseFunctor() {}
+        virtual R operator() 
+        ( const Array<R,d>& x, const Array<R,d>& p ) const = 0;
+    };
+}
+
+#endif /* BFIO_PHASE_FUNCTOR_HPP */
 

@@ -16,12 +16,17 @@
   You should have received a copy of the GNU Lesser General Public License
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_HPP
-#define BFIO_HPP 1
+#ifndef BFIO_UNIFORM_HPP
+#define BFIO_UNIFORM_HPP 1
 
-#include "BFIO/Constants.hpp"
-#include "BFIO/Transform.hpp"
-#include "BFIO/Tools/Uniform.hpp"
+namespace BFIO
+{
+    // Samples uniformly within (0,1]
+    template<typename R>
+    inline R
+    Uniform()
+    { return static_cast<R>(rand())/RAND_MAX; }
+}
 
-#endif 
+#endif /* BFIO_UNIFORM_HPP */
 

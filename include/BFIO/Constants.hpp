@@ -16,12 +16,14 @@
   You should have received a copy of the GNU Lesser General Public License
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_HPP
-#define BFIO_HPP 1
+#ifndef BFIO_CONSTANTS_HPP
+#define BFIO_CONSTANTS_HPP 1
 
-#include "BFIO/Constants.hpp"
-#include "BFIO/Transform.hpp"
-#include "BFIO/Tools/Uniform.hpp"
+namespace BFIO
+{
+    static const double Pi    = 3.141592653589793;
+    static const double TwoPi = 6.283185307179586;
+}
 
-#endif 
+#endif /* BFIO_CONSTANTS_HPP */
 

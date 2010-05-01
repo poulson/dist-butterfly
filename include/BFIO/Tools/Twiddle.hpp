@@ -16,23 +16,8 @@
   You should have received a copy of the GNU Lesser General Public License
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_UTIL_HPP
-#define BFIO_UTIL_HPP 1
-
-// C standard headers
-#include <cmath>
-#include <cstdlib>
-
-// C++ standard headers
-#include <complex>
-#include <iostream>
-#include <vector>
-
-// Additional library headers
-#include "mpi.h"
-
-#include "BFIO/Data.hpp"
-#include "BFIO/MPI.hpp"
+#ifndef BFIO_TWIDDLE_HPP
+#define BFIO_TWIDDLE_HPP 1
 
 namespace BFIO
 {
@@ -106,5 +91,5 @@ namespace BFIO
     }
 }
 
-#endif /* BFIO_UTIL_HPP */
+#endif /* BFIO_TWIDDLE_HPP */
 

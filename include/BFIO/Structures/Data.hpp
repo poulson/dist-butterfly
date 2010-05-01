@@ -20,14 +20,10 @@
 #define BFIO_DATA_HPP 1
 
 #include <complex>
-#include "BFIO/Pow.hpp"
+#include "BFIO/Tools/Pow.hpp"
 
 namespace BFIO
 {
-    using namespace std;
-    static const double Pi    = 3.141592653589793;
-    static const double TwoPi = 6.283185307179586;
-
     // A d-dimensional point over arbitrary datatype T
     template<typename T,unsigned d>
     class Array
@@ -56,23 +52,49 @@ namespace BFIO
     struct Source 
     { 
         Array<R,d> p;
-        complex<R> magnitude;
+        std::complex<R> magnitude;
+    };
+
+    template<typename R,unsigned d,unsigned q>
+    class PointSet
+    {
+        Array< Array<R,d>, Pow<q,d>::val > _point;
+
+    public:
+        PointSet() {}
+        ~PointSet() {}
+
+        const Array<R,d>&
+        operator[] ( const unsigned i ) const
+        { return _point[i]; }
+
+        Array<R,d>&
+        operator[] ( const unsigned i )
+        { return _point[i]; }
+
+        const PointSet<R,d,q>&
+        operator= ( const PointSet<R,d,q>& pointSet )
+        {
+            for( unsigned j=0; j<Pow<q,d>::val; ++j )
+                _point[j] = pointSet[j];
+            return *this;
+        }
     };
 
     template<typename R,unsigned d,unsigned q>
     class WeightSet
     {
-        Array< complex<R>, Pow<q,d>::val > _weight;
+        Array< std::complex<R>, Pow<q,d>::val > _weight;
 
     public:
-        WeightSet() { }
-        ~WeightSet() { }
+        WeightSet() {}
+        ~WeightSet() {}
 
-        const complex<R>&
+        const std::complex<R>&
         operator[] ( const unsigned i ) const
         { return _weight[i]; }
 
-        complex<R>&
+        std::complex<R>&
         operator[] ( const unsigned i )
         { return _weight[i]; }
 

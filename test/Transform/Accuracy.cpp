@@ -31,36 +31,19 @@ Usage()
     cout << endl;
 }
 
-// Create the left kernel used in the analytical solution of the
-// wave equation in 3d for a particular time, t=0.5
-struct UpWave
-{ 
-    static inline double
-    Eval
-    ( const Array<double,3>& x, const Array<double,3>& p )
-    { return x[0]*p[0] + x[1]*p[1] + x[2]*p[2] +
-             0.5*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]); }
+static const unsigned d = 3;
+static const unsigned q = 5;
+
+class UpWave : public PhaseFunctor<double,d>
+{
+public:
+    inline double
+    operator() ( const Array<double,d>& x, const Array<double,d>& p ) const
+    {
+        return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
+               0.5*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]); 
+    }
 };
-
-// Create the right kernel used in the analytical solution of the
-// wave equation in 3d for a particular time, t=0.5
-/*
-struct DownWave
-{ 
-    static inline double
-    Eval
-    ( const Array<double,3>& x, const Array<double,3>& p )
-    { return x[0]*p[0] + x[1]*p[1] + x[2]*p[2] -
-             0.5*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]); }
-};
-*/
-
-#define d 3
-#define q 5
-
-double
-Uniform()
-{ return static_cast<double>(rand())/RAND_MAX; }
 
 int
 main
@@ -97,35 +80,18 @@ main
 
     try 
     {
-        // Compute the box that our process owns
-        unsigned s = Log2(size);
-        unsigned nextDim = 0;
-        bitset<sizeof(int)*8> rankBits(rank);
-        Array<unsigned,d> myFreqBox(0);
-        Array<unsigned,d> mySpatialBox(0);
-        Array<unsigned,d> log2FreqBoxesPerDim(0);
-        Array<unsigned,d> log2SpatialBoxesPerDim(0);
-        for( unsigned m=s; m>0; --m )
-        {
-            myFreqBox[nextDim] = (myFreqBox[nextDim]<<1)+rankBits[m-1];     
-            ++log2FreqBoxesPerDim[nextDim];
-            nextDim = (nextDim+1) % d;
-        }
-        Array<double,d> myFreqBoxWidths;
-        Array<double,d> myFreqBoxOffsets;
-        for( unsigned j=0; j<d; ++j )
-        {
-            myFreqBoxWidths[j] = 
-                static_cast<double>(1)/(1<<log2FreqBoxesPerDim[j]); 
-            myFreqBoxOffsets[j] = myFreqBox[j]*myFreqBoxWidths[j];
-        }
-
         // Consistently randomly seed all of the processes' PRNG.
         long seed;
         if( rank == 0 )
             seed = time(0);
         MPI_Bcast( &seed, 1, MPI_LONG, 0, MPI_COMM_WORLD );
         srand( seed );
+
+        // Compute the box that our process owns
+        Array<double,d> myFreqBoxWidths;
+        Array<double,d> myFreqBoxOffsets;
+        InitialLocalFreqData
+        ( myFreqBoxWidths, myFreqBoxOffsets, MPI_COMM_WORLD );
 
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
@@ -134,8 +100,8 @@ main
         for( unsigned i=0; i<M; ++i )
         {
             for( unsigned j=0; j<d; ++j )
-                globalSources[i].p[j] = Uniform();          // [0,1]
-            globalSources[i].magnitude = 200*Uniform()-100; // [-100,100]
+                globalSources[i].p[j] = Uniform<double>();  // [0,1]
+            globalSources[i].magnitude = 200*Uniform<double>()-100; 
 
             // Check if we should push this source onto our local list
             bool isMine = true;
@@ -152,9 +118,11 @@ main
         }
 
         // Create vectors for storing the results and then run the algorithm
-        vector< LRP<UpWave,double,d,q> > myLeftLRPs;
-        MPI_Barrier( MPI_COMM_WORLD );
-        Transform( N, mySources, myLeftLRPs, MPI_COMM_WORLD );
+        UpWave upWave;
+        unsigned numLocalLRPs = NumLocalLRPs<d>( N, MPI_COMM_WORLD );
+        vector< LRP<double,d,q> > myUpWaveLRPs
+        ( numLocalLRPs, LRP<double,d,q>(upWave,N) );
+        Transform( upWave, N, mySources, myUpWaveLRPs, MPI_COMM_WORLD );
 
         // Evaluate each processes' low rank potentials at their center
         for( int i=0; i<size; ++i )
@@ -162,16 +130,16 @@ main
             if( i == rank )
             {
                 cout << "Process " << i << ":" << endl;
-                for( unsigned k=0; k<myLeftLRPs.size(); ++k )
+                for( unsigned k=0; k<myUpWaveLRPs.size(); ++k )
                 {
-                    Array<double,d> x0 = myLeftLRPs[k].x0;
-                    complex<double> u = myLeftLRPs[k]( x0 );
+                    Array<double,d> x0 = myUpWaveLRPs[k].GetSpatialCenter();
+                    complex<double> u = myUpWaveLRPs[k]( x0 );
 
                     complex<double> uTruth(0.,0.);
                     for( unsigned m=0; m<globalSources.size(); ++m )
                     {
                         double alpha = 
-                            TwoPi*UpWave::Eval(x0,globalSources[m].p);
+                            TwoPi*upWave(x0,globalSources[m].p);
                         uTruth += complex<double>(cos(alpha),sin(alpha))*
                                   globalSources[m].magnitude;
                     }
