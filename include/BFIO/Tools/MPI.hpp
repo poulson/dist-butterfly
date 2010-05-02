@@ -33,8 +33,6 @@ namespace BFIO
 // Implementations for {float,double,complex<float>,complex<double>}
 namespace BFIO
 {
-    using namespace std;
-
     template<>
     void
     SumScatter<float>
@@ -44,9 +42,9 @@ namespace BFIO
         ( sendBuf, recvBuf, recvCounts, MPI_FLOAT, MPI_SUM, comm );
         if( ierror != 0 )
         {
-            ostringstream msg;
+            std::ostringstream msg;
             msg << "ierror from MPI_Reduce_scatter = " << ierror;
-            const string& s = msg.str();
+            const std::string& s = msg.str();
             throw s.c_str();
         }
     }
@@ -60,43 +58,45 @@ namespace BFIO
         ( sendBuf, recvBuf, recvCounts, MPI_DOUBLE, MPI_SUM, comm );
         if( ierror != 0 )
         {
-            ostringstream msg;
+            std::ostringstream msg;
             msg << "ierror from MPI_Reduce_scatter = " << ierror;
-            const string& s = msg.str();
+            const std::string& s = msg.str();
             throw s.c_str();
         }
     }
 
     template<>
     void
-    SumScatter< complex<float> >
-    ( complex<float>* sendBuf, complex<float>* recvBuf, 
+    SumScatter< std::complex<float> >
+    ( std::complex<float>* sendBuf, 
+      std::complex<float>* recvBuf, 
       int* recvCounts, MPI_Comm comm )
     {
         int ierror = MPI_Reduce_scatter
         ( sendBuf, recvBuf, recvCounts, MPI_COMPLEX, MPI_SUM, comm );
         if( ierror != 0 )
         {
-            ostringstream msg;
+            std::ostringstream msg;
             msg << "ierror from MPI_Reduce_scatter = " << ierror;
-            const string& s = msg.str();
+            const std::string& s = msg.str();
             throw s.c_str();
         }
     }
 
     template<>
     void
-    SumScatter< complex<double> >
-    ( complex<double>* sendBuf, complex<double>* recvBuf,
+    SumScatter< std::complex<double> >
+    ( std::complex<double>* sendBuf, 
+      std::complex<double>* recvBuf,
       int* recvCounts, MPI_Comm comm )
     {
         int ierror = MPI_Reduce_scatter
         ( sendBuf, recvBuf, recvCounts, MPI_DOUBLE_COMPLEX, MPI_SUM, comm );
         if( ierror != 0 )
         {
-            ostringstream msg;
+            std::ostringstream msg;
             msg << "ierror from MPI_Reduce_scatter = " << ierror;
-            const string& s = msg.str();
+            const std::string& s = msg.str();
             throw s.c_str();
         }
     }

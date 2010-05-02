@@ -25,8 +25,6 @@
 
 namespace BFIO
 {
-    using namespace std;
-
     // Phi: Mapped phase function 
     // R:   type for real variables (e.g., float or double)
     // d:   dimension of problem
@@ -37,8 +35,8 @@ namespace BFIO
     ( 
       const PhaseFunctor<R,d>& Phi,
       const unsigned N,
-      const vector< Source<R,d> >& mySources,
-      const vector< Array<R,d> >& chebyGrid,
+      const std::vector< Source<R,d> >& mySources,
+      const std::vector< Array<R,d> >& chebyGrid,
       const Array<R,d>& myFreqBoxWidths,
       const Array<unsigned,d>& myFreqBox,
       const unsigned log2LocalFreqBoxes,
@@ -46,7 +44,7 @@ namespace BFIO
             WeightSetList<R,d,q>& weightSetList
     )
     {
-        typedef complex<R> C;
+        typedef std::complex<R> C;
 
         const R wB = static_cast<R>(1) / N;
 
@@ -74,12 +72,12 @@ namespace BFIO
                 R rightBound = myFreqBoxWidths[j]*(myFreqBox[j]+1);
                 if( pj < leftBound || pj >= rightBound )
                 {
-                    ostringstream msg;
+                    std::ostringstream msg;
                     msg << "Source " << i << " was at " << pj
                         << " in dimension " << j << ", but our frequency box"
                         << " in this dim. is [" << leftBound << "," 
                         << rightBound << ").";
-                    const string& s = msg.str();
+                    const std::string& s = msg.str();
                     throw s.c_str();
                 }
 

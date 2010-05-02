@@ -22,15 +22,18 @@ ARFLAGS = rc
 ################################################################################
 
 includefiles = BFIO.hpp \
+               BFIO/Constants.hpp \
                BFIO/Structures/Data.hpp \
                BFIO/Structures/HTree.hpp \
                BFIO/Structures/LRP.hpp \
                BFIO/Structures/PhaseFunctor.hpp \
                BFIO/Tools/BLAS.hpp \
                BFIO/Tools/Lagrange.hpp \
+               BFIO/Tools/LocalData.hpp \
                BFIO/Tools/MPI.hpp \
                BFIO/Tools/Pow.hpp \
                BFIO/Tools/Twiddle.hpp \
+               BFIO/Tools/Uniform.hpp \
                BFIO/Transform.hpp \
                BFIO/Transform/FreqWeightRecursion.hpp \
                BFIO/Transform/InitializeWeights.hpp \

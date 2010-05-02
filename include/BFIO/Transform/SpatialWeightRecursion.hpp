@@ -24,8 +24,6 @@
 
 namespace BFIO
 {
-    using namespace std;
-
     template<typename R,unsigned d,unsigned q>
     inline void
     SpatialWeightRecursion
@@ -33,7 +31,7 @@ namespace BFIO
       const unsigned log2Procs,
       const unsigned myTeamRank,
       const unsigned N, 
-      const vector< Array<R,d> >& chebyGrid,
+      const std::vector< Array<R,d> >& chebyGrid,
       const unsigned ARelativeToAp,
       const Array<R,d>& x0A,
       const Array<R,d>& x0Ap,
@@ -44,7 +42,7 @@ namespace BFIO
       const WeightSetList<R,d,q>& oldWeightSetList,
             WeightSet<R,d,q>& weightSet             )
     {
-        typedef complex<R> C;
+        typedef std::complex<R> C;
 
         static bool initialized = false;
         static R LSpatial[1<<d][Pow<q,2*d>::val];

@@ -90,7 +90,7 @@ namespace BFIO
         // Convert x to the reference domain of [-1/2,+1/2]^d
         Array<R,d> xRef;
         for( unsigned j=0; j<d; ++j )
-            xRef[j] = (x[j]-_x0[j])/_N;
+            xRef[j] = (x[j]-_x0[j])*_N;
 
         C value(0.,0.);
         for( unsigned t=0; t<Pow<q,d>::val; ++t )

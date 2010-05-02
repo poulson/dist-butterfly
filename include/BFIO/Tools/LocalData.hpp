@@ -93,7 +93,8 @@ namespace BFIO
     NumLocalLRPs
     ( unsigned N, MPI_Comm comm )
     {
-        int size = MPI_Comm_size( comm, &size );
+        int size;
+        MPI_Comm_size( comm, &size );
         unsigned L = Log2( N );
         unsigned s = Log2( size );
         return 1<<(d*L-s);

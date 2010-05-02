@@ -116,7 +116,8 @@ main
         ( myFreqBoxWidths, myFreqBoxOffsets, MPI_COMM_WORLD );
 
         // Seed our process
-        srand( time(0) );
+        long seed = time(0);
+        srand( seed );
 
         // Now generate random sources in our frequency box
         unsigned numLocalSources = ( rank<(int)(M%size) ? M/size+1 : M/size );
@@ -166,7 +167,7 @@ main
                 cout << "done" << endl;
             }
 
-            // Gather potentials and then dump to file 
+            // TODO: Gather potentials and then dump to VTK file 
         }
     }
     catch( const char* errorMsg )

@@ -19,6 +19,8 @@
 #ifndef BFIO_UNIFORM_HPP
 #define BFIO_UNIFORM_HPP 1
 
+#include <cstdlib>
+
 namespace BFIO
 {
     // Samples uniformly within (0,1]

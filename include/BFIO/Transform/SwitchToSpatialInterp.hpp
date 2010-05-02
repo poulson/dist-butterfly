@@ -23,8 +23,6 @@
 
 namespace BFIO
 {
-    using namespace std;
-
     template<typename R,unsigned d,unsigned q>
     void
     SwitchToSpatialInterp
@@ -36,10 +34,10 @@ namespace BFIO
       const Array<unsigned,d>& log2LocalSpatialBoxesPerDim,
       const Array<R,d>& myFreqBoxOffsets,
       const Array<R,d>& mySpatialBoxOffsets,
-      const vector< Array<R,d> >& chebyGrid,
-            WeightSetList<R,d,q>& weightSetList              )
+      const std::vector< Array<R,d> >& chebyGrid,
+            WeightSetList<R,d,q>& weightSetList            )
     {
-        typedef complex<R> C;
+        typedef std::complex<R> C;
 
         // Compute the width of the nodes at level l
         const unsigned l = L/2;
@@ -56,7 +54,7 @@ namespace BFIO
             for( unsigned j=0; j<d; ++j )
                 x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
 
-            vector< Array<R,d> > xPoints( Pow<q,d>::val );
+            std::vector< Array<R,d> > xPoints( Pow<q,d>::val );
             for( unsigned t=0; t<Pow<q,d>::val; ++t )
                 for( unsigned j=0; j<d; ++j )
                     xPoints[t][j] = x0A[j] + wA*chebyGrid[t][j];
@@ -71,7 +69,7 @@ namespace BFIO
                 for( unsigned j=0; j<d; ++j )
                     p0B[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
 
-                vector< Array<R,d> > pPoints( Pow<q,d>::val );
+                std::vector< Array<R,d> > pPoints( Pow<q,d>::val );
                 for( unsigned t=0; t<Pow<q,d>::val; ++t )
                     for( unsigned j=0; j<d; ++j )
                         pPoints[t][j] = p0B[j] + wB*chebyGrid[t][j];

@@ -115,6 +115,7 @@ namespace BFIO
           log2LocalFreqBoxes, log2LocalFreqBoxesPerDim, weightSetList );
 
         // Start the main recursion loop
+        unsigned numSpaceCuts = 0;
         if( L == 0 || L == 1 )
         {
             SwitchToSpatialInterp<R,d,q>
@@ -223,7 +224,6 @@ namespace BFIO
                 MPI_Comm_group( comm, &group );
 
                 // Construct the group for our local team
-                static unsigned numSpaceCuts = 0;
                 MPI_Group teamGroup;
                 int myTeamRank = 0;
                 // Mask log2Procs bits offset by numSpaceCuts bits
@@ -271,7 +271,7 @@ namespace BFIO
                 Array<R,d> p0B;
                 for( unsigned j=0; j<d; ++j )
                     p0B[j] = myFreqBoxOffsets[j] + wB/2;
-            
+
                 // Form the partial weights. 
                 //
                 // Loop over boxes in spatial domain. 'i' will represent the

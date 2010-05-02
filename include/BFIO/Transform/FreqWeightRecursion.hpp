@@ -23,8 +23,6 @@
 
 namespace BFIO
 {
-    using namespace std;
-
     template<typename R,unsigned d,unsigned q>
     inline void
     FreqWeightRecursion
@@ -32,7 +30,7 @@ namespace BFIO
       const unsigned log2Procs,
       const unsigned myTeamRank,
       const unsigned N, 
-      const vector< Array<R,d> >& chebyGrid,
+      const std::vector< Array<R,d> >& chebyGrid,
       const Array<R,d>& x0A,
       const Array<R,d>& p0B,
       const R wB,
@@ -40,7 +38,7 @@ namespace BFIO
       const WeightSetList<R,d,q>& oldWeightSetList,
             WeightSet<R,d,q>& weightSet            )
     {
-        typedef complex<R> C;
+        typedef std::complex<R> C;
 
         static bool initialized = false;
         static R pRefB[1<<d][Pow<q,d>::val][d];
@@ -52,7 +50,6 @@ namespace BFIO
             {
                 for( unsigned t=0; t<Pow<q,d>::val; ++t )
                 {
-
                     for( unsigned tPrime=0; tPrime<Pow<q,d>::val; ++tPrime )
                     {
                         // Map p_t'(Bc) to the reference domain of B and 

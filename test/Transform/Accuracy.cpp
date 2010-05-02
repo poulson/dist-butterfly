@@ -32,7 +32,7 @@ Usage()
 }
 
 static const unsigned d = 3;
-static const unsigned q = 5;
+static const unsigned q = 6;
 
 class UpWave : public PhaseFunctor<double,d>
 {
@@ -132,26 +132,32 @@ main
                 cout << "Process " << i << ":" << endl;
                 for( unsigned k=0; k<myUpWaveLRPs.size(); ++k )
                 {
+                    // Retrieve the spatial center of LRP k
                     Array<double,d> x0 = myUpWaveLRPs[k].GetSpatialCenter();
-                    complex<double> u = myUpWaveLRPs[k]( x0 );
 
+                    // Find a random point in that box
+                    Array<double,d> x;
+                    for( unsigned j=0; j<d; ++j )
+                        x[j] = x0[j] + 1./(2*N)*(2*Uniform<double>()-1.);
+
+                    // Evaluate our LRP at x  and compare against truth
+                    complex<double> u = myUpWaveLRPs[k]( x );
                     complex<double> uTruth(0.,0.);
                     for( unsigned m=0; m<globalSources.size(); ++m )
                     {
                         double alpha = 
-                            TwoPi*upWave(x0,globalSources[m].p);
+                            TwoPi*upWave(x,globalSources[m].p);
                         uTruth += complex<double>(cos(alpha),sin(alpha))*
                                   globalSources[m].magnitude;
                     }
-
-                    cout << "  x0: ";
+                    cout << "  x: ";
                     for( unsigned j=0; j<d; ++j )
-                        cout << fixed << x0[j] << " ";
+                        cout << fixed << x[j] << " ";
                     cout << endl;
-                    cout << fixed << "  u(x0): " << u << endl;
-                    cout << fixed << "  uTruth(x0): " << uTruth << endl;
-                    cout << scientific << "  relative error: " 
-                         << abs((u-uTruth)/uTruth) << endl << endl;
+                    cout << fixed << "    u(x): " << u << endl;
+                    cout << fixed << "    uTruth(x): " << uTruth << endl;
+                    cout << scientific << "    relative error: " 
+                         << abs(u-uTruth)/abs(uTruth) << endl << endl;
                 }
             }
             MPI_Barrier( MPI_COMM_WORLD );

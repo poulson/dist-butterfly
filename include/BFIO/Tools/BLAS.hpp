@@ -29,14 +29,12 @@
 
 namespace BFIO
 {
-    using namespace std;
-
     template<typename R>
     void
     RealMatrixComplexVec
     ( int m, int n, 
-      const R alpha, const R* A, int lda, const complex<R>* x, 
-      const R beta,  complex<R>* y                            );
+      const R alpha, const R* A, int lda, const std::complex<R>* x, 
+      const R beta,  std::complex<R>* y                            );
 }
 
 extern "C"
@@ -59,14 +57,13 @@ extern "C"
 // Implementations for {float,double,complex<float>,complex<double>}
 namespace BFIO
 {
-    using namespace std;
-
     template<>
     void
     RealMatrixComplexVec<float>
     ( int m, int n,
-      const float alpha, const float* A, int lda, const complex<float>* x,
-      const float beta,  complex<float>* y                                )
+      const float alpha, const float* A, int lda, 
+      const std::complex<float>* x,
+      const float beta,  std::complex<float>* y  )
     {
         const int realsPerComplex = 2;
         const char normal = 'N';
@@ -81,8 +78,9 @@ namespace BFIO
     void
     RealMatrixComplexVec<double>
     ( int m, int n,
-      const double alpha, const double* A, int lda, const complex<double>* x,
-      const double beta,  complex<double>* y                                 )
+      const double alpha, const double* A, int lda, 
+      const std::complex<double>* x,
+      const double beta,  std::complex<double>* y  )
     {
         const int realsPerComplex = 2;
         const char normal = 'N';
