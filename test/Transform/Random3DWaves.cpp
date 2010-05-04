@@ -25,7 +25,7 @@ using namespace BFIO;
 void 
 Usage()
 {
-    cout << "3DWave <N> <M> <T> <nT>" << endl;
+    cout << "Random3DWaves <N> <M> <T> <nT>" << endl;
     cout << "  N: power of 2, the frequency spread in each dimension" << endl;
     cout << "  M: number of random sources to instantiate" << endl;
     cout << "  T: time to simulate to" << endl;
@@ -138,7 +138,7 @@ main
         // Loop over each timestep, computing in parallel, gathering the 
         // results, and then dumping to file
         double deltaT = T/(nT-1);
-        unsigned numLocalLRPs = NumLocalLRPs<d>( N, MPI_COMM_WORLD );
+        unsigned numLocalLRPs = NumLocalBoxes<d>( N, MPI_COMM_WORLD );
         for( unsigned i=0; i<nT; ++i )
         {
             const double t = i*deltaT;
@@ -151,8 +151,8 @@ main
                 cout << "  Starting upWave transform...";
                 cout.flush();
             }
-            vector< LRP<double,d,q> > myUpWaveLRPs
-            ( numLocalLRPs, LRP<double,d,q>(upWave,N) );
+            vector< LowRankPotential<double,d,q> > myUpWaveLRPs
+            ( numLocalLRPs, LowRankPotential<double,d,q>(upWave,N) );
             FreqToSpatial
             ( upWave, N, mySources, myUpWaveLRPs, MPI_COMM_WORLD );
 
@@ -161,8 +161,8 @@ main
                 cout << "done" << endl;
                 cout << "  Starting downWave transform...";
             }
-            vector< LRP<double,d,q> > myDownWaveLRPs
-            ( numLocalLRPs, LRP<double,d,q>(downWave,N) );
+            vector< LowRankPotential<double,d,q> > myDownWaveLRPs
+            ( numLocalLRPs, LowRankPotential<double,d,q>(downWave,N) );
             FreqToSpatial
             ( downWave, N, mySources, myDownWaveLRPs, MPI_COMM_WORLD );
             if( rank == 0 )

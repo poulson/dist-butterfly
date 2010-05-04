@@ -16,8 +16,8 @@
   You should have received a copy of the GNU Lesser General Public License
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_LRP_HPP
-#define BFIO_LRP_HPP 1
+#ifndef BFIO_LOW_RANK_SOURCE_HPP
+#define BFIO_LOW_RANK_SOURCE_HPP 1
 
 #include "BFIO/Structures/Data.hpp"
 #include "BFIO/Structures/PhaseFunctor.hpp"
@@ -25,9 +25,9 @@
 
 namespace BFIO
 {
-    // Low-rank potential
+    // Low-rank source
     template<typename R,unsigned d,unsigned q>
-    class LRP
+    class LowRankSource
     {
         const PhaseFunctor<R,d>& _Phi;
         unsigned _N;
@@ -37,7 +37,7 @@ namespace BFIO
         WeightSet<R,d,q> _weightSet;
 
     public:
-        LRP
+        LowRankSource
         ( PhaseFunctor<R,d>& Phi, const unsigned N )
         : _Phi(Phi), _N(N)
         { }
@@ -74,7 +74,7 @@ namespace BFIO
         SetWeightSet( const WeightSet<R,d,q>& weightSet )
         { _weightSet = weightSet; }
         
-        std::complex<R> operator()( const Array<R,d>& x );
+        std::complex<R> operator()( const Array<R,d>& p );
     };
 }
 
@@ -83,27 +83,27 @@ namespace BFIO
 {
     template<typename R,unsigned d,unsigned q>
     inline std::complex<R>
-    LRP<R,d,q>::operator()( const Array<R,d>& x )
+    LowRankSource<R,d,q>::operator()( const Array<R,d>& p )
     {
         typedef std::complex<R> C;
 
-        // Convert x to the reference domain of [-1/2,+1/2]^d
-        Array<R,d> xRef;
+        // Convert p to the reference domain of [-1/2,+1/2]^d
+        Array<R,d> pRef;
         for( unsigned j=0; j<d; ++j )
-            xRef[j] = (x[j]-_x0[j])*_N;
+            pRef[j] = (p[j]-_p0[j])*_N;
 
         C value(0.,0.);
         for( unsigned t=0; t<Pow<q,d>::val; ++t )
         {
-            R alpha = -TwoPi * _Phi( _pointSet[t], _p0 );
-            value += Lagrange<R,d,q>( t, xRef ) * 
+            R alpha = -TwoPi * _Phi( _x0, _pointSet[t] );
+            value += Lagrange<R,d,q>( t, pRef ) * 
                      C( cos(alpha), sin(alpha) ) * _weightSet[t];
         }
-        R alpha = TwoPi * _Phi( x, _p0 );
+        R alpha = TwoPi * _Phi( _x0, p );
         value *= C( cos(alpha), sin(alpha) );
         return value;
     }
 }
 
-#endif /* BFIO_LRP_HPP */
+#endif /* BFIO_LOW_RANK_SOURCE_HPP */
 

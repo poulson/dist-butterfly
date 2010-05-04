@@ -119,9 +119,9 @@ main
 
         // Create vectors for storing the results and then run the algorithm
         UpWave upWave;
-        unsigned numLocalLRPs = NumLocalLRPs<d>( N, MPI_COMM_WORLD );
-        vector< LRP<double,d,q> > myUpWaveLRPs
-        ( numLocalLRPs, LRP<double,d,q>(upWave,N) );
+        unsigned numLocalLRPs = NumLocalBoxes<d>( N, MPI_COMM_WORLD );
+        vector< LowRankPotential<double,d,q> > myUpWaveLRPs
+        ( numLocalLRPs, LowRankPotential<double,d,q>(upWave,N) );
         FreqToSpatial( upWave, N, mySources, myUpWaveLRPs, MPI_COMM_WORLD );
 
         // Evaluate each processes' low rank potentials at their center

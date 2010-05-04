@@ -90,7 +90,7 @@ namespace BFIO
 
     template<unsigned d>
     unsigned
-    NumLocalLRPs
+    NumLocalBoxes
     ( unsigned N, MPI_Comm comm )
     {
         int size;

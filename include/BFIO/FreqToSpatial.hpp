@@ -20,7 +20,7 @@
 #define BFIO_FREQ_TO_SPATIAL_HPP 1
 
 #include <iostream>
-#include "BFIO/Structures/LRP.hpp"
+#include "BFIO/Structures/LowRankPotential.hpp"
 #include "BFIO/Structures/HTree.hpp"
 #include "BFIO/Tools/LocalData.hpp"
 #include "BFIO/Tools/Twiddle.hpp"
@@ -43,7 +43,7 @@ namespace BFIO
     ( const PhaseFunctor<R,d>& Phi,
       const unsigned N,
       const std::vector< Source<R,d> >& mySources,
-            std::vector< LRP<R,d,q> >& myLRPs,
+            std::vector< LowRankPotential<R,d,q> >& myLRPs,
             MPI_Comm comm )
     {
         typedef std::complex<R> C;
@@ -58,7 +58,7 @@ namespace BFIO
             throw "Must use a power of 2 problem size.";
         if( ! IsPowerOfTwo(S) ) 
             throw "Must use a power of 2 number of processes.";
-        if( myLRPs.size() != NumLocalLRPs<d>( N, comm ) )
+        if( myLRPs.size() != NumLocalBoxes<d>( N, comm ) )
             throw "Incorrect length for vector of LRPs.";
         const unsigned L = Log2( N );
         const unsigned s = Log2( S );

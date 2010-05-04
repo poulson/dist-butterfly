@@ -26,7 +26,8 @@ includefiles = BFIO.hpp \
                BFIO/FreqToSpatial.hpp \
                BFIO/Structures/Data.hpp \
                BFIO/Structures/HTree.hpp \
-               BFIO/Structures/LRP.hpp \
+               BFIO/Structures/LowRankPotential.hpp \
+               BFIO/Structures/LowRankSource.hpp \
                BFIO/Structures/PhaseFunctor.hpp \
                BFIO/Tools/BLAS.hpp \
                BFIO/Tools/Lagrange.hpp \
@@ -48,7 +49,7 @@ includes = $(addprefix $(incdir)/,$(includefiles))
 bindir_debug = $(bindir)/debug
 bindir_release = $(bindir)/release
 
-tests = Transform/3DWave \
+tests = Transform/Random3DWaves \
         Transform/Accuracy \
         Tree/CHTreeWalker \
         Tree/HTreeWalker
