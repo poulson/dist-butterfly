@@ -16,8 +16,8 @@
   You should have received a copy of the GNU Lesser General Public License
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_TRANSFORM_HPP
-#define BFIO_TRANSFORM_HPP 1
+#ifndef BFIO_FREQ_TO_SPATIAL_HPP
+#define BFIO_FREQ_TO_SPATIAL_HPP 1
 
 #include <iostream>
 #include "BFIO/Structures/LRP.hpp"
@@ -39,7 +39,7 @@ namespace BFIO
     // Chebyshev tensor-product grid (q^d points total).
     template<typename R,unsigned d,unsigned q>
     void
-    Transform
+    FreqToSpatial
     ( const PhaseFunctor<R,d>& Phi,
       const unsigned N,
       const std::vector< Source<R,d> >& mySources,
@@ -401,5 +401,5 @@ namespace BFIO
     }
 }
 
-#endif /* BFIO_TRANSFORM_HPP */
+#endif /* BFIO_FREQ_TO_SPATIAL_HPP */
 

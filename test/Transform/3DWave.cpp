@@ -153,7 +153,9 @@ main
             }
             vector< LRP<double,d,q> > myUpWaveLRPs
             ( numLocalLRPs, LRP<double,d,q>(upWave,N) );
-            Transform( upWave, N, mySources, myUpWaveLRPs, MPI_COMM_WORLD );
+            FreqToSpatial
+            ( upWave, N, mySources, myUpWaveLRPs, MPI_COMM_WORLD );
+
             if( rank == 0 )
             {
                 cout << "done" << endl;
@@ -161,7 +163,8 @@ main
             }
             vector< LRP<double,d,q> > myDownWaveLRPs
             ( numLocalLRPs, LRP<double,d,q>(downWave,N) );
-            Transform( downWave, N, mySources, myDownWaveLRPs, MPI_COMM_WORLD );
+            FreqToSpatial
+            ( downWave, N, mySources, myDownWaveLRPs, MPI_COMM_WORLD );
             if( rank == 0 )
             {
                 cout << "done" << endl;

@@ -20,7 +20,7 @@
 #define BFIO_HPP 1
 
 #include "BFIO/Constants.hpp"
-#include "BFIO/Transform.hpp"
+#include "BFIO/FreqToSpatial.hpp"
 #include "BFIO/Tools/Uniform.hpp"
 
 #endif 

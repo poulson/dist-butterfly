@@ -122,7 +122,7 @@ main
         unsigned numLocalLRPs = NumLocalLRPs<d>( N, MPI_COMM_WORLD );
         vector< LRP<double,d,q> > myUpWaveLRPs
         ( numLocalLRPs, LRP<double,d,q>(upWave,N) );
-        Transform( upWave, N, mySources, myUpWaveLRPs, MPI_COMM_WORLD );
+        FreqToSpatial( upWave, N, mySources, myUpWaveLRPs, MPI_COMM_WORLD );
 
         // Evaluate each processes' low rank potentials at their center
         for( int i=0; i<size; ++i )
