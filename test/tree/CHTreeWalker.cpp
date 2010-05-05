@@ -16,19 +16,20 @@
   You should have received a copy of the GNU Lesser General Public License
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#include "BFIO.hpp"
+#include "bfio.hpp"
 using namespace std;
-using namespace BFIO;
+using namespace bfio;
 
 void 
 Usage()
 {
-    cout << "HTreeWalker <N>" << endl;
-    cout << "  N: the number of indices of the HTree to iterate over" << endl;
+    cout << "HTreeWalker <N> <log2Dim[0]> ... <log2Dim[d-1]>" << endl;
+    cout << "  N: number of indices of the HTree to iterate over" << endl;
+    cout << "  log2Dim[j]: log2 of the number of boxes in dimension j" << endl;
     cout << endl;
 }
 
-#define d 3
+static const unsigned d = 3;
 
 int
 main
@@ -39,7 +40,7 @@ main
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
     MPI_Comm_size( MPI_COMM_WORLD, &size );
 
-    if( argc != 2 )
+    if( argc != 2+d )
     {
         if( rank == 0 )
             Usage();
@@ -47,19 +48,23 @@ main
         return 0;
     }
     const unsigned N = atoi(argv[1]);
+    Array<unsigned,d> log2BoxesPerDim;
+    for( unsigned j=0; j<d; ++j )
+        log2BoxesPerDim[j] = atoi(argv[2+j]);
 
     try
     {
         if( rank == 0 )
         {
-            HTreeWalker<d> walker;
+            CHTreeWalker<d> walker( log2BoxesPerDim );
             for( unsigned i=0; i<N; ++i, walker.Walk() )
             {
                 Array<unsigned,d> A = walker.State();
                 cout << i << ": ";
                 for( unsigned j=0; j<d; ++j )
                     cout << A[j] << " ";
-                cout << "; flattened=" << FlattenHTreeIndex( A ) << endl;
+                cout << "; flattened=" 
+                     << FlattenCHTreeIndex( A, log2BoxesPerDim ) << endl;
             }
         }
     }

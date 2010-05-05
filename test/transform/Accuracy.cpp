@@ -18,9 +18,9 @@
 */
 #include <ctime>
 #include <memory>
-#include "BFIO.hpp"
+#include "bfio.hpp"
 using namespace std;
-using namespace BFIO;
+using namespace bfio;
 
 void 
 Usage()
@@ -90,7 +90,7 @@ main
         // Compute the box that our process owns
         Array<double,d> myFreqBoxWidths;
         Array<double,d> myFreqBoxOffsets;
-        InitialLocalFreqData
+        LocalFreqPartitionData
         ( myFreqBoxWidths, myFreqBoxOffsets, MPI_COMM_WORLD );
 
         // Now generate random sources across the domain and store them in 

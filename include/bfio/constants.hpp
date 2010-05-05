@@ -16,12 +16,28 @@
   You should have received a copy of the GNU Lesser General Public License
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_HPP
-#define BFIO_HPP 1
+#ifndef BFIO_CONSTANTS_HPP
+#define BFIO_CONSTANTS_HPP 1
 
-#include "BFIO/Constants.hpp"
-#include "BFIO/FreqToSpatial.hpp"
-#include "BFIO/Tools/Uniform.hpp"
+namespace bfio {
 
-#endif 
+static const double Pi    = 3.141592653589793;
+static const double TwoPi = 6.283185307179586;
+
+// Pow<x,y>::val returns x to the y'th power at compile-time
+template<unsigned x,unsigned y>
+struct Pow
+{ enum { val = x * Pow<x,y-1>::val }; };
+
+template<unsigned x>
+struct Pow<x,1>
+{ enum { val = x }; };
+
+template<unsigned x>
+struct Pow<x,0>
+{ enum { val = 1 }; };
+
+} // bfio
+
+#endif /* BFIO_CONSTANTS_HPP */
 

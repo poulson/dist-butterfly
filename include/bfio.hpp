@@ -16,24 +16,13 @@
   You should have received a copy of the GNU Lesser General Public License
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_POW_HPP
-#define BFIO_POW_HPP 1
+#ifndef BFIO_HPP
+#define BFIO_HPP 1
 
-namespace BFIO
-{
-    // Pow<x,y>::val returns x to the y'th power at compile-time
-    template<unsigned x,unsigned y>
-    struct Pow
-    { enum { val = x * Pow<x,y-1>::val }; };
+#include "bfio/constants.hpp"
+#include "bfio/freq_to_spatial.hpp"
+#include "bfio/structures.hpp"
+#include "bfio/tools.hpp"
 
-    template<unsigned x>
-    struct Pow<x,1>
-    { enum { val = x }; };
-
-    template<unsigned x>
-    struct Pow<x,0>
-    { enum { val = 1 }; };
-}
-
-#endif /* BFIO_POW_HPP */
+#endif 
 

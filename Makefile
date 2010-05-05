@@ -21,25 +21,25 @@ ARFLAGS = rc
 # Only developers should edit past this point.                                 #
 ################################################################################
 
-includefiles = BFIO.hpp \
-               BFIO/Constants.hpp \
-               BFIO/FreqToSpatial.hpp \
-               BFIO/Structures/Data.hpp \
-               BFIO/Structures/HTree.hpp \
-               BFIO/Structures/LowRankPotential.hpp \
-               BFIO/Structures/LowRankSource.hpp \
-               BFIO/Structures/PhaseFunctor.hpp \
-               BFIO/Tools/BLAS.hpp \
-               BFIO/Tools/Lagrange.hpp \
-               BFIO/Tools/LocalData.hpp \
-               BFIO/Tools/MPI.hpp \
-               BFIO/Tools/Pow.hpp \
-               BFIO/Tools/Twiddle.hpp \
-               BFIO/Tools/Uniform.hpp \
-               BFIO/Transform/FreqWeightRecursion.hpp \
-               BFIO/Transform/InitializeWeights.hpp \
-               BFIO/Transform/SpatialWeightRecursion.hpp \
-               BFIO/Transform/SwitchToSpatialInterp.hpp 
+includefiles = bfio.hpp \
+               bfio/constants.hpp \
+               bfio/freq_to_spatial.hpp \
+               bfio/freq_to_spatial/freq_weight_recursion.hpp \
+               bfio/freq_to_spatial/initialize_weights.hpp \
+               bfio/freq_to_spatial/spatial_weight_recursion.hpp \
+               bfio/freq_to_spatial/switch_to_spatial_interp.hpp  \
+               bfio/structures/data.hpp \
+               bfio/structures/htree_walker.hpp \
+               bfio/structures/low_rank_potential.hpp \
+               bfio/structures/low_rank_source.hpp \
+               bfio/structures/phase_functor.hpp \
+               bfio/tools/blas.hpp \
+               bfio/tools/flatten_htree_index.hpp \
+               bfio/tools/lagrange.hpp \
+               bfio/tools/local_data.hpp \
+               bfio/tools/mpi.hpp \
+               bfio/tools/twiddle.hpp \
+               bfio/tools/uniform.hpp 
 
 includes = $(addprefix $(incdir)/,$(includefiles))
 
@@ -49,10 +49,10 @@ includes = $(addprefix $(incdir)/,$(includefiles))
 bindir_debug = $(bindir)/debug
 bindir_release = $(bindir)/release
 
-tests = Transform/Random3DWaves \
-        Transform/Accuracy \
-        Tree/CHTreeWalker \
-        Tree/HTreeWalker
+tests = transform/Random3DWaves \
+        transform/Accuracy \
+        tree/CHTreeWalker \
+        tree/HTreeWalker
 testobjs = $(addsuffix .o, $(tests))
 
 tests_debug = $(addprefix $(bindir_debug)/, $(tests))

@@ -16,19 +16,14 @@
   You should have received a copy of the GNU Lesser General Public License
   along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_UNIFORM_HPP
-#define BFIO_UNIFORM_HPP 1
+#ifndef BFIO_STRUCTURES_HPP
+#define BFIO_STRUCTURES_HPP 1
 
-#include <cstdlib>
+#include "bfio/structures/data.hpp"
+#include "bfio/structures/htree_walker.hpp"
+#include "bfio/structures/low_rank_potential.hpp"
+#include "bfio/structures/low_rank_source.hpp"
+#include "bfio/structures/phase_functor.hpp"
 
-namespace BFIO
-{
-    // Samples uniformly within (0,1]
-    template<typename R>
-    inline R
-    Uniform()
-    { return static_cast<R>(rand())/RAND_MAX; }
-}
-
-#endif /* BFIO_UNIFORM_HPP */
+#endif /* BFIO_STRUCTURES_HPP */
 
