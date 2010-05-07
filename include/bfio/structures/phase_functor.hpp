@@ -28,7 +28,7 @@ template<typename R,unsigned d>
 class PhaseFunctor
 {
 public:
-    virtual inline ~PhaseFunctor() {}
+    virtual ~PhaseFunctor() {}
     virtual R operator() 
     ( const Array<R,d>& x, const Array<R,d>& p ) const = 0;
 };

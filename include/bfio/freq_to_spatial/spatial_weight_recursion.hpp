@@ -26,7 +26,7 @@ namespace bfio {
 namespace freq_to_spatial {
 
 template<typename R,unsigned d,unsigned q>
-inline void
+void
 SpatialWeightRecursion
 ( const PhaseFunctor<R,d>& Phi,
   const unsigned log2Procs,

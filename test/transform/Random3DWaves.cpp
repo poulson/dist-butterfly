@@ -45,7 +45,7 @@ public:
     void SetTime( const double t ) { _t = t; }
     double GetTime() const { return _t; }
 
-    inline double
+    double
     operator() ( const Array<double,d>& x, const Array<double,d>& p ) const
     { 
         return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
@@ -62,7 +62,7 @@ public:
     void SetTime( const double t ) { _t = t; }
     double GetTime() const { return _t; }
 
-    inline double
+    double
     operator() ( const Array<double,d>& x, const Array<double,d>& p ) const
     {
         return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] - 

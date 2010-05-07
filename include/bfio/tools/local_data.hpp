@@ -27,7 +27,7 @@
 namespace bfio {
 
 template<unsigned d>
-unsigned
+inline unsigned
 NumLocalBoxes
 ( unsigned N, MPI_Comm comm )
 {

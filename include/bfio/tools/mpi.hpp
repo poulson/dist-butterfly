@@ -35,7 +35,7 @@ SumScatter
 namespace bfio {
 
 template<>
-void
+inline void
 SumScatter<float>
 ( float* sendBuf, float* recvBuf, int* recvCounts, MPI_Comm comm )
 {
@@ -51,7 +51,7 @@ SumScatter<float>
 }
 
 template<>
-void
+inline void
 SumScatter<double>
 ( double* sendBuf, double* recvBuf, int* recvCounts, MPI_Comm comm )
 {
@@ -67,7 +67,7 @@ SumScatter<double>
 }
 
 template<>
-void
+inline void
 SumScatter< std::complex<float> >
 ( std::complex<float>* sendBuf, 
   std::complex<float>* recvBuf, 
@@ -86,7 +86,7 @@ SumScatter< std::complex<float> >
 
 template<>
 void
-SumScatter< std::complex<double> >
+inline SumScatter< std::complex<double> >
 ( std::complex<double>* sendBuf, 
   std::complex<double>* recvBuf,
   int* recvCounts, MPI_Comm comm )

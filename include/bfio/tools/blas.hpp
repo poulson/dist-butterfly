@@ -61,7 +61,7 @@ void C2F(dgemm)
 namespace bfio {
 
 template<>
-void
+inline void
 RealMatrixComplexVec<float>
 ( int m, int n,
   const float alpha, const float* A, int lda, 
@@ -78,7 +78,7 @@ RealMatrixComplexVec<float>
 }
     
 template<>
-void
+inline void
 RealMatrixComplexVec<double>
 ( int m, int n,
   const double alpha, const double* A, int lda, 
