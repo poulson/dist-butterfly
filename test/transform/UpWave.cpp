@@ -25,9 +25,10 @@ using namespace bfio;
 void 
 Usage()
 {
-    cout << "Accuracy <N> <M>" << endl;
+    cout << "UpWave <N> <M> <testAccuracy?>" << endl;
     cout << "  N: power of 2, the frequency spread in each dimension" << endl;
     cout << "  M: number of random sources to instantiate" << endl;
+    cout << "  testAccuracy?: test accuracy iff 1" << endl;
     cout << endl;
 }
 
@@ -60,7 +61,7 @@ main
         return 0;
     }
 
-    if( argc != 3 )
+    if( argc != 4 )
     {
         if( rank == 0 )
             Usage();
@@ -69,6 +70,7 @@ main
     }
     const unsigned N = atoi(argv[1]);
     const unsigned M = atoi(argv[2]);
+    const bool testAccuracy = ( atoi(argv[3]) == 1 );
 
     if( rank == 0 )
     {
@@ -96,25 +98,44 @@ main
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
         vector< Source<double,d> > mySources;
-        vector< Source<double,d> > globalSources( M );
-        for( unsigned i=0; i<M; ++i )
+        vector< Source<double,d> > globalSources;
+        if( testAccuracy )
         {
-            for( unsigned j=0; j<d; ++j )
-                globalSources[i].p[j] = Uniform<double>();  // [0,1]
-            globalSources[i].magnitude = 200*Uniform<double>()-100; 
-
-            // Check if we should push this source onto our local list
-            bool isMine = true;
-            for( unsigned j=0; j<d; ++j )
+            globalSources.resize( M );
+            for( unsigned i=0; i<M; ++i )
             {
-                double u = globalSources[i].p[j];
-                double start = myFreqBoxOffsets[j];
-                double stop = myFreqBoxOffsets[j] + myFreqBoxWidths[j];
-                if( u < start || u >= stop )
-                    isMine = false;
+                for( unsigned j=0; j<d; ++j )
+                    globalSources[i].p[j] = Uniform<double>();  // [0,1]
+                globalSources[i].magnitude = 200*Uniform<double>()-100; 
+
+                // Check if we should push this source onto our local list
+                bool isMine = true;
+                for( unsigned j=0; j<d; ++j )
+                {
+                    double u = globalSources[i].p[j];
+                    double start = myFreqBoxOffsets[j];
+                    double stop = myFreqBoxOffsets[j] + myFreqBoxWidths[j];
+                    if( u < start || u >= stop )
+                        isMine = false;
+                }
+                if( isMine )
+                    mySources.push_back( globalSources[i] );
             }
-            if( isMine )
-                mySources.push_back( globalSources[i] );
+        }
+        else
+        {
+            unsigned numLocalSources = 
+                ( rank<(int)(M%size) ? M/size+1 : M/size );
+            mySources.resize( numLocalSources ); 
+            for( unsigned i=0; i<numLocalSources; ++i )
+            {
+                for( unsigned j=0; j<d; ++j )
+                {
+                    mySources[i].p[j] = myFreqBoxOffsets[j]+
+                                        Uniform<double>()*myFreqBoxWidths[j];
+                }
+                mySources[i].magnitude = 200*Uniform<double>()-100;
+            }
         }
 
         // Create vectors for storing the results and then run the algorithm
@@ -122,45 +143,51 @@ main
         unsigned numLocalLRPs = NumLocalBoxes<d>( N, MPI_COMM_WORLD );
         vector< LowRankPotential<double,d,q> > myUpWaveLRPs
         ( numLocalLRPs, LowRankPotential<double,d,q>(upWave,N) );
+
+        MPI_Barrier( MPI_COMM_WORLD );
+        double startTime = MPI_Wtime();
         FreqToSpatial( upWave, N, mySources, myUpWaveLRPs, MPI_COMM_WORLD );
+        MPI_Barrier( MPI_COMM_WORLD );
+        double stopTime = MPI_Wtime();
+        if( rank == 0 )
+            cout << "Runtime: " << stopTime-startTime << " seconds." << endl;
 
         // Evaluate each processes' low rank potentials at their center
-        for( int i=0; i<size; ++i )
+        if( testAccuracy )
         {
-            if( i == rank )
+            for( int i=0; i<size; ++i )
             {
-                cout << "Process " << i << ":" << endl;
-                for( unsigned k=0; k<myUpWaveLRPs.size(); ++k )
+                if( i == rank )
                 {
-                    // Retrieve the spatial center of LRP k
-                    Array<double,d> x0 = myUpWaveLRPs[k].GetSpatialCenter();
-
-                    // Find a random point in that box
-                    Array<double,d> x;
-                    for( unsigned j=0; j<d; ++j )
-                        x[j] = x0[j] + 1./(2*N)*(2*Uniform<double>()-1.);
-
-                    // Evaluate our LRP at x  and compare against truth
-                    complex<double> u = myUpWaveLRPs[k]( x );
-                    complex<double> uTruth(0.,0.);
-                    for( unsigned m=0; m<globalSources.size(); ++m )
+                    cout << "Process " << i << ":" << endl;
+                    double maxRelError = 0.;
+                    for( unsigned k=0; k<myUpWaveLRPs.size(); ++k )
                     {
-                        double alpha = 
-                            TwoPi*upWave(x,globalSources[m].p);
-                        uTruth += complex<double>(cos(alpha),sin(alpha))*
-                                  globalSources[m].magnitude;
+                        // Retrieve the spatial center of LRP k
+                        Array<double,d> x0 = myUpWaveLRPs[k].GetSpatialCenter();
+
+                        // Find a random point in that box
+                        Array<double,d> x;
+                        for( unsigned j=0; j<d; ++j )
+                            x[j] = x0[j] + 1./(2*N)*(2*Uniform<double>()-1.);
+
+                        // Evaluate our LRP at x and compare against truth
+                        complex<double> u = myUpWaveLRPs[k]( x );
+                        complex<double> uTruth(0.,0.);
+                        for( unsigned m=0; m<globalSources.size(); ++m )
+                        {
+                            double alpha = 
+                                TwoPi*upWave(x,globalSources[m].p);
+                            uTruth += complex<double>(cos(alpha),sin(alpha))*
+                                      globalSources[m].magnitude;
+                        }
+                        double relError = abs(u-uTruth)/abs(uTruth);
+                        maxRelError = max( maxRelError, relError );
                     }
-                    cout << "  x: ";
-                    for( unsigned j=0; j<d; ++j )
-                        cout << fixed << x[j] << " ";
-                    cout << endl;
-                    cout << fixed << "    u(x): " << u << endl;
-                    cout << fixed << "    uTruth(x): " << uTruth << endl;
-                    cout << scientific << "    relative error: " 
-                         << abs(u-uTruth)/abs(uTruth) << endl << endl;
+                    cout << "  maxRelError: " << maxRelError << endl;
                 }
+                MPI_Barrier( MPI_COMM_WORLD );
             }
-            MPI_Barrier( MPI_COMM_WORLD );
         }
     }
     catch( const char* errorMsg )

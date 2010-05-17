@@ -49,8 +49,9 @@ includes = $(addprefix $(incdir)/,$(includefiles))
 bindir_debug = $(bindir)/debug
 bindir_release = $(bindir)/release
 
-tests = transform/Random3DWaves \
-        transform/Accuracy \
+tests = transform/GeneralizedRadon \
+        transform/UpWave \
+        transform/Random3DWaves \
         tree/CHTreeWalker \
         tree/HTreeWalker
 testobjs = $(addsuffix .o, $(tests))
