@@ -48,7 +48,7 @@ public:
     {
         double a = c1(x)*p[0];
         double b = c2(x)*p[1];
-        return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + sqrt(a*a+b*b);
+        return x[0]*p[0]+x[1]*p[1] + sqrt(a*a+b*b);
     }
 };
 
