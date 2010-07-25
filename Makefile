@@ -9,8 +9,12 @@ incdir = include
 testdir = test
 bindir = bin
 
+# Defining 'AVOID_COMPLEX_MPI' avoids buggy complex MPI_Reduce_scatter summation
+# implementations by using the real version with doubled lengths
+#
+# Defining 'FUNDERSCORE' appends an underscore to BLAS routine names
 CXX = mpicxx
-CXXFLAGS = -I$(incdir) -DFUNDERSCORE
+CXXFLAGS = -I$(incdir) -DFUNDERSCORE -DAVOID_COMPLEX_MPI
 CXXFLAGS_DEBUG = -g -Wall $(CXXFLAGS)
 CXXFLAGS_RELEASE = -O3 -Wall -DRELEASE $(CXXFLAGS)
 LDFLAGS = -L/usr/lib -lblas

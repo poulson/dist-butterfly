@@ -63,10 +63,12 @@ main
             }
         }
     }
-    catch( const char* errorMsg )
+    catch( const exception& e )
     {
-        cout << "Caught exception on process " << rank << ":" << endl;
-        cout << "  " << errorMsg << endl;
+        ostringstream msg;
+        msg << "Caught exception on process " << rank << ":" << endl;
+        msg << "   " << e.what() << endl;
+        cout << msg.str();
     }
 
     MPI_Finalize();

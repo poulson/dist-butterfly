@@ -33,7 +33,7 @@ Usage()
 }
 
 static const unsigned d = 2;
-static const unsigned q = 5;
+static const unsigned q = 8;
 
 class GenRadon : public PhaseFunctor<double,d>
 {
@@ -63,7 +63,9 @@ main
 
     if( !IsPowerOfTwo(size) )
     {
-        cout << "Must run with a power of two number of cores." << endl;
+        if( rank == 0 )
+            cout << "Must run with a power of two number of cores." << endl;
+        MPI_Finalize();
         return 0;
     }
 
@@ -76,14 +78,26 @@ main
     }
     const unsigned N = atoi(argv[1]);
     const unsigned M = atoi(argv[2]);
-    const bool testAccuracy = ( atoi(argv[3]) == 1 );
+    const bool testAccuracy = atoi(argv[3]);
+
+    const unsigned L = Log2( N );
+    const unsigned s = Log2( size );
+    if( s > d*L )
+    {
+        if( rank == 0 )
+            cout << "Cannot run with more than N^d processes." << endl;
+        MPI_Finalize();
+        return 0;
+    }
 
     if( rank == 0 )
     {
-        cout << "Will distribute " << M << " random sources over the " << 
-        endl << "frequency domain, which will be split into " << N << " " << 
-        endl << "boxes in each of the " << d << " dimensions and " << 
-        endl << "distributed amongst " << size << " processes." << endl << endl;
+        ostringstream msg;
+        msg << "Will distribute " << M << " random sources over the frequency " 
+            << "domain, which will be split into " << N 
+            << " boxes in each of the " << d << " dimensions and distributed "
+            << "amongst " << size << " processes." << endl << endl;
+        cout << msg.str();
     }
 
     try 
@@ -158,49 +172,48 @@ main
         if( rank == 0 )
             cout << "Runtime: " << stopTime-startTime << " seconds." << endl;
 
-        // Evaluate each processes' low rank potentials at their center
+        // Evaluate each processes' low rank potentials at a random point
         if( testAccuracy )
         {
-            for( int i=0; i<size; ++i )
+            double myMaxRelError = 0.;
+            for( unsigned k=0; k<myGenRadonLRPs.size(); ++k )
             {
-                if( i == rank )
+                // Retrieve the spatial center of LRP k
+                Array<double,d> x0 = 
+                    myGenRadonLRPs[k].GetSpatialCenter();
+
+                // Find a random point in that box
+                Array<double,d> x;
+                for( unsigned j=0; j<d; ++j )
+                    x[j] = x0[j] + 1./(2*N)*(2*Uniform<double>()-1.);
+
+                // Evaluate our LRP at x  and compare against truth
+                complex<double> u = myGenRadonLRPs[k]( x );
+                complex<double> uTruth(0.,0.);
+                for( unsigned m=0; m<globalSources.size(); ++m )
                 {
-                    cout << "Process " << i << ":" << endl;
-                    double maxRelError = 0.;
-                    for( unsigned k=0; k<myGenRadonLRPs.size(); ++k )
-                    {
-                        // Retrieve the spatial center of LRP k
-                        Array<double,d> x0 = 
-                            myGenRadonLRPs[k].GetSpatialCenter();
-
-                        // Find a random point in that box
-                        Array<double,d> x;
-                        for( unsigned j=0; j<d; ++j )
-                            x[j] = x0[j] + 1./(2*N)*(2*Uniform<double>()-1.);
-
-                        // Evaluate our LRP at x  and compare against truth
-                        complex<double> u = myGenRadonLRPs[k]( x );
-                        complex<double> uTruth(0.,0.);
-                        for( unsigned m=0; m<globalSources.size(); ++m )
-                        {
-                            double alpha = 
-                                TwoPi*genRadon(x,globalSources[m].p);
-                            uTruth += complex<double>(cos(alpha),sin(alpha))*
-                                      globalSources[m].magnitude;
-                        }
-                        double relError = abs(u-uTruth)/abs(uTruth);
-                        maxRelError = max( maxRelError, relError );
-                    }
-                    cout << "  maxRelError: " << maxRelError << endl;
+                    double alpha = 
+                        TwoPi*genRadon(x,globalSources[m].p);
+                    uTruth += complex<double>(cos(alpha),sin(alpha))*
+                              globalSources[m].magnitude;
                 }
-                MPI_Barrier( MPI_COMM_WORLD );
+                double relError = abs(u-uTruth)/abs(uTruth);
+                myMaxRelError = max( myMaxRelError, relError );
             }
+            double maxRelError;
+            MPI_Reduce
+            ( &myMaxRelError, &maxRelError, 1, MPI_DOUBLE, MPI_MAX, 0, 
+              MPI_COMM_WORLD );
+            if( rank == 0 )
+                cout << "Maximum relative error: " << maxRelError << endl;
         }
     }
-    catch( const char* errorMsg )
+    catch( const exception& e )
     {
-        cout << "Caught exception on process " << rank << ":" << endl;
-        cout << "  " << errorMsg << endl;
+        ostringstream msg;
+        msg << "Caught exception on process " << rank << ":" << endl;
+        msg << "   " << e.what() << endl;
+        cout << msg.str();
     }
 
     MPI_Finalize();

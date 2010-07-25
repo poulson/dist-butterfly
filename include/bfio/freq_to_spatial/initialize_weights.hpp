@@ -79,8 +79,7 @@ InitializeWeights
                     << " in dimension " << j << ", but our frequency box"
                     << " in this dim. is [" << leftBound << "," 
                     << rightBound << ").";
-                const std::string& s = msg.str();
-                throw s.c_str();
+                throw std::runtime_error( msg.str() );
             }
 
             // We must be in the box, so bitwise determine the coord index

@@ -19,6 +19,7 @@
 #ifndef BFIO_HTREE_WALKER_HPP
 #define BFIO_HTREE_WALKER_HPP 1
 
+#include <stdexcept>
 #include "bfio/structures/data.hpp"
 #include "bfio/tools/twiddle.hpp"
 
@@ -114,7 +115,7 @@ public:
     Array<unsigned,d> State()
     { 
         if( _overflowed )
-            throw "Overflowed HTree.";
+            throw std::logic_error( "Overflowed HTree" );
         return _state; 
     }
 

@@ -20,6 +20,7 @@
 #define BFIO_FREQ_TO_SPATIAL_HPP 1
 
 #include <iostream>
+#include <stdexcept>
 
 #include "bfio/structures.hpp"
 #include "bfio/tools.hpp"
@@ -55,15 +56,15 @@ FreqToSpatial
 
     // Assert that N and size are powers of 2
     if( ! IsPowerOfTwo(N) )
-        throw "Must use a power of 2 problem size.";
+        throw std::runtime_error( "Must use a power of 2 problem size" );
     if( ! IsPowerOfTwo(S) ) 
-        throw "Must use a power of 2 number of processes.";
+        throw std::runtime_error( "Must use a power of 2 number of processes" );
     if( myLRPs.size() != NumLocalBoxes<d>( N, comm ) )
-        throw "Incorrect length for vector of LRPs.";
+        throw std::runtime_error( "Incorrect length for vector of LRPs" );
     const unsigned L = Log2( N );
     const unsigned s = Log2( S );
     if( s > d*L )
-        throw "Cannot use more than N^d processes.";
+        throw std::runtime_error( "Cannot use more than N^d processes" );
 
     // Determine the number of boxes in each dimension of the frequency
     // domain by applying the partitions cyclically over the d dimensions.
@@ -116,6 +117,7 @@ FreqToSpatial
 
     // Start the main recursion loop
     unsigned numSpaceCuts = 0;
+    unsigned nextSpatialDimToCut = d-1;
     if( L == 0 || L == 1 )
     {
         freq_to_spatial::SwitchToSpatialInterp<R,d,q>
@@ -215,6 +217,7 @@ FreqToSpatial
             // a of d dimensions. Getting these ranks is implicit in the
             // tree structure.
             const unsigned log2Procs = d-log2LocalFreqBoxes;
+
             log2LocalFreqBoxes = 0; 
             for( unsigned j=0; j<d; ++j )
                 log2LocalFreqBoxesPerDim[j] = 0;
@@ -230,7 +233,7 @@ FreqToSpatial
             const int startRank = 
                 rank & ~(((1<<log2Procs)-1)<<numSpaceCuts);
             const unsigned log2Stride = numSpaceCuts;
-
+            
             std::vector<int> ranks( 1<<log2Procs );
             for( unsigned j=0; j<(1u<<log2Procs); ++j )
             {
@@ -257,7 +260,9 @@ FreqToSpatial
             {
                 ++log2LocalSpatialBoxesPerDim[j];
                 ++log2LocalSpatialBoxes;
-            
+            }
+            for( unsigned j=0; j<log2Procs; ++j ) 
+            {
                 if( myFreqBox[j] & 1 )
                 {
                     myFreqBoxOffsets[j] *= 
@@ -266,7 +271,7 @@ FreqToSpatial
                 myFreqBox[j] >>= 1;
                 myFreqBoxWidths[j] *= 2;
             }
-        
+
             // Compute the coordinates and center of this freq box
             Array<R,d> p0B;
             for( unsigned j=0; j<d; ++j )
@@ -331,21 +336,20 @@ FreqToSpatial
             ( &(partialWeightSetList[0][0]), &(weightSetList[0][0]), 
               &recvCounts[0], teamComm );
 
-            // There is at most 1 case where mult processes communicate
-            // with a team size not = to 2^d, so we can wrap backwards
-            // over the d dims by always starting this loop from d
             for( unsigned j=0; j<log2Procs; ++j )
             {
-                const unsigned dim = d-j-1;
-                mySpatialBoxWidths[dim] /= 2;
-                mySpatialBox[dim] <<= 1;
-                if( rankBits[numSpaceCuts++] ) 
+                mySpatialBoxWidths[nextSpatialDimToCut] /= 2;
+                mySpatialBox[nextSpatialDimToCut] <<= 1;
+                if( rankBits[numSpaceCuts] ) 
                 {
-                    mySpatialBox[dim] |= 1;
-                    mySpatialBoxOffsets[dim] += mySpatialBoxWidths[dim];
+                    mySpatialBox[nextSpatialDimToCut] |= 1;
+                    mySpatialBoxOffsets[nextSpatialDimToCut] 
+                        += mySpatialBoxWidths[nextSpatialDimToCut];
                 }
-                --log2LocalSpatialBoxesPerDim[dim];
+                --log2LocalSpatialBoxesPerDim[nextSpatialDimToCut];
                 --log2LocalSpatialBoxes;
+                ++numSpaceCuts;
+                nextSpatialDimToCut = (nextSpatialDimToCut+d-1) % d;
             }
 
             // Tear down the new communicator
@@ -367,34 +371,28 @@ FreqToSpatial
     {
         const R wA = static_cast<R>(1)/N;
 
-        for( int m=0; m<S; ++m )
+        CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
+        for( unsigned i=0; i<myLRPs.size(); ++i, AWalker.Walk() )
         {
-            if( rank == m )
-            {
-                CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
-                for( unsigned i=0; i<myLRPs.size(); ++i, AWalker.Walk() )
-                {
-                    const Array<unsigned,d> A = AWalker.State();
+            const Array<unsigned,d> A = AWalker.State();
 
-                    Array<R,d> x0A;
-                    for( unsigned j=0; j<d; ++j )
-                        x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
-                    myLRPs[i].SetSpatialCenter( x0A );
+            Array<R,d> x0A;
+            for( unsigned j=0; j<d; ++j )
+                x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
+            myLRPs[i].SetSpatialCenter( x0A );
 
-                    Array<R,d> p0B;
-                    for( unsigned j=0; j<d; ++j )
-                        p0B[j] = static_cast<R>(1)/2;
-                    myLRPs[i].SetFreqCenter( p0B );
+            Array<R,d> p0B;
+            for( unsigned j=0; j<d; ++j )
+                p0B[j] = static_cast<R>(1)/2;
+            myLRPs[i].SetFreqCenter( p0B );
 
-                    PointSet<R,d,q> pointSet;
-                    for( unsigned t=0; t<Pow<q,d>::val; ++t )             
-                        for( unsigned j=0; j<d; ++j )    
-                            pointSet[t][j] = x0A[j] + wA*chebyGrid[t][j];
-                    myLRPs[i].SetPointSet( pointSet );
+            PointSet<R,d,q> pointSet;
+            for( unsigned t=0; t<Pow<q,d>::val; ++t )             
+                for( unsigned j=0; j<d; ++j )    
+                    pointSet[t][j] = x0A[j] + wA*chebyGrid[t][j];
+            myLRPs[i].SetPointSet( pointSet );
 
-                    myLRPs[i].SetWeightSet( weightSetList[i] );
-                }
-            }
+            myLRPs[i].SetWeightSet( weightSetList[i] );
         }
     }
 }

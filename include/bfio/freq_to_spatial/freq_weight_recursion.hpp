@@ -90,6 +90,7 @@ FreqWeightRecursion
         // Step 1
         const unsigned c = (cLocal<<log2Procs) + myTeamRank;
         const unsigned key = parentOffset + cLocal;
+
         WeightSet<R,d,q> scaledWeightSet;
         for( unsigned tPrime=0; tPrime<Pow<q,d>::val; ++tPrime )
         {

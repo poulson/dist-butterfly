@@ -81,7 +81,9 @@ main
 
     if( !IsPowerOfTwo(size) )
     {
-        cout << "Must run with a power of two number of cores." << endl;
+        if( rank == 0 )
+            cout << "Must run with a power of two number of cores." << endl;
+        MPI_Finalize();
         return 0;
     }
 
@@ -99,12 +101,14 @@ main
 
     if( rank == 0 )
     {
-        cout << "Will distribute " << M << " random sources over the " << 
-        endl << "frequency domain, which will be split into " << N << " " << 
-        endl << "boxes in each of the " << d << " dimensions and " << 
-        endl << "distributed amongst " << size << " processes." << endl << endl;
-        cout << "Simulation will be over " << T << " units of time with " << 
-        endl << nT << " timesteps." << endl;
+        ostringstream msg;
+        msg << "Will distribute " << M << " random sources over the frequency "
+            << "domain, which will be split into " << N
+            << " boxes in each of the " << d << " dimensions and distributed "
+            << "amongst " << size << " processes. The simulation will be over "
+            << T << " units of time with " << nT << " timesteps." 
+            << endl << endl;
+        cout << msg.str();
     }
 
     try 
@@ -173,10 +177,12 @@ main
             // TODO: Gather potentials and then dump to VTK file 
         }
     }
-    catch( const char* errorMsg )
+    catch( const exception& e )
     {
-        cout << "Caught exception on process " << rank << ":" << endl;
-        cout << "  " << errorMsg << endl;
+        ostringstream msg;
+        msg << "Caught exception on process " << rank << ":" << endl;
+        msg << "   " << e.what() << endl;
+        cout << msg.str();
     }
 
     MPI_Finalize();
