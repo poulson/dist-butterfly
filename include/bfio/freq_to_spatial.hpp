@@ -41,7 +41,8 @@ namespace bfio {
 template<typename R,unsigned d,unsigned q>
 void
 FreqToSpatial
-( const PhaseFunctor<R,d>& Phi,
+( const AmplitudeFunctor<R,d>& Amp,
+  const PhaseFunctor<R,d>& Phi,
   const unsigned N,
   const std::vector< Source<R,d> >& mySources,
         std::vector< LowRankPotential<R,d,q> >& myLRPs,
@@ -121,7 +122,7 @@ FreqToSpatial
     if( L == 0 || L == 1 )
     {
         freq_to_spatial::SwitchToSpatialInterp<R,d,q>
-        ( Phi, L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
+        ( Amp, Phi, L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
           log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
            myFreqBoxOffsets, mySpatialBoxOffsets, chebyGrid, 
            weightSetList  );
@@ -360,7 +361,7 @@ FreqToSpatial
         if( l==L/2 )
         {
             freq_to_spatial::SwitchToSpatialInterp<R,d,q>
-            ( Phi, L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
+            ( Amp, Phi, L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
               log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
               myFreqBoxOffsets, mySpatialBoxOffsets, chebyGrid, 
               weightSetList );

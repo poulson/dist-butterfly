@@ -35,6 +35,14 @@ Usage()
 static const unsigned d = 3;
 static const unsigned q = 8;
 
+class Unity : public AmplitudeFunctor<double,d>
+{
+public:
+    complex<double>
+    operator() ( const Array<double,d>& x, const Array<double,d>& p ) const
+    { return complex<double>(1); }
+};
+
 class UpWave : public PhaseFunctor<double,d>
 {
 public:
@@ -143,6 +151,7 @@ main
         }
 
         // Create vectors for storing the results and then run the algorithm
+        Unity unity;
         UpWave upWave;
         unsigned numLocalLRPs = NumLocalBoxes<d>( N, MPI_COMM_WORLD );
         vector< LowRankPotential<double,d,q> > myUpWaveLRPs
@@ -150,7 +159,8 @@ main
 
         MPI_Barrier( MPI_COMM_WORLD );
         double startTime = MPI_Wtime();
-        FreqToSpatial( upWave, N, mySources, myUpWaveLRPs, MPI_COMM_WORLD );
+        FreqToSpatial
+        ( unity, upWave, N, mySources, myUpWaveLRPs, MPI_COMM_WORLD );
         MPI_Barrier( MPI_COMM_WORLD );
         double stopTime = MPI_Wtime();
         if( rank == 0 )

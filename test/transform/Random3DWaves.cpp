@@ -36,6 +36,14 @@ Usage()
 static const unsigned d = 3;
 static const unsigned q = 5;
 
+class Unity : public AmplitudeFunctor<double,d>
+{
+public:
+    complex<double>
+    operator() ( const Array<double,d>& x, const Array<double,d>& p ) const
+    { return complex<double>(1); }
+};
+ 
 class UpWave : public PhaseFunctor<double,d>
 {
     double _t;
@@ -136,6 +144,7 @@ main
             mySources[i].magnitude = 200*Uniform<double>()-100;
         }
 
+        Unity unity;
         UpWave upWave;
         DownWave downWave;
 
@@ -158,7 +167,7 @@ main
             vector< LowRankPotential<double,d,q> > myUpWaveLRPs
             ( numLocalLRPs, LowRankPotential<double,d,q>(upWave,N) );
             FreqToSpatial
-            ( upWave, N, mySources, myUpWaveLRPs, MPI_COMM_WORLD );
+            ( unity, upWave, N, mySources, myUpWaveLRPs, MPI_COMM_WORLD );
 
             if( rank == 0 )
             {
@@ -168,7 +177,7 @@ main
             vector< LowRankPotential<double,d,q> > myDownWaveLRPs
             ( numLocalLRPs, LowRankPotential<double,d,q>(downWave,N) );
             FreqToSpatial
-            ( downWave, N, mySources, myDownWaveLRPs, MPI_COMM_WORLD );
+            ( unity, downWave, N, mySources, myDownWaveLRPs, MPI_COMM_WORLD );
             if( rank == 0 )
             {
                 cout << "done" << endl;

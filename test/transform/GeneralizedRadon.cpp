@@ -35,6 +35,14 @@ Usage()
 static const unsigned d = 2;
 static const unsigned q = 8;
 
+class Unity : public AmplitudeFunctor<double,d>
+{
+public:
+    complex<double>
+    operator() ( const Array<double,d>& x, const Array<double,d>& p ) const
+    { return complex<double>(1); }
+};
+
 class GenRadon : public PhaseFunctor<double,d>
 {
     double c1( const Array<double,d>& x ) const
@@ -159,6 +167,7 @@ main
         }
 
         // Create vectors for storing the results and then run the algorithm
+        Unity unity;
         GenRadon genRadon;
         unsigned numLocalLRPs = NumLocalBoxes<d>( N, MPI_COMM_WORLD );
         vector< LowRankPotential<double,d,q> > myGenRadonLRPs
@@ -166,7 +175,8 @@ main
 
         MPI_Barrier( MPI_COMM_WORLD );
         double startTime = MPI_Wtime();
-        FreqToSpatial( genRadon, N, mySources, myGenRadonLRPs, MPI_COMM_WORLD );
+        FreqToSpatial
+        ( unity, genRadon, N, mySources, myGenRadonLRPs, MPI_COMM_WORLD );
         MPI_Barrier( MPI_COMM_WORLD );
         double stopTime = MPI_Wtime();
         if( rank == 0 )

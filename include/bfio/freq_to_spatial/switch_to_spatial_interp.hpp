@@ -28,7 +28,8 @@ namespace freq_to_spatial {
 template<typename R,unsigned d,unsigned q>
 void
 SwitchToSpatialInterp
-( const PhaseFunctor<R,d>& Phi,
+( const AmplitudeFunctor<R,d>& Amp,
+  const PhaseFunctor<R,d>& Phi,
   const unsigned L, 
   const unsigned log2LocalFreqBoxes,
   const unsigned log2LocalSpatialBoxes,
@@ -85,6 +86,7 @@ SwitchToSpatialInterp
                 {
                     R alpha = TwoPi*Phi(xPoints[t],pPoints[tPrime]);
                     weightSetList[key][t] += 
+                        Amp(xPoints[t],pPoints[tPrime])*
                         C(cos(alpha),sin(alpha)) * 
                         oldWeightSetList[key][tPrime];
                 }

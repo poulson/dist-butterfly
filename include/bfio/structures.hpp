@@ -23,6 +23,8 @@
 #include "bfio/structures/htree_walker.hpp"
 #include "bfio/structures/low_rank_potential.hpp"
 #include "bfio/structures/low_rank_source.hpp"
+
+#include "bfio/structures/amplitude_functor.hpp"
 #include "bfio/structures/phase_functor.hpp"
 
 #endif /* BFIO_STRUCTURES_HPP */
