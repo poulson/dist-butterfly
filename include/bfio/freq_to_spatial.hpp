@@ -49,6 +49,7 @@ FreqToSpatial
         MPI_Comm comm )
 {
     typedef std::complex<R> C;
+    const unsigned q_to_d = Pow<q,d>::val;
 
     int rank, S;
     MPI_Comm_rank( comm, &rank );
@@ -97,8 +98,8 @@ FreqToSpatial
     }
 
     // Compute the Chebyshev grid over [-1/2,+1/2]^d
-    std::vector< Array<R,d> > chebyGrid( Pow<q,d>::val );
-    for( unsigned t=0; t<Pow<q,d>::val; ++t )
+    std::vector< Array<R,d> > chebyGrid( q_to_d );
+    for( unsigned t=0; t<q_to_d; ++t )
     {
         unsigned qToThej = 1;
         for( unsigned j=0; j<d; ++j )
@@ -332,7 +333,7 @@ FreqToSpatial
             // Scatter the summation of the weights
             std::vector<int> recvCounts( 1<<log2Procs );
             for( unsigned j=0; j<(1u<<log2Procs); ++j )
-                recvCounts[j] = weightSetList.Length()*Pow<q,d>::val;
+                recvCounts[j] = weightSetList.Length()*q_to_d;
             SumScatter
             ( &(partialWeightSetList[0][0]), &(weightSetList[0][0]), 
               &recvCounts[0], teamComm );
@@ -388,7 +389,7 @@ FreqToSpatial
             myLRPs[i].SetFreqCenter( p0B );
 
             PointSet<R,d,q> pointSet;
-            for( unsigned t=0; t<Pow<q,d>::val; ++t )             
+            for( unsigned t=0; t<q_to_d; ++t )             
                 for( unsigned j=0; j<d; ++j )    
                     pointSet[t][j] = x0A[j] + wA*chebyGrid[t][j];
             myLRPs[i].SetPointSet( pointSet );

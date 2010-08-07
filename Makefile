@@ -56,6 +56,7 @@ bindir_release = $(bindir)/release
 tests = transform/GeneralizedRadon \
         transform/UpWave \
         transform/Random3DWaves \
+        transform/VariableUpWave \
         tree/CHTreeWalker \
         tree/HTreeWalker
 testobjs = $(addsuffix .o, $(tests))

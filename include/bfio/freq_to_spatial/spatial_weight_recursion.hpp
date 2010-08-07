@@ -45,17 +45,19 @@ SpatialWeightRecursion
 )
 {
     typedef std::complex<R> C;
+    const unsigned q_to_d = Pow<q,d>::val;
+    const unsigned q_to_2d = Pow<q,2*d>::val;
 
     static bool initialized = false;
-    static R LSpatial[1<<d][Pow<q,2*d>::val];
+    static std::vector<R> LSpatial( q_to_2d << d );
 
     if( !initialized )
     {
         for( unsigned p=0; p<(1u<<d); ++p )
         {
-            for( unsigned tPrime=0; tPrime<Pow<q,d>::val; ++tPrime )
+            for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
             {
-                for( unsigned t=0; t<Pow<q,d>::val; ++t )
+                for( unsigned t=0; t<q_to_d; ++t )
                 {
                     // Map x_t(A) to the reference domain of its parent
                     Array<R,d> xtARefAp;
@@ -66,7 +68,7 @@ SpatialWeightRecursion
                                          (2*chebyGrid[t][j]-1)/4  );
                     }
 
-                    LSpatial[p][t+tPrime*Pow<q,d>::val] = 
+                    LSpatial[p*q_to_2d + t+tPrime*q_to_d] = 
                         Lagrange<R,d,q>( tPrime, xtARefAp );
                 }
             }
@@ -74,7 +76,7 @@ SpatialWeightRecursion
         initialized = true;
     }
 
-    for( unsigned t=0; t<Pow<q,d>::val; ++t )
+    for( unsigned t=0; t<q_to_d; ++t )
         weightSet[t] = 0;
 
     // We seek performance by isolating the Lagrangian interpolation as 
@@ -94,7 +96,7 @@ SpatialWeightRecursion
         Array<R,d> p0Bc;
         for( unsigned j=0; j<d; ++j )
             p0Bc[j] = p0B[j] + ( (c>>j)&1 ? wB/4 : -wB/4 );
-        for( unsigned tPrime=0; tPrime<Pow<q,d>::val; ++tPrime )
+        for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
         {
             Array<R,d> xtPrimeAp;
             for( unsigned j=0; j<d; ++j )
@@ -107,8 +109,8 @@ SpatialWeightRecursion
         // Step 2: perform the matrix-vector multiply
         WeightSet<R,d,q> expandedWeightSet;
         RealMatrixComplexVec
-        ( Pow<q,d>::val, Pow<q,d>::val, 
-          (R)1, LSpatial[ARelativeToAp], Pow<q,d>::val, 
+        ( q_to_d, q_to_d, 
+          (R)1, &LSpatial[ARelativeToAp*q_to_2d], q_to_d, 
                 &scaledWeightSet[0],
           (R)0, &expandedWeightSet[0] );
 

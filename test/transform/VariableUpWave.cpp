@@ -1,0 +1,219 @@
+/*
+  Copyright 2010 Jack Poulson
+
+  This file is part of ButterflyFIO.
+
+  This program is free software: you can redistribute it and/or modify it under
+  the terms of the GNU Lesser General Public License as published by the
+  Free Software Foundation; either version 3 of the License, or 
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful, but 
+  WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public License
+  along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+#include <ctime>
+#include <memory>
+#include "bfio.hpp"
+using namespace std;
+using namespace bfio;
+
+void 
+Usage()
+{
+    cout << "VariableUpWave <N> <M> <testAccuracy?>" << endl;
+    cout << "  N: power of 2, the frequency spread in each dimension" << endl;
+    cout << "  M: number of random sources to instantiate" << endl;
+    cout << "  testAccuracy?: test accuracy iff 1" << endl;
+    cout << endl;
+}
+
+static const unsigned d = 3;
+static const unsigned q = 8;
+
+class Oscillatory : public AmplitudeFunctor<double,d>
+{
+public:
+    complex<double>
+    operator() ( const Array<double,d>& x, const Array<double,d>& p ) const
+    { 
+        return sin(Pi*x[0])*sin(4*Pi*x[1])*cos(2.5*Pi*x[2])*
+               sin(3*Pi*p[0])*cos(2*Pi*p[1])*cos(0.5*Pi*p[2]); 
+    }
+};
+
+class UpWave : public PhaseFunctor<double,d>
+{
+public:
+    double
+    operator() ( const Array<double,d>& x, const Array<double,d>& p ) const
+    {
+        return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
+               0.5*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]); 
+    }
+};
+
+int
+main
+( int argc, char* argv[] )
+{
+    int rank, size;
+    MPI_Init( &argc, &argv );
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+    MPI_Comm_size( MPI_COMM_WORLD, &size );
+
+    if( !IsPowerOfTwo(size) )
+    {
+        if( rank == 0 )
+            cout << "Must run with a power of two number of cores." << endl;
+        MPI_Finalize();
+        return 0;
+    }
+
+    if( argc != 4 )
+    {
+        if( rank == 0 )
+            Usage();
+        MPI_Finalize();
+        return 0;
+    }
+    const unsigned N = atoi(argv[1]);
+    const unsigned M = atoi(argv[2]);
+    const bool testAccuracy = atoi(argv[3]);
+
+    if( rank == 0 )
+    {
+        ostringstream msg;
+        msg << "Will distribute " << M << " random sources over the frequency "
+            << "domain, which will be split into " << N
+            << " boxes in each of the " << d << " dimensions and distributed "
+            << "amongst " << size << " processes." << endl << endl;
+        cout << msg.str();
+    }
+
+    try 
+    {
+        // Consistently randomly seed all of the processes' PRNG.
+        long seed;
+        if( rank == 0 )
+            seed = time(0);
+        MPI_Bcast( &seed, 1, MPI_LONG, 0, MPI_COMM_WORLD );
+        srand( seed );
+
+        // Compute the box that our process owns
+        Array<double,d> myFreqBoxWidths;
+        Array<double,d> myFreqBoxOffsets;
+        LocalFreqPartitionData
+        ( myFreqBoxWidths, myFreqBoxOffsets, MPI_COMM_WORLD );
+
+        // Now generate random sources across the domain and store them in 
+        // our local list when appropriate
+        vector< Source<double,d> > mySources;
+        vector< Source<double,d> > globalSources;
+        if( testAccuracy )
+        {
+            globalSources.resize( M );
+            for( unsigned i=0; i<M; ++i )
+            {
+                for( unsigned j=0; j<d; ++j )
+                    globalSources[i].p[j] = Uniform<double>();  // [0,1]
+                globalSources[i].magnitude = 200*Uniform<double>()-100; 
+
+                // Check if we should push this source onto our local list
+                bool isMine = true;
+                for( unsigned j=0; j<d; ++j )
+                {
+                    double u = globalSources[i].p[j];
+                    double start = myFreqBoxOffsets[j];
+                    double stop = myFreqBoxOffsets[j] + myFreqBoxWidths[j];
+                    if( u < start || u >= stop )
+                        isMine = false;
+                }
+                if( isMine )
+                    mySources.push_back( globalSources[i] );
+            }
+        }
+        else
+        {
+            unsigned numLocalSources = 
+                ( rank<(int)(M%size) ? M/size+1 : M/size );
+            mySources.resize( numLocalSources ); 
+            for( unsigned i=0; i<numLocalSources; ++i )
+            {
+                for( unsigned j=0; j<d; ++j )
+                {
+                    mySources[i].p[j] = myFreqBoxOffsets[j]+
+                                        Uniform<double>()*myFreqBoxWidths[j];
+                }
+                mySources[i].magnitude = 200*Uniform<double>()-100;
+            }
+        }
+
+        // Create vectors for storing the results and then run the algorithm
+        Oscillatory oscillatory;
+        UpWave upWave;
+        unsigned numLocalLRPs = NumLocalBoxes<d>( N, MPI_COMM_WORLD );
+        vector< LowRankPotential<double,d,q> > myUpWaveLRPs
+        ( numLocalLRPs, LowRankPotential<double,d,q>(upWave,N) );
+
+        MPI_Barrier( MPI_COMM_WORLD );
+        double startTime = MPI_Wtime();
+        FreqToSpatial
+        ( oscillatory, upWave, N, mySources, myUpWaveLRPs, MPI_COMM_WORLD );
+        MPI_Barrier( MPI_COMM_WORLD );
+        double stopTime = MPI_Wtime();
+        if( rank == 0 )
+            cout << "Runtime: " << stopTime-startTime << " seconds." << endl;
+
+        // Evaluate each processes' low rank potentials at a random point
+        if( testAccuracy )
+        {
+            double myMaxRelError = 0.;
+            for( unsigned k=0; k<myUpWaveLRPs.size(); ++k )
+            {
+                // Retrieve the spatial center of LRP k
+                Array<double,d> x0 = myUpWaveLRPs[k].GetSpatialCenter();
+
+                // Find a random point in that box
+                Array<double,d> x;
+                for( unsigned j=0; j<d; ++j )
+                    x[j] = x0[j] + 1./(2*N)*(2*Uniform<double>()-1.);
+
+                // Evaluate our LRP at x and compare against truth
+                complex<double> u = myUpWaveLRPs[k]( x );
+                complex<double> uTruth(0.,0.);
+                for( unsigned m=0; m<globalSources.size(); ++m )
+                {
+                    Array<double,d>& p = globalSources[m].p;
+                    double alpha = TwoPi * upWave(x,p);
+                    uTruth += oscillatory(x,p)*
+                              complex<double>(cos(alpha),sin(alpha))*
+                              globalSources[m].magnitude;
+                }
+                double relError = abs(u-uTruth)/max(abs(uTruth),1.);
+                myMaxRelError = max( myMaxRelError, relError );
+            }
+            double maxRelError;
+            MPI_Reduce
+            ( &myMaxRelError, &maxRelError, 1, MPI_DOUBLE, MPI_MAX, 0, 
+              MPI_COMM_WORLD );
+            if( rank == 0 )
+                cout << "  maxRelError: " << maxRelError << endl;
+        }
+    }
+    catch( const exception& e )
+    {
+        ostringstream msg;
+        msg << "Caught exception on process " << rank << ":" << endl;
+        msg << "   " << e.what() << endl;
+        cout << msg.str();
+    }
+
+    MPI_Finalize();
+    return 0;
+}
+

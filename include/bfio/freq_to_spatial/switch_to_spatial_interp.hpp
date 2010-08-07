@@ -42,6 +42,7 @@ SwitchToSpatialInterp
 )
 {
     typedef std::complex<R> C;
+    const unsigned q_to_d = Pow<q,d>::val;
 
     // Compute the width of the nodes at level l
     const unsigned l = L/2;
@@ -58,8 +59,8 @@ SwitchToSpatialInterp
         for( unsigned j=0; j<d; ++j )
             x0A[j] = mySpatialBoxOffsets[j] + A[j]*wA + wA/2;
 
-        std::vector< Array<R,d> > xPoints( Pow<q,d>::val );
-        for( unsigned t=0; t<Pow<q,d>::val; ++t )
+        std::vector< Array<R,d> > xPoints( q_to_d );
+        for( unsigned t=0; t<q_to_d; ++t )
             for( unsigned j=0; j<d; ++j )
                 xPoints[t][j] = x0A[j] + wA*chebyGrid[t][j];
 
@@ -73,16 +74,16 @@ SwitchToSpatialInterp
             for( unsigned j=0; j<d; ++j )
                 p0B[j] = myFreqBoxOffsets[j] + B[j]*wB + wB/2;
 
-            std::vector< Array<R,d> > pPoints( Pow<q,d>::val );
-            for( unsigned t=0; t<Pow<q,d>::val; ++t )
+            std::vector< Array<R,d> > pPoints( q_to_d );
+            for( unsigned t=0; t<q_to_d; ++t )
                 for( unsigned j=0; j<d; ++j )
                     pPoints[t][j] = p0B[j] + wB*chebyGrid[t][j];
 
             const unsigned key = k+(i<<log2LocalFreqBoxes);
-            for( unsigned t=0; t<Pow<q,d>::val; ++t )
+            for( unsigned t=0; t<q_to_d; ++t )
             {
                 weightSetList[key][t] = 0;
-                for( unsigned tPrime=0; tPrime<Pow<q,d>::val; ++tPrime )
+                for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
                 {
                     R alpha = TwoPi*Phi(xPoints[t],pPoints[tPrime]);
                     weightSetList[key][t] += 

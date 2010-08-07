@@ -47,6 +47,7 @@ InitializeWeights
 )
 {
     typedef std::complex<R> C;
+    const unsigned q_to_d = Pow<q,d>::val;
 
     const R wB = static_cast<R>(1) / N;
 
@@ -119,7 +120,7 @@ InitializeWeights
         const C f = mySources[i].magnitude;
         const R alpha = TwoPi*Phi(x0,p);
         const C beta = C( cos(alpha), sin(alpha) ) * f;
-        for( unsigned t=0; t<Pow<q,d>::val; ++t )
+        for( unsigned t=0; t<q_to_d; ++t )
         {
             weightSetList[k][t] += 
                 beta*Lagrange<R,d,q>( t, pRef );
@@ -140,7 +141,7 @@ InitializeWeights
 
         // Compute the prefactors given this p0 and multiply it by 
         // the corresponding weights
-        for( unsigned t=0; t<Pow<q,d>::val; ++t )
+        for( unsigned t=0; t<q_to_d; ++t )
         {
             // Compute the physical location of pt
             Array<R,d> pt;

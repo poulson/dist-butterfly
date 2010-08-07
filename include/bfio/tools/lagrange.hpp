@@ -29,15 +29,17 @@ R
 Lagrange
 ( const unsigned t, const Array<R,d>& z )
 {
+    const unsigned q_to_d = Pow<q,d>::val;
+
     static bool initialized = false;
     static Array<R,q> chebyNodes;
-    static std::vector< Array<unsigned,d> > chebyIndex( Pow<q,d>::val );
+    static std::vector< Array<unsigned,d> > chebyIndex( q_to_d );
 
     if( !initialized )
     {
         for( unsigned i=0; i<q; ++i )
             chebyNodes[i] = 0.5*cos(i*Pi/(q-1));
-        for( unsigned tp=0; tp<Pow<q,d>::val; ++tp )
+        for( unsigned tp=0; tp<q_to_d; ++tp )
         {
             unsigned qToThej = 1;
             for( unsigned j=0; j<d; ++j )

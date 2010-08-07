@@ -41,29 +41,31 @@ FreqWeightRecursion
 )
 {
     typedef std::complex<R> C;
+    const unsigned q_to_d = Pow<q,d>::val;
+    const unsigned q_to_2d = Pow<q,2*d>::val;
 
     static bool initialized = false;
-    static R pRefB[1<<d][Pow<q,d>::val][d];
-    static R LFreq[1<<d][Pow<q,2*d>::val];
+    static std::vector<R> pRefB( (q_to_d << d)*d );
+    static std::vector<R> LFreq( q_to_2d << d );
 
     if( !initialized )
     {
         for( unsigned c=0; c<(1u<<d); ++c )
         {
-            for( unsigned t=0; t<Pow<q,d>::val; ++t )
+            for( unsigned t=0; t<q_to_d; ++t )
             {
-                for( unsigned tPrime=0; tPrime<Pow<q,d>::val; ++tPrime )
+                for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
                 {
                     // Map p_t'(Bc) to the reference domain of B and 
                     // store the Lagrangian evaluation
                     Array<R,d> ptPrimeBcRefB;
                     for( unsigned j=0; j<d; ++j )
                     {
-                        pRefB[c][tPrime][j] = ptPrimeBcRefB[j] = 
+                        pRefB[c*q_to_d*d+tPrime*d+j] = ptPrimeBcRefB[j] = 
                             ( (c>>j)&1 ? (2*chebyGrid[tPrime][j]+1)/4 :
                                          (2*chebyGrid[tPrime][j]-1)/4  );
                     }
-                    LFreq[c][t+tPrime*Pow<q,d>::val] = 
+                    LFreq[c*q_to_2d+t+tPrime*q_to_d] = 
                         Lagrange<R,d,q>( t, ptPrimeBcRefB );
                 }
             }
@@ -82,7 +84,7 @@ FreqWeightRecursion
     // Finally:
     // 3) scale the accumulated weights
 
-    for( unsigned t=0; t<Pow<q,d>::val; ++t )
+    for( unsigned t=0; t<q_to_d; ++t )
         weightSet[t] = 0;
 
     for( unsigned cLocal=0; cLocal<(1u<<(d-log2Procs)); ++cLocal )
@@ -92,11 +94,11 @@ FreqWeightRecursion
         const unsigned key = parentOffset + cLocal;
 
         WeightSet<R,d,q> scaledWeightSet;
-        for( unsigned tPrime=0; tPrime<Pow<q,d>::val; ++tPrime )
+        for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
         {
             Array<R,d> ptPrime;
             for( unsigned j=0; j<d; ++j )
-                ptPrime[j] = p0B[j] + wB*pRefB[c][tPrime][j];
+                ptPrime[j] = p0B[j] + wB*pRefB[c*q_to_d*d+tPrime*d+j];
 
             const R alpha = TwoPi*Phi( x0A, ptPrime );
             scaledWeightSet[tPrime] = 
@@ -105,14 +107,12 @@ FreqWeightRecursion
         
         // Step 2
         RealMatrixComplexVec
-        ( Pow<q,d>::val, Pow<q,d>::val,
-          (R)1, LFreq[c], Pow<q,d>::val,
-                &scaledWeightSet[0],
-          (R)1, &weightSet[0] );
+        ( q_to_d, q_to_d, (R)1, &LFreq[c*q_to_2d], q_to_d, 
+          &scaledWeightSet[0], (R)1, &weightSet[0] );
     }
 
     // Step 3
-    for( unsigned t=0; t<Pow<q,d>::val; ++t )
+    for( unsigned t=0; t<q_to_d; ++t )
     {
         Array<R,d> ptB;
         for( unsigned j=0; j<d; ++j )
