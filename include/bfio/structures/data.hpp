@@ -32,7 +32,7 @@ class Array
     T _x[d];
 public:
     Array() { }
-    Array( T val ) { for( unsigned j=0; j<d; ++j ) _x[j] = val; }
+    Array( T alpha ) { for( unsigned j=0; j<d; ++j ) _x[j] = alpha; }
     ~Array() { }
 
     T& operator[]( unsigned j ) { return _x[j]; }
@@ -62,97 +62,99 @@ struct Source
 };
 
 template<typename R,unsigned d,unsigned q>
-class PointSet
+class PointGrid
 {
-    Array< Array<R,d>, Pow<q,d>::val > _point;
+    Array< Array<R,d>, Pow<q,d>::val > _points;
 
 public:
-    PointSet() {}
-    ~PointSet() {}
+    PointGrid() {}
+    ~PointGrid() {}
 
     const Array<R,d>&
-    operator[] ( const unsigned i ) const
-    { return _point[i]; }
+    operator[] ( unsigned i ) const
+    { return _points[i]; }
 
     Array<R,d>&
-    operator[] ( const unsigned i )
-    { return _point[i]; }
+    operator[] ( unsigned i )
+    { return _points[i]; }
 
-    const PointSet<R,d,q>&
-    operator= ( const PointSet<R,d,q>& pointSet )
+    const PointGrid<R,d,q>&
+    operator= ( const PointGrid<R,d,q>& pointGrid )
     {
-        for( unsigned j=0; j<Pow<q,d>::val; ++j )
-            _point[j] = pointSet[j];
+        const unsigned q_to_d = Pow<q,d>::val;
+        for( unsigned j=0; j<q_to_d; ++j )
+            _points[j] = pointGrid[j];
         return *this;
     }
 };
 
 template<typename R,unsigned d,unsigned q>
-class WeightSet
+class WeightGrid
 {
-    Array< std::complex<R>, Pow<q,d>::val > _weight;
+    Array< std::complex<R>, Pow<q,d>::val > _weights;
 
 public:
-    WeightSet() {}
-    ~WeightSet() {}
+    WeightGrid() {}
+    ~WeightGrid() {}
 
     const std::complex<R>&
-    operator[] ( const unsigned i ) const
-    { return _weight[i]; }
+    operator[] ( unsigned i ) const
+    { return _weights[i]; }
 
     std::complex<R>&
-    operator[] ( const unsigned i )
-    { return _weight[i]; }
+    operator[] ( unsigned i )
+    { return _weights[i]; }
 
-    const WeightSet<R,d,q>&
-    operator= ( const WeightSet<R,d,q>& weightSet )
+    const WeightGrid<R,d,q>&
+    operator= ( const WeightGrid<R,d,q>& weightGrid )
     { 
-        for( unsigned j=0; j<Pow<q,d>::val; ++j )
-            _weight[j] = weightSet[j];
+        const unsigned q_to_d = Pow<q,d>::val;
+        for( unsigned j=0; j<q_to_d; ++j )
+            _weights[j] = weightGrid[j];
         return *this;
     }
 };
 
 template<typename R,unsigned d,unsigned q>
-class WeightSetList
+class WeightGridList
 {
     unsigned _length;
-    WeightSet<R,d,q>* _weightSetList;
+    WeightGrid<R,d,q>* _weightGridList;
 
 public:
-    WeightSetList( unsigned length ) 
-        : _length(length), _weightSetList(new WeightSet<R,d,q>[length])
+    WeightGridList( unsigned length ) 
+        : _length(length), _weightGridList(new WeightGrid<R,d,q>[length])
     { }
 
-    WeightSetList( const WeightSetList<R,d,q>& weightSetList )
-        : _length(weightSetList.Length()),
-          _weightSetList(new WeightSet<R,d,q>[weightSetList.Length()])
+    WeightGridList( const WeightGridList<R,d,q>& weightGridList )
+        : _length(weightGridList.Length()),
+          _weightGridList(new WeightGrid<R,d,q>[weightGridList.Length()])
     {
         for( unsigned j=0; j<_length; ++j )
-            _weightSetList[j] = weightSetList[j];
+            _weightGridList[j] = weightGridList[j];
     }
 
-    ~WeightSetList() 
-    { delete[] _weightSetList; }
+    ~WeightGridList() 
+    { delete[] _weightGridList; }
 
-    const unsigned
+    unsigned
     Length() const
     { return _length; }
 
-    const WeightSet<R,d,q>& 
+    const WeightGrid<R,d,q>& 
     operator[] ( unsigned i ) const
-    { return _weightSetList[i]; }
+    { return _weightGridList[i]; }
 
-    WeightSet<R,d,q>& 
+    WeightGrid<R,d,q>& 
     operator[] ( unsigned i )
-    { return _weightSetList[i]; }
+    { return _weightGridList[i]; }
 
-    const WeightSetList<R,d,q>&
-    operator=  ( const WeightSetList<R,d,q>& weightSetList )
+    const WeightGridList<R,d,q>&
+    operator=  ( const WeightGridList<R,d,q>& weightGridList )
     { 
-        _length = weightSetList.Length();
+        _length = weightGridList.Length();
         for( unsigned j=0; j<_length; ++j )
-            _weightSetList[j] = weightSetList[j];
+            _weightGridList[j] = weightGridList[j];
         return *this;
     }
 };

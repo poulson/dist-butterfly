@@ -38,7 +38,7 @@ SwitchToSpatialInterp
   const Array<R,d>& myFreqBoxOffsets,
   const Array<R,d>& mySpatialBoxOffsets,
   const std::vector< Array<R,d> >& chebyGrid,
-        WeightSetList<R,d,q>& weightSetList
+        WeightGridList<R,d,q>& weightGridList
 )
 {
     typedef std::complex<R> C;
@@ -49,7 +49,7 @@ SwitchToSpatialInterp
     const R wA = static_cast<R>(1)/(1<<l);
     const R wB = static_cast<R>(1)/(1<<(L-l));
     CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
-    WeightSetList<R,d,q> oldWeightSetList( weightSetList );
+    WeightGridList<R,d,q> oldWeightGridList( weightGridList );
     for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i, AWalker.Walk() )
     {
         const Array<unsigned,d> A = AWalker.State();
@@ -82,14 +82,14 @@ SwitchToSpatialInterp
             const unsigned key = k+(i<<log2LocalFreqBoxes);
             for( unsigned t=0; t<q_to_d; ++t )
             {
-                weightSetList[key][t] = 0;
+                weightGridList[key][t] = 0;
                 for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
                 {
                     R alpha = TwoPi*Phi(xPoints[t],pPoints[tPrime]);
-                    weightSetList[key][t] += 
+                    weightGridList[key][t] += 
                         Amp(xPoints[t],pPoints[tPrime])*
                         C(cos(alpha),sin(alpha)) * 
-                        oldWeightSetList[key][tPrime];
+                        oldWeightGridList[key][tPrime];
                 }
             }
         }

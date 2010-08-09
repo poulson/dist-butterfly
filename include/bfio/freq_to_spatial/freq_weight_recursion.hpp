@@ -36,8 +36,8 @@ FreqWeightRecursion
   const Array<R,d>& p0B,
   const R wB,
   const unsigned parentOffset,
-  const WeightSetList<R,d,q>& oldWeightSetList,
-        WeightSet<R,d,q>& weightSet
+  const WeightGridList<R,d,q>& oldWeightGridList,
+        WeightGrid<R,d,q>& weightGrid
 )
 {
     typedef std::complex<R> C;
@@ -85,7 +85,7 @@ FreqWeightRecursion
     // 3) scale the accumulated weights
 
     for( unsigned t=0; t<q_to_d; ++t )
-        weightSet[t] = 0;
+        weightGrid[t] = 0;
 
     for( unsigned cLocal=0; cLocal<(1u<<(d-log2Procs)); ++cLocal )
     {
@@ -93,7 +93,7 @@ FreqWeightRecursion
         const unsigned c = (cLocal<<log2Procs) + myTeamRank;
         const unsigned key = parentOffset + cLocal;
 
-        WeightSet<R,d,q> scaledWeightSet;
+        WeightGrid<R,d,q> scaledWeightGrid;
         for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
         {
             Array<R,d> ptPrime;
@@ -101,14 +101,14 @@ FreqWeightRecursion
                 ptPrime[j] = p0B[j] + wB*pRefB[c*q_to_d*d+tPrime*d+j];
 
             const R alpha = TwoPi*Phi( x0A, ptPrime );
-            scaledWeightSet[tPrime] = 
-                C( cos(alpha), sin(alpha) )*oldWeightSetList[key][tPrime];
+            scaledWeightGrid[tPrime] = 
+                C( cos(alpha), sin(alpha) )*oldWeightGridList[key][tPrime];
         }
         
         // Step 2
         RealMatrixComplexVec
         ( q_to_d, q_to_d, (R)1, &LFreq[c*q_to_2d], q_to_d, 
-          &scaledWeightSet[0], (R)1, &weightSet[0] );
+          &scaledWeightGrid[0], (R)1, &weightGrid[0] );
     }
 
     // Step 3
@@ -119,7 +119,7 @@ FreqWeightRecursion
             ptB[j] = p0B[j] + wB*chebyGrid[t][j];
 
         const R alpha = -TwoPi*Phi( x0A, ptB );
-        weightSet[t] *= C( cos(alpha), sin(alpha) );
+        weightGrid[t] *= C( cos(alpha), sin(alpha) );
     }
 }
 

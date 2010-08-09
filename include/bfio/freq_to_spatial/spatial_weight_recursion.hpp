@@ -40,8 +40,8 @@ SpatialWeightRecursion
   const R wA,
   const R wB,
   const unsigned parentOffset,
-  const WeightSetList<R,d,q>& oldWeightSetList,
-        WeightSet<R,d,q>& weightSet
+  const WeightGridList<R,d,q>& oldWeightGridList,
+        WeightGrid<R,d,q>& weightGrid
 )
 {
     typedef std::complex<R> C;
@@ -77,7 +77,7 @@ SpatialWeightRecursion
     }
 
     for( unsigned t=0; t<q_to_d; ++t )
-        weightSet[t] = 0;
+        weightGrid[t] = 0;
 
     // We seek performance by isolating the Lagrangian interpolation as 
     // a matrix-vector multiplication.
@@ -90,7 +90,7 @@ SpatialWeightRecursion
     for( unsigned cLocal=0; cLocal<(1u<<(d-log2Procs)); ++cLocal )
     {
         // Step 1: scale the old weights
-        WeightSet<R,d,q> scaledWeightSet;
+        WeightGrid<R,d,q> scaledWeightGrid;
         const unsigned c = (cLocal<<log2Procs) + myTeamRank;
         const unsigned key = parentOffset + cLocal;
         Array<R,d> p0Bc;
@@ -102,17 +102,17 @@ SpatialWeightRecursion
             for( unsigned j=0; j<d; ++j )
                 xtPrimeAp[j] = x0Ap[j] + (2*wA)*chebyGrid[tPrime][j];
             const R alpha = -TwoPi*Phi( xtPrimeAp, p0Bc );
-            scaledWeightSet[tPrime] = 
-                C(cos(alpha),sin(alpha))*oldWeightSetList[key][tPrime];
+            scaledWeightGrid[tPrime] = 
+                C(cos(alpha),sin(alpha))*oldWeightGridList[key][tPrime];
         }
 
         // Step 2: perform the matrix-vector multiply
-        WeightSet<R,d,q> expandedWeightSet;
+        WeightGrid<R,d,q> expandedWeightGrid;
         RealMatrixComplexVec
         ( q_to_d, q_to_d, 
           (R)1, &LSpatial[ARelativeToAp*q_to_2d], q_to_d, 
-                &scaledWeightSet[0],
-          (R)0, &expandedWeightSet[0] );
+                &scaledWeightGrid[0],
+          (R)0, &expandedWeightGrid[0] );
 
         // Step 3: scale the result
         for( unsigned t=0; t<Pow<q,d>::val; ++t )
@@ -121,7 +121,7 @@ SpatialWeightRecursion
             for( unsigned j=0; j<d; ++j )
                 xtA[j] = x0A[j] + wA*chebyGrid[t][j];
             const R alpha = TwoPi*Phi( xtA, p0Bc );
-            weightSet[t] += C(cos(alpha),sin(alpha))*expandedWeightSet[t];
+            weightGrid[t] += C(cos(alpha),sin(alpha))*expandedWeightGrid[t];
         }
     }
 }

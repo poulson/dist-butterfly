@@ -32,12 +32,12 @@ class LowRankPotential
     unsigned _N;
     Array<R,d> _x0;
     Array<R,d> _p0;
-    PointSet<R,d,q> _pointSet;
-    WeightSet<R,d,q> _weightSet;
+    PointGrid<R,d,q> _pointGrid;
+    WeightGrid<R,d,q> _weightGrid;
 
 public:
     LowRankPotential
-    ( PhaseFunctor<R,d>& Phi, const unsigned N )
+    ( PhaseFunctor<R,d>& Phi, unsigned N )
     : _Phi(Phi), _N(N)
     { }
 
@@ -57,21 +57,21 @@ public:
     SetFreqCenter( const Array<R,d>& p0 )
     { _p0 = p0; }
 
-    const PointSet<R,d,q>&
-    GetPointSet() const
-    { return _pointSet; }
+    const PointGrid<R,d,q>&
+    GetPointGrid() const
+    { return _pointGrid; }
 
     void 
-    SetPointSet( const PointSet<R,d,q>& pointSet )
-    { _pointSet = pointSet; }
+    SetPointGrid( const PointGrid<R,d,q>& pointGrid )
+    { _pointGrid = pointGrid; }
 
-    const WeightSet<R,d,q>&
-    GetWeightSet() const
-    { return _weightSet; }
+    const WeightGrid<R,d,q>&
+    GetWeightGrid() const
+    { return _weightGrid; }
 
     void 
-    SetWeightSet( const WeightSet<R,d,q>& weightSet )
-    { _weightSet = weightSet; }
+    SetWeightGrid( const WeightGrid<R,d,q>& weightGrid )
+    { _weightGrid = weightGrid; }
     
     std::complex<R> operator()( const Array<R,d>& x );
 };
@@ -95,9 +95,9 @@ LowRankPotential<R,d,q>::operator()( const Array<R,d>& x )
     C value(0.,0.);
     for( unsigned t=0; t<Pow<q,d>::val; ++t )
     {
-        R alpha = -TwoPi * _Phi( _pointSet[t], _p0 );
+        R alpha = -TwoPi * _Phi( _pointGrid[t], _p0 );
         value += Lagrange<R,d,q>( t, xRef ) * 
-                 C( cos(alpha), sin(alpha) ) * _weightSet[t];
+                 C( cos(alpha), sin(alpha) ) * _weightGrid[t];
     }
     R alpha = TwoPi * _Phi( x, _p0 );
     value *= C( cos(alpha), sin(alpha) );

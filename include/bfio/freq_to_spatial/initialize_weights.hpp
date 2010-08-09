@@ -43,7 +43,7 @@ InitializeWeights
   const Array<unsigned,d>& myFreqBox,
   const unsigned log2LocalFreqBoxes,
   const Array<unsigned,d>& log2LocalFreqBoxesPerDim,
-        WeightSetList<R,d,q>& weightSetList
+        WeightGridList<R,d,q>& weightGridList
 )
 {
     typedef std::complex<R> C;
@@ -122,7 +122,7 @@ InitializeWeights
         const C beta = C( cos(alpha), sin(alpha) ) * f;
         for( unsigned t=0; t<q_to_d; ++t )
         {
-            weightSetList[k][t] += 
+            weightGridList[k][t] += 
                 beta*Lagrange<R,d,q>( t, pRef );
         }
     }
@@ -149,7 +149,7 @@ InitializeWeights
                 pt[j] = p0[j] + wB*chebyGrid[t][j];
 
             const R alpha = -TwoPi*Phi(x0,pt);
-            weightSetList[k][t] *= C( cos(alpha), sin(alpha) );
+            weightGridList[k][t] *= C( cos(alpha), sin(alpha) );
         }
     }
 }

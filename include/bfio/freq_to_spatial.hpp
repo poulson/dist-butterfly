@@ -112,10 +112,10 @@ FreqToSpatial
 
     // Initialize the weights using Lagrangian interpolation on the 
     // smooth component of the kernel.
-    WeightSetList<R,d,q> weightSetList( 1<<log2LocalFreqBoxes );
+    WeightGridList<R,d,q> weightGridList( 1<<log2LocalFreqBoxes );
     freq_to_spatial::InitializeWeights<R,d,q>
     ( Phi, N, mySources, chebyGrid, myFreqBoxWidths, myFreqBox,
-      log2LocalFreqBoxes, log2LocalFreqBoxesPerDim, weightSetList );
+      log2LocalFreqBoxes, log2LocalFreqBoxesPerDim, weightGridList );
 
     // Start the main recursion loop
     unsigned numSpaceCuts = 0;
@@ -126,7 +126,7 @@ FreqToSpatial
         ( Amp, Phi, L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
           log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
            myFreqBoxOffsets, mySpatialBoxOffsets, chebyGrid, 
-           weightSetList  );
+           weightGridList );
     }
     for( unsigned l=1; l<=L; ++l )
     {
@@ -149,7 +149,7 @@ FreqToSpatial
             // leaf # w.r.t. the tree implied by cyclically assigning
             // the spatial bisections across the d dims.
             CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
-            WeightSetList<R,d,q> oldWeightSetList( weightSetList );
+            WeightGridList<R,d,q> oldWeightGridList( weightGridList );
             for( unsigned i=0; 
                  i<(1u<<log2LocalSpatialBoxes); 
                  ++i, AWalker.Walk()           )
@@ -182,7 +182,7 @@ FreqToSpatial
                         freq_to_spatial::FreqWeightRecursion<R,d,q>
                         ( Phi, 0, 0, N, chebyGrid, 
                           x0A, p0B, wB, parentOffset,
-                          oldWeightSetList, weightSetList[key] );
+                          oldWeightGridList, weightGridList[key] );
                     }
                     else
                     {
@@ -200,8 +200,8 @@ FreqToSpatial
                         freq_to_spatial::SpatialWeightRecursion<R,d,q>
                         ( Phi, 0, 0, N, chebyGrid, 
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
-                          parentOffset, oldWeightSetList, 
-                          weightSetList[key] );
+                          parentOffset, oldWeightGridList, 
+                          weightGridList[key] );
                     }
                 }
             }
@@ -288,7 +288,7 @@ FreqToSpatial
             // the d dims, then the ReduceScatter will not require any
             // packing or unpacking.
             CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
-            WeightSetList<R,d,q> partialWeightSetList
+            WeightGridList<R,d,q> partialWeightGridList
             ( 1<<log2LocalSpatialBoxes );
             for( unsigned i=0; 
                  i<(1u<<log2LocalSpatialBoxes); 
@@ -307,7 +307,7 @@ FreqToSpatial
                     freq_to_spatial::FreqWeightRecursion<R,d,q>
                     ( Phi, log2Procs, myTeamRank, 
                       N, chebyGrid, x0A, p0B, wB, parentOffset,
-                      weightSetList, partialWeightSetList[i]    );
+                      weightGridList, partialWeightGridList[i] );
                 }
                 else
                 {
@@ -326,16 +326,16 @@ FreqToSpatial
                     ( Phi, log2Procs, myTeamRank,
                       N, chebyGrid, ARelativeToAp,
                       x0A, x0Ap, p0B, wA, wB, parentOffset,
-                      weightSetList, partialWeightSetList[i] );
+                      weightGridList, partialWeightGridList[i] );
                 }
             }
 
             // Scatter the summation of the weights
             std::vector<int> recvCounts( 1<<log2Procs );
             for( unsigned j=0; j<(1u<<log2Procs); ++j )
-                recvCounts[j] = weightSetList.Length()*q_to_d;
+                recvCounts[j] = weightGridList.Length()*q_to_d;
             SumScatter
-            ( &(partialWeightSetList[0][0]), &(weightSetList[0][0]), 
+            ( &(partialWeightGridList[0][0]), &(weightGridList[0][0]), 
               &recvCounts[0], teamComm );
 
             for( unsigned j=0; j<log2Procs; ++j )
@@ -365,7 +365,7 @@ FreqToSpatial
             ( Amp, Phi, L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
               log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
               myFreqBoxOffsets, mySpatialBoxOffsets, chebyGrid, 
-              weightSetList );
+              weightGridList );
         }
     }
     
@@ -388,13 +388,13 @@ FreqToSpatial
                 p0B[j] = static_cast<R>(1)/2;
             myLRPs[i].SetFreqCenter( p0B );
 
-            PointSet<R,d,q> pointSet;
+            PointGrid<R,d,q> pointGrid;
             for( unsigned t=0; t<q_to_d; ++t )             
                 for( unsigned j=0; j<d; ++j )    
-                    pointSet[t][j] = x0A[j] + wA*chebyGrid[t][j];
-            myLRPs[i].SetPointSet( pointSet );
+                    pointGrid[t][j] = x0A[j] + wA*chebyGrid[t][j];
+            myLRPs[i].SetPointGrid( pointGrid );
 
-            myLRPs[i].SetWeightSet( weightSetList[i] );
+            myLRPs[i].SetWeightGrid( weightGridList[i] );
         }
     }
 }
