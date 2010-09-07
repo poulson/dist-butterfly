@@ -1,21 +1,36 @@
 /*
-  Copyright 2010 Jack Poulson
+   Copyright (c) 2010, Jack Poulson
+   All rights reserved.
 
-  This file is part of ButterflyFIO.
+   This file is part of ButterflyFIO.
 
-  This program is free software: you can redistribute it and/or modify it under
-  the terms of the GNU Lesser General Public License as published by the
-  Free Software Foundation; either version 3 of the License, or 
-  (at your option) any later version.
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions are met:
 
-  This program is distributed in the hope that it will be useful, but 
-  WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Lesser General Public License for more details.
+    - Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
 
-  You should have received a copy of the GNU Lesser General Public License
-  along with this program. If not, see <http://www.gnu.org/licenses/>.
+    - Redistributions in binary form must reproduce the above copyright notice,
+      this list of conditions and the following disclaimer in the documentation
+      and/or other materials provided with the distribution.
+
+    - Neither the name of the owner nor the names of its contributors
+      may be used to endorse or promote products derived from this software
+      without specific prior written permission.
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+   POSSIBILITY OF SUCH DAMAGE.
 */
+#pragma once
 #ifndef BFIO_FREQ_TO_SPATIAL_HPP
 #define BFIO_FREQ_TO_SPATIAL_HPP 1
 
@@ -33,28 +48,31 @@
 namespace bfio {
 
 // Applies the butterfly algorithm for the Fourier integral operator 
-// defined by the mapped phase function, Phi. This allows one to call the 
-// function with their own functor with potentially no performance penalty. 
-// R is the datatype for representing a Real and d is the spatial and 
-// frequency dimension. q is the number of points in each dimension of the 
-// Chebyshev tensor-product grid (q^d points total).
+// defined by the mapped amplitude and phase functions, Amp and Phi. This 
+// allows one to call the function with their own functor with potentially no 
+// performance penalty. R is the datatype for representing a Real and d is the 
+// spatial and frequency dimension. q is the number of points in each dimension 
+// of the Chebyshev tensor-product grid (q^d points total).
 template<typename R,unsigned d,unsigned q>
 void
 FreqToSpatial
-( const AmplitudeFunctor<R,d>& Amp,
-  const PhaseFunctor<R,d>& Phi,
-  const unsigned N,
-  const std::vector< Source<R,d> >& mySources,
+( const std::vector< Source<R,d> >& mySources,
         std::vector< LowRankPotential<R,d,q> >& myLRPs,
         MPI_Comm comm )
 {
     typedef std::complex<R> C;
     const unsigned q_to_d = Pow<q,d>::val;
 
+    // Extract our communicator and its size
     int rank, S;
     MPI_Comm_rank( comm, &rank );
     MPI_Comm_size( comm, &S    ); 
     std::bitset<sizeof(int)*8> rankBits(rank); 
+
+    // Extract our amplitude and phase functions, as well as N
+    const unsigned N = myLRPs[0].GetN();
+    const AmplitudeFunctor<R,d>& Amp = myLRPs[0].GetAmplitudeFunctor();
+    const PhaseFunctor<R,d>& Phi = myLRPs[0].GetPhaseFunctor();
 
     // Assert that N and size are powers of 2
     if( ! IsPowerOfTwo(N) )
@@ -114,7 +132,7 @@ FreqToSpatial
     // smooth component of the kernel.
     WeightGridList<R,d,q> weightGridList( 1<<log2LocalFreqBoxes );
     freq_to_spatial::InitializeWeights<R,d,q>
-    ( Phi, N, mySources, chebyGrid, myFreqBoxWidths, myFreqBox,
+    ( Amp, Phi, N, mySources, chebyGrid, myFreqBoxWidths, myFreqBox,
       log2LocalFreqBoxes, log2LocalFreqBoxesPerDim, weightGridList );
 
     // Start the main recursion loop
@@ -125,8 +143,8 @@ FreqToSpatial
         freq_to_spatial::SwitchToSpatialInterp<R,d,q>
         ( Amp, Phi, L, log2LocalFreqBoxes, log2LocalSpatialBoxes,
           log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
-           myFreqBoxOffsets, mySpatialBoxOffsets, chebyGrid, 
-           weightGridList );
+          myFreqBoxOffsets, mySpatialBoxOffsets, chebyGrid, 
+          weightGridList );
     }
     for( unsigned l=1; l<=L; ++l )
     {
@@ -152,7 +170,7 @@ FreqToSpatial
             WeightGridList<R,d,q> oldWeightGridList( weightGridList );
             for( unsigned i=0; 
                  i<(1u<<log2LocalSpatialBoxes); 
-                 ++i, AWalker.Walk()           )
+                 ++i, AWalker.Walk() )
             {
                 const Array<unsigned,d> A = AWalker.State();
 
@@ -165,7 +183,7 @@ FreqToSpatial
                 CHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
                 for( unsigned k=0; 
                      k<(1u<<log2LocalFreqBoxes); 
-                     ++k, BWalker.Walk()        )
+                     ++k, BWalker.Walk() )
                 {
                     const Array<unsigned,d> B = BWalker.State();
 
@@ -180,7 +198,7 @@ FreqToSpatial
                     if( l <= L/2 )
                     {
                         freq_to_spatial::FreqWeightRecursion<R,d,q>
-                        ( Phi, 0, 0, N, chebyGrid, 
+                        ( Amp, Phi, 0, 0, N, chebyGrid, 
                           x0A, p0B, wB, parentOffset,
                           oldWeightGridList, weightGridList[key] );
                     }
@@ -198,7 +216,7 @@ FreqToSpatial
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
                         freq_to_spatial::SpatialWeightRecursion<R,d,q>
-                        ( Phi, 0, 0, N, chebyGrid, 
+                        ( Amp, Phi, 0, 0, N, chebyGrid, 
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentOffset, oldWeightGridList, 
                           weightGridList[key] );
@@ -253,7 +271,7 @@ FreqToSpatial
             ( group, 1<<log2Procs, &ranks[0], &teamGroup );
 
             // Construct the local team communicator from the team group
-            MPI_Comm  teamComm;
+            MPI_Comm teamComm;
             MPI_Comm_create( comm, teamGroup, &teamComm );
 
             // Fully refine spatial domain and coarsen frequency domain.
@@ -292,7 +310,7 @@ FreqToSpatial
             ( 1<<log2LocalSpatialBoxes );
             for( unsigned i=0; 
                  i<(1u<<log2LocalSpatialBoxes); 
-                 ++i, AWalker.Walk()           )
+                 ++i, AWalker.Walk() )
             {
                 const Array<unsigned,d> A = AWalker.State();
 
@@ -305,7 +323,7 @@ FreqToSpatial
                 if( l <= L/2 )
                 {
                     freq_to_spatial::FreqWeightRecursion<R,d,q>
-                    ( Phi, log2Procs, myTeamRank, 
+                    ( Amp, Phi, log2Procs, myTeamRank, 
                       N, chebyGrid, x0A, p0B, wB, parentOffset,
                       weightGridList, partialWeightGridList[i] );
                 }
@@ -323,7 +341,7 @@ FreqToSpatial
                         ARelativeToAp |= (globalA[j]&1)<<j;
                     }
                     freq_to_spatial::SpatialWeightRecursion<R,d,q>
-                    ( Phi, log2Procs, myTeamRank,
+                    ( Amp, Phi, log2Procs, myTeamRank,
                       N, chebyGrid, ARelativeToAp,
                       x0A, x0Ap, p0B, wA, wB, parentOffset,
                       weightGridList, partialWeightGridList[i] );

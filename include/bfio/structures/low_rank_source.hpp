@@ -1,25 +1,41 @@
 /*
-  Copyright 2010 Jack Poulson
+   Copyright (c) 2010, Jack Poulson
+   All rights reserved.
 
-  This file is part of ButterflyFIO.
+   This file is part of ButterflyFIO.
 
-  This program is free software: you can redistribute it and/or modify it under
-  the terms of the GNU Lesser General Public License as published by the
-  Free Software Foundation; either version 3 of the License, or 
-  (at your option) any later version.
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions are met:
 
-  This program is distributed in the hope that it will be useful, but 
-  WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU Lesser General Public License for more details.
+    - Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
 
-  You should have received a copy of the GNU Lesser General Public License
-  along with this program. If not, see <http://www.gnu.org/licenses/>.
+    - Redistributions in binary form must reproduce the above copyright notice,
+      this list of conditions and the following disclaimer in the documentation
+      and/or other materials provided with the distribution.
+
+    - Neither the name of the owner nor the names of its contributors
+      may be used to endorse or promote products derived from this software
+      without specific prior written permission.
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+   POSSIBILITY OF SUCH DAMAGE.
 */
+#pragma once
 #ifndef BFIO_LOW_RANK_SOURCE_HPP
 #define BFIO_LOW_RANK_SOURCE_HPP 1
 
 #include "bfio/structures/data.hpp"
+#include "bfio/structures/amplitude_functor.hpp"
 #include "bfio/structures/phase_functor.hpp"
 #include "bfio/tools/lagrange.hpp"
 
@@ -29,6 +45,7 @@ namespace bfio {
 template<typename R,unsigned d,unsigned q>
 class LowRankSource
 {
+    const AmplitudeFunctor<R,d>& _Amp;
     const PhaseFunctor<R,d>& _Phi;
     unsigned _N;
     Array<R,d> _x0;
@@ -38,9 +55,23 @@ class LowRankSource
 
 public:
     LowRankSource
-    ( PhaseFunctor<R,d>& Phi, unsigned N )
-    : _Phi(Phi), _N(N)
+    ( const AmplitudeFunctor<R,d>& Amp,
+      const PhaseFunctor<R,d>& Phi, 
+      unsigned N )
+    : _Amp(Amp), _Phi(Phi), _N(N)
     { }
+
+    const AmplitudeFunctor<R,d>&
+    GetAmplitudeFunctor() const
+    { return _Amp; }
+
+    const PhaseFunctor<R,d>&
+    GetPhaseFunctor() const
+    { return _Phi; }
+
+    unsigned
+    GetN() const
+    { return _N; }
 
     const Array<R,d>&
     GetSpatialCenter() const
@@ -96,12 +127,28 @@ LowRankSource<R,d,q>::operator()( const Array<R,d>& p )
     C value(0.,0.);
     for( unsigned t=0; t<Pow<q,d>::val; ++t )
     {
-        R alpha = -TwoPi * _Phi( _x0, _pointGrid[t] );
-        value += Lagrange<R,d,q>( t, pRef ) * 
-                 C( cos(alpha), sin(alpha) ) * _weightGrid[t];
+        R alpha = TwoPi * _Phi(_x0,_pointGrid[t]);
+        if( _Amp.algorithm == MiddleSwitch )
+        {
+            value += Lagrange<R,d,q>(t,pRef) * _weightGrid[t] / 
+                     C(cos(alpha),sin(alpha));
+        }
+        else if( _Amp.algorithm == Prefactor )
+        {
+            value += Lagrange<R,d,q>(t,pRef) * _weightGrid[t] /
+                     ( _Amp(_x0,_pointGrid[t]) * C(cos(alpha),sin(alpha)) );
+        }
     }
-    R alpha = TwoPi * _Phi( _x0, p );
-    value *= C( cos(alpha), sin(alpha) );
+    R alpha = TwoPi * _Phi(_x0,p);
+    if( _Amp.algorithm == MiddleSwitch )
+    {
+        value *= C(cos(alpha),sin(alpha));
+    }
+    else if( _Amp.algorithm == Prefactor )
+    {
+        value *= _Amp(_x0,p) * C(cos(alpha),sin(alpha));
+    }
+
     return value;
 }
 
