@@ -56,6 +56,7 @@ bindir_release = $(bindir)/release
 tests = htree/CHTreeWalker \
         htree/HTreeWalker \
         transform/GeneralizedRadon \
+        transform/Logarithmic \
         transform/UpWave \
         transform/Random3DWaves \
         transform/VariableUpWave 
