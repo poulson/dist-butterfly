@@ -32,6 +32,6 @@ Compile-time exponentials
       // Compute q^d at compile-time and print the result
       const unsigned q = 8;
       const unsigned d = 3;
-      const unsigned q_to_d = butterflyfio::Pow<q,d>::val;
+      const unsigned q_to_d = bfio::Pow<q,d>::val;
       std::cout << "q^d = " << q_to_d << std::endl;
 

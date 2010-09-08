@@ -19,7 +19,7 @@ struct Source
 
    .. code-block:: cpp
 
-      butterflyfio::Source<double,3> source;
+      bfio::Source<double,3> source;
       source.p[0] = 0.;
       source.p[1] = 2.;
       source.p[2] = -1.;

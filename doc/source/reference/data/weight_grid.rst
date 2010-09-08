@@ -30,8 +30,8 @@ class WeightGrid
    .. code-block:: cpp
 
       // Double a set of weights
-      butterflyfio::WeightGrid<R,d,q> weightGrid;
-      const unsigned q_to_d = butterflyfio::Pow<q,d>::val;
+      bfio::WeightGrid<R,d,q> weightGrid;
+      const unsigned q_to_d = bfio::Pow<q,d>::val;
       for( unsigned t=0; t<q_to_d; ++t )
           weightGrid[t] = 2*oldWeightGrid[t];
 

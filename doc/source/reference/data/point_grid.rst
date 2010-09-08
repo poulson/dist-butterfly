@@ -32,8 +32,8 @@ class PointGrid
 
       // Given a Cartesian product of Chebyshev grids, chebyGrid, translate the 
       // points by x0 and scale by alpha
-      butterflyfio::PointGrid<R,d,q> pointGrid;
-      const unsigned q_to_d = butterflyfio::Pow<q,d>::val;
+      bfio::PointGrid<R,d,q> pointGrid;
+      const unsigned q_to_d = bfio::Pow<q,d>::val;
       for( unsigned t=0; t<q_to_d; ++t )
           for( unsigned j=0; j<d; ++j )
               pointGrid[t][j] = x0[j] + alpha*chebyGrid[t][j];

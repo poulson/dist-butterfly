@@ -19,7 +19,7 @@ struct Potential
 
    .. code-block:: cpp
 
-      butterflyfio::Potential<double,3> potential;
+      bfio::Potential<double,3> potential;
       potential.x[0] = 0.;
       potential.x[1] = 2.;
       potential.x[2] = -1.;

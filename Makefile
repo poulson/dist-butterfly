@@ -53,12 +53,13 @@ includes = $(addprefix $(incdir)/,$(includefiles))
 bindir_debug = $(bindir)/debug
 bindir_release = $(bindir)/release
 
-tests = transform/GeneralizedRadon \
+tests = htree/CHTreeWalker \
+        htree/HTreeWalker \
+        transform/GeneralizedRadon \
+        transform/NonlinearPhase \
         transform/UpWave \
         transform/Random3DWaves \
-        transform/VariableUpWave \
-        tree/CHTreeWalker \
-        tree/HTreeWalker
+        transform/VariableUpWave 
 testobjs = $(addsuffix .o, $(tests))
 
 tests_debug = $(addprefix $(bindir_debug)/, $(tests))
