@@ -21,6 +21,6 @@ operators of the form
 on large parallel machines, where :math:`\Phi(x,\xi)` is required to be 
 real-valued and also linear in its second argument.
 
-The spatial and frequency domains are currently assumed to be the 
-:math:`d`-dimensional unit cube :math:`[0,1]^d`.
+The spatial and frequency domains are each allowed to be arbitrary boxes aligned
+with :math:`R^d`.
 

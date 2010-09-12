@@ -1,34 +1,19 @@
 /*
-   Copyright (c) 2010, Jack Poulson
-   All rights reserved.
-
-   This file is part of ButterflyFIO.
-
-   Redistribution and use in source and binary forms, with or without
-   modification, are permitted provided that the following conditions are met:
-
-    - Redistributions of source code must retain the above copyright notice,
-      this list of conditions and the following disclaimer.
-
-    - Redistributions in binary form must reproduce the above copyright notice,
-      this list of conditions and the following disclaimer in the documentation
-      and/or other materials provided with the distribution.
-
-    - Neither the name of the owner nor the names of its contributors
-      may be used to endorse or promote products derived from this software
-      without specific prior written permission.
-
-   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-   POSSIBILITY OF SUCH DAMAGE.
+   ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
+   Copyright (C) 2010 Jack Poulson <jack.poulson@gmail.com>
+ 
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+ 
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
 #ifndef BFIO_LOW_RANK_SOURCE_HPP
@@ -47,7 +32,7 @@ class LowRankSource
 {
     const AmplitudeFunctor<R,d>& _Amp;
     const PhaseFunctor<R,d>& _Phi;
-    unsigned _N;
+    Array<R,d> _wB;
     Array<R,d> _x0;
     Array<R,d> _p0;
     PointGrid<R,d,q> _pointGrid;
@@ -56,9 +41,8 @@ class LowRankSource
 public:
     LowRankSource
     ( const AmplitudeFunctor<R,d>& Amp,
-      const PhaseFunctor<R,d>& Phi, 
-      unsigned N )
-    : _Amp(Amp), _Phi(Phi), _N(N)
+      const PhaseFunctor<R,d>& Phi )
+    : _Amp(Amp), _Phi(Phi)
     { }
 
     const AmplitudeFunctor<R,d>&
@@ -69,10 +53,6 @@ public:
     GetPhaseFunctor() const
     { return _Phi; }
 
-    unsigned
-    GetN() const
-    { return _N; }
-
     const Array<R,d>&
     GetSpatialCenter() const
     { return _x0; }
@@ -80,6 +60,14 @@ public:
     void 
     SetSpatialCenter( const Array<R,d>& x0 )
     { _x0 = x0; }
+
+    const Array<R,d>&
+    GetFreqWidths() const
+    { return _wB; }
+
+    void
+    SetFreqWidths( const Array<R,d>& wB )
+    { _wB = wB; }
 
     const Array<R,d>&
     GetFreqCenter() const
@@ -122,7 +110,7 @@ LowRankSource<R,d,q>::operator()( const Array<R,d>& p )
     // Convert p to the reference domain of [-1/2,+1/2]^d
     Array<R,d> pRef;
     for( unsigned j=0; j<d; ++j )
-        pRef[j] = (p[j]-_p0[j])*_N;
+        pRef[j] = (p[j]-_p0[j])/_wB[j];
 
     C value(0.,0.);
     for( unsigned t=0; t<Pow<q,d>::val; ++t )
@@ -154,5 +142,5 @@ LowRankSource<R,d,q>::operator()( const Array<R,d>& p )
 
 } // bfio
 
-#endif /* BFIO_LOW_RANK_SOURCE_HPP */
+#endif // BFIO_LOW_RANK_SOURCE_HPP
 

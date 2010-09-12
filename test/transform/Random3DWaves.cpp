@@ -1,34 +1,19 @@
 /*
-   Copyright (c) 2010, Jack Poulson
-   All rights reserved.
-
-   This file is part of ButterflyFIO.
-
-   Redistribution and use in source and binary forms, with or without
-   modification, are permitted provided that the following conditions are met:
-
-    - Redistributions of source code must retain the above copyright notice,
-      this list of conditions and the following disclaimer.
-
-    - Redistributions in binary form must reproduce the above copyright notice,
-      this list of conditions and the following disclaimer in the documentation
-      and/or other materials provided with the distribution.
-
-    - Neither the name of the owner nor the names of its contributors
-      may be used to endorse or promote products derived from this software
-      without specific prior written permission.
-
-   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-   POSSIBILITY OF SUCH DAMAGE.
+   ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
+   Copyright (C) 2010 Jack Poulson <jack.poulson@gmail.com>
+ 
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+ 
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <ctime>
 #include <memory>
@@ -96,12 +81,12 @@ int
 main
 ( int argc, char* argv[] )
 {
-    int rank, size;
+    int rank, numProcesses;
     MPI_Init( &argc, &argv );
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
-    MPI_Comm_size( MPI_COMM_WORLD, &size );
+    MPI_Comm_size( MPI_COMM_WORLD, &numProcesses );
 
-    if( !IsPowerOfTwo(size) )
+    if( !IsPowerOfTwo(numProcesses) )
     {
         if( rank == 0 )
             cout << "Must run with a power of two number of cores." << endl;
@@ -121,14 +106,24 @@ main
     const double   T = atof(argv[3]);
     const unsigned nT = atoi(argv[4]);
 
+    // Define the spatial and frequency boxes
+    Box<double,d> freqBox, spatialBox;
+    for( unsigned j=0; j<d; ++j )
+    {
+        freqBox.offsets[j] = -0.5*N;
+        freqBox.widths[j] = N;
+        spatialBox.offsets[j] = 0;
+        spatialBox.widths[j] = 1;
+    }
+
     if( rank == 0 )
     {
         ostringstream msg;
         msg << "Will distribute " << M << " random sources over the frequency "
             << "domain, which will be split into " << N
             << " boxes in each of the " << d << " dimensions and distributed "
-            << "amongst " << size << " processes. The simulation will be over "
-            << T << " units of time with " << nT << " timesteps." 
+            << "amongst " << numProcesses << " processes. The simulation will "
+            << "be over " << T << " units of time with " << nT << " timesteps." 
             << endl << endl;
         cout << msg.str();
     }
@@ -136,24 +131,24 @@ main
     try 
     {
         // Compute the box that our process owns
-        Array<double,d> myFreqBoxWidths;
-        Array<double,d> myFreqBoxOffsets;
+        Box<double,d> myFreqBox;
         LocalFreqPartitionData
-        ( myFreqBoxWidths, myFreqBoxOffsets, MPI_COMM_WORLD );
+        ( freqBox, myFreqBox, MPI_COMM_WORLD );
 
         // Seed our process
         long seed = time(0);
         srand( seed );
 
         // Now generate random sources in our frequency box
-        unsigned numLocalSources = ( rank<(int)(M%size) ? M/size+1 : M/size );
+        unsigned numLocalSources = ( rank<(int)(M%numProcesses) 
+                                     ? M/numProcesses+1 : M/numProcesses );
         vector< Source<double,d> > mySources( numLocalSources );
         for( unsigned i=0; i<numLocalSources; ++i )
         {
             for( unsigned j=0; j<d; ++j )
             {
                 mySources[i].p[j] = 
-                    myFreqBoxOffsets[j]+Uniform<double>()*myFreqBoxWidths[j];
+                    myFreqBox.offsets[j]+Uniform<double>()*myFreqBox.widths[j];
             }
             mySources[i].magnitude = 200*Uniform<double>()-100;
         }
@@ -180,9 +175,9 @@ main
                 cout.flush();
             }
             vector< LowRankPotential<double,d,q> > myUpWaveLRPs
-            ( numLocalLRPs, LowRankPotential<double,d,q>(unity,upWave,N) );
+            ( numLocalLRPs, LowRankPotential<double,d,q>(unity,upWave) );
             FreqToSpatial
-            ( mySources, myUpWaveLRPs, MPI_COMM_WORLD );
+            ( N, freqBox, spatialBox, mySources, myUpWaveLRPs, MPI_COMM_WORLD );
 
             if( rank == 0 )
             {
@@ -190,9 +185,10 @@ main
                 cout << "  Starting downWave transform...";
             }
             vector< LowRankPotential<double,d,q> > myDownWaveLRPs
-            ( numLocalLRPs, LowRankPotential<double,d,q>(unity,downWave,N) );
+            ( numLocalLRPs, LowRankPotential<double,d,q>(unity,downWave) );
             FreqToSpatial
-            ( mySources, myDownWaveLRPs, MPI_COMM_WORLD );
+            ( N, freqBox, spatialBox, mySources, myDownWaveLRPs, 
+              MPI_COMM_WORLD );
             if( rank == 0 )
             {
                 cout << "done" << endl;

@@ -1,34 +1,19 @@
 /*
-   Copyright (c) 2010, Jack Poulson
-   All rights reserved.
-
-   This file is part of ButterflyFIO.
-
-   Redistribution and use in source and binary forms, with or without
-   modification, are permitted provided that the following conditions are met:
-
-    - Redistributions of source code must retain the above copyright notice,
-      this list of conditions and the following disclaimer.
-
-    - Redistributions in binary form must reproduce the above copyright notice,
-      this list of conditions and the following disclaimer in the documentation
-      and/or other materials provided with the distribution.
-
-    - Neither the name of the owner nor the names of its contributors
-      may be used to endorse or promote products derived from this software
-      without specific prior written permission.
-
-   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-   POSSIBILITY OF SUCH DAMAGE.
+   ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
+   Copyright (C) 2010 Jack Poulson <jack.poulson@gmail.com>
+ 
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+ 
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <ctime>
 #include <memory>
@@ -48,7 +33,7 @@ Usage()
 }
 
 static const unsigned d = 2;
-static const unsigned q = 8;
+static const unsigned q = 12;
 
 class Unity : public AmplitudeFunctor<double,d>
 {
@@ -82,12 +67,12 @@ int
 main
 ( int argc, char* argv[] )
 {
-    int rank, size;
+    int rank, numProcesses;
     MPI_Init( &argc, &argv );
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
-    MPI_Comm_size( MPI_COMM_WORLD, &size );
+    MPI_Comm_size( MPI_COMM_WORLD, &numProcesses );
 
-    if( !IsPowerOfTwo(size) )
+    if( !IsPowerOfTwo(numProcesses) )
     {
         if( rank == 0 )
             cout << "Must run with a power of two number of cores." << endl;
@@ -108,14 +93,24 @@ main
         ( atoi(argv[3]) ? Prefactor : MiddleSwitch );
     const bool testAccuracy = atoi(argv[4]);
 
-    const unsigned L = Log2( N );
-    const unsigned s = Log2( size );
-    if( s > d*L )
+    const unsigned log2N = Log2( N );
+    const unsigned log2NumProcesses = Log2( numProcesses );
+    if( log2NumProcesses > d*log2N )
     {
         if( rank == 0 )
             cout << "Cannot run with more than N^d processes." << endl;
         MPI_Finalize();
         return 0;
+    }
+
+    // Set our spatial and frequency boxes
+    Box<double,d> freqBox, spatialBox;
+    for( unsigned j=0; j<d; ++j )
+    {
+        freqBox.offsets[j] = -0.5*N;
+        freqBox.widths[j] = N;
+        spatialBox.offsets[j] = 0;
+        spatialBox.widths[j] = 1;
     }
 
     if( rank == 0 )
@@ -124,7 +119,7 @@ main
         msg << "Will distribute " << M << " random sources over the frequency " 
             << "domain, which will be split into " << N 
             << " boxes in each of the " << d << " dimensions and distributed "
-            << "amongst " << size << " processes." << endl << endl;
+            << "amongst " << numProcesses << " processes." << endl << endl;
         msg << "We are using the " 
             << ( algorithm == Prefactor ? "Prefactor" : "MiddleSwitch" )
             << " amplitude algorithm. Since the amplitude function is unity," 
@@ -141,11 +136,10 @@ main
         MPI_Bcast( &seed, 1, MPI_LONG, 0, MPI_COMM_WORLD );
         srand( seed );
 
-        // Compute the box that our process owns
-        Array<double,d> myFreqBoxWidths;
-        Array<double,d> myFreqBoxOffsets;
+        // Compute the box that our process owns within the frequency box
+        Box<double,d> myFreqBox;
         LocalFreqPartitionData
-        ( myFreqBoxWidths, myFreqBoxOffsets, MPI_COMM_WORLD );
+        ( freqBox, myFreqBox, MPI_COMM_WORLD );
 
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
@@ -157,7 +151,10 @@ main
             for( unsigned i=0; i<M; ++i )
             {
                 for( unsigned j=0; j<d; ++j )
-                    globalSources[i].p[j] = Uniform<double>();  // [0,1]
+                {
+                    globalSources[i].p[j] = freqBox.offsets[j] + 
+                        freqBox.widths[j]*Uniform<double>();  // [0,1]
+                }
                 globalSources[i].magnitude = 200*Uniform<double>()-100; 
 
                 // Check if we should push this source onto our local list
@@ -165,8 +162,8 @@ main
                 for( unsigned j=0; j<d; ++j )
                 {
                     double u = globalSources[i].p[j];
-                    double start = myFreqBoxOffsets[j];
-                    double stop = myFreqBoxOffsets[j] + myFreqBoxWidths[j];
+                    double start = myFreqBox.offsets[j];
+                    double stop = myFreqBox.offsets[j] + myFreqBox.widths[j];
                     if( u < start || u >= stop )
                         isMine = false;
                 }
@@ -177,14 +174,15 @@ main
         else
         {
             unsigned numLocalSources = 
-                ( rank<(int)(M%size) ? M/size+1 : M/size );
+                ( rank<(int)(M%numProcesses) 
+                  ? M/numProcesses+1 : M/numProcesses );
             mySources.resize( numLocalSources );
             for( unsigned i=0; i<numLocalSources; ++i )
             {
                 for( unsigned j=0; j<d; ++j )
                 {
-                    mySources[i].p[j] = myFreqBoxOffsets[j] + 
-                                        Uniform<double>()*myFreqBoxWidths[j];
+                    mySources[i].p[j] = myFreqBox.offsets[j] + 
+                                        Uniform<double>()*myFreqBox.widths[j];
                 }
                 mySources[i].magnitude = 200*Uniform<double>()-100;
             }
@@ -197,13 +195,13 @@ main
         // Create vectors for storing the results
         unsigned numLocalLRPs = NumLocalBoxes<d>( N, MPI_COMM_WORLD );
         vector< LowRankPotential<double,d,q> > myGenRadonLRPs
-        ( numLocalLRPs, LowRankPotential<double,d,q>(unity,genRadon,N) );
+        ( numLocalLRPs, LowRankPotential<double,d,q>(unity,genRadon) );
 
         // Run the algorithm
         MPI_Barrier( MPI_COMM_WORLD );
         double startTime = MPI_Wtime();
         FreqToSpatial
-        ( mySources, myGenRadonLRPs, MPI_COMM_WORLD );
+        ( N, freqBox, spatialBox, mySources, myGenRadonLRPs, MPI_COMM_WORLD );
         MPI_Barrier( MPI_COMM_WORLD );
         double stopTime = MPI_Wtime();
         if( rank == 0 )
@@ -221,7 +219,8 @@ main
                 // Find a random point in that box
                 Array<double,d> x;
                 for( unsigned j=0; j<d; ++j )
-                    x[j] = x0[j] + 1./(2*N)*(2*Uniform<double>()-1.);
+                    x[j] = x0[j] + 
+                           spatialBox.widths[j]/(2*N)*(2*Uniform<double>()-1.);
 
                 // Evaluate our LRP at x  and compare against truth
                 complex<double> u = myGenRadonLRPs[k]( x );
@@ -233,7 +232,7 @@ main
                     uTruth += complex<double>(cos(alpha),sin(alpha))*
                               globalSources[m].magnitude;
                 }
-                double relError = abs(u-uTruth)/abs(uTruth);
+                double relError = abs(u-uTruth)/max(abs(uTruth),1.);
                 myMaxRelError = max( myMaxRelError, relError );
             }
             double maxRelError;

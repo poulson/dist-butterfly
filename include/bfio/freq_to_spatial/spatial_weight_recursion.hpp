@@ -1,34 +1,19 @@
 /*
-   Copyright (c) 2010, Jack Poulson
-   All rights reserved.
-
-   This file is part of ButterflyFIO.
-
-   Redistribution and use in source and binary forms, with or without
-   modification, are permitted provided that the following conditions are met:
-
-    - Redistributions of source code must retain the above copyright notice,
-      this list of conditions and the following disclaimer.
-
-    - Redistributions in binary form must reproduce the above copyright notice,
-      this list of conditions and the following disclaimer in the documentation
-      and/or other materials provided with the distribution.
-
-    - Neither the name of the owner nor the names of its contributors
-      may be used to endorse or promote products derived from this software
-      without specific prior written permission.
-
-   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-   POSSIBILITY OF SUCH DAMAGE.
+   ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
+   Copyright (C) 2010 Jack Poulson <jack.poulson@gmail.com>
+ 
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+ 
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
 #ifndef BFIO_FREQ_TO_SPATIAL_SPATIAL_WEIGHT_RECURSION_HPP
@@ -45,7 +30,7 @@ void
 SpatialWeightRecursion
 ( const AmplitudeFunctor<R,d>& Amp,
   const PhaseFunctor<R,d>& Phi,
-  const unsigned log2Procs,
+  const unsigned log2NumMergingProcesses,
   const unsigned myTeamRank,
   const unsigned N, 
   const std::vector< Array<R,d> >& chebyGrid,
@@ -53,8 +38,8 @@ SpatialWeightRecursion
   const Array<R,d>& x0A,
   const Array<R,d>& x0Ap,
   const Array<R,d>& p0B,
-  const R wA,
-  const R wB,
+  const Array<R,d>& wA,
+  const Array<R,d>& wB,
   const unsigned parentOffset,
   const WeightGridList<R,d,q>& oldWeightGridList,
         WeightGrid<R,d,q>& weightGrid
@@ -103,20 +88,20 @@ SpatialWeightRecursion
     //  1) scale the old weights with the appropriate exponentials
     //  2) multiply the lagrangian matrix against the scaled weights
     //  3) scale and accumulate the result of the lagrangian mat-vec
-    for( unsigned cLocal=0; cLocal<(1u<<(d-log2Procs)); ++cLocal )
+    for( unsigned cLocal=0; cLocal<(1u<<(d-log2NumMergingProcesses)); ++cLocal )
     {
         // Step 1: scale the old weights
         WeightGrid<R,d,q> scaledWeightGrid;
-        const unsigned c = (cLocal<<log2Procs) + myTeamRank;
+        const unsigned c = (cLocal<<log2NumMergingProcesses) + myTeamRank;
         const unsigned key = parentOffset + cLocal;
         Array<R,d> p0Bc;
         for( unsigned j=0; j<d; ++j )
-            p0Bc[j] = p0B[j] + ( (c>>j)&1 ? wB/4 : -wB/4 );
+            p0Bc[j] = p0B[j] + ( (c>>j)&1 ? wB[j]/4 : -wB[j]/4 );
         for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
         {
             Array<R,d> xtPrimeAp;
             for( unsigned j=0; j<d; ++j )
-                xtPrimeAp[j] = x0Ap[j] + (2*wA)*chebyGrid[tPrime][j];
+                xtPrimeAp[j] = x0Ap[j] + (2*wA[j])*chebyGrid[tPrime][j];
             const R alpha = TwoPi * Phi(xtPrimeAp,p0Bc);
             if( Amp.algorithm == MiddleSwitch )
             {
@@ -144,7 +129,7 @@ SpatialWeightRecursion
         {
             Array<R,d> xtA;
             for( unsigned j=0; j<d; ++j )
-                xtA[j] = x0A[j] + wA*chebyGrid[t][j];
+                xtA[j] = x0A[j] + wA[j]*chebyGrid[t][j];
             const R alpha = TwoPi * Phi(xtA,p0Bc);
             if( Amp.algorithm == MiddleSwitch )
             {
@@ -163,5 +148,5 @@ SpatialWeightRecursion
 } // freq_to_spatial
 } // bfio
 
-#endif /* BFIO_FREQ_TO_SPATIAL_SPATIAL_WEIGHT_RECURSION_HPP */
+#endif // BFIO_FREQ_TO_SPATIAL_SPATIAL_WEIGHT_RECURSION_HPP
 
