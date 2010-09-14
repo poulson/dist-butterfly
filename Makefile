@@ -50,6 +50,7 @@ includefiles = bfio.hpp \
                bfio/structures/phase_functor.hpp \
                bfio/tools/blas.hpp \
                bfio/tools/flatten_htree_index.hpp \
+               bfio/tools/imag_exp.hpp \
                bfio/tools/lagrange.hpp \
                bfio/tools/local_data.hpp \
                bfio/tools/mpi.hpp \
