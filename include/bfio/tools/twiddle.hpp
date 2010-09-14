@@ -16,8 +16,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_TWIDDLE_HPP
-#define BFIO_TWIDDLE_HPP 1
+#ifndef BFIO_TOOLS_TWIDDLE_HPP
+#define BFIO_TOOLS_TWIDDLE_HPP 1
 
 namespace bfio {
 
@@ -92,5 +92,5 @@ NumberOfTrailingOnes( unsigned N )
 
 } // bfio
 
-#endif // BFIO_TWIDDLE_HPP
+#endif // BFIO_TOOLS_TWIDDLE_HPP
 

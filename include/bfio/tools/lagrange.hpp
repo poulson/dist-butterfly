@@ -16,8 +16,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_LAGRANGE_HPP
-#define BFIO_LAGRANGE_HPP 1
+#ifndef BFIO_TOOLS_LAGRANGE_HPP
+#define BFIO_TOOLS_LAGRANGE_HPP 1
 
 #include <vector>
 #include "bfio/structures/data.hpp"
@@ -70,5 +70,5 @@ Lagrange
 
 } // bfio
 
-#endif // BFIO_LAGRANGE_HPP
+#endif // BFIO_TOOLS_LAGRANGE_HPP
 

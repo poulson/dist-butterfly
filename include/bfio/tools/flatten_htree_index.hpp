@@ -16,8 +16,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_FLATTEN_HTREE_INDEX_HPP
-#define BFIO_FLATTEN_HTREE_INDEX_HPP 1
+#ifndef BFIO_TOOLS_FLATTEN_HTREE_INDEX_HPP
+#define BFIO_TOOLS_FLATTEN_HTREE_INDEX_HPP 1
 
 #include "bfio/structures/data.hpp"
 #include "bfio/tools/twiddle.hpp"
@@ -84,5 +84,5 @@ FlattenCHTreeIndex
 
 } // bfio
 
-#endif // BFIO_FLATTEN_HTREE_INDEX_HPP
+#endif // BFIO_TOOLS_FLATTEN_HTREE_INDEX_HPP
 

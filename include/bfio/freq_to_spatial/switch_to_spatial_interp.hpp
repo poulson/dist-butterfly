@@ -92,10 +92,10 @@ SwitchToSpatialInterp
                 weightGridList[key][t] = 0;
                 for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
                 {
-                    R alpha = TwoPi*Phi(xPoints[t],pPoints[tPrime]);
+                    const C beta = 
+                        ImagExp( TwoPi*Phi(xPoints[t],pPoints[tPrime]) );
                     weightGridList[key][t] += 
-                        Amp(xPoints[t],pPoints[tPrime]) *
-                        C(cos(alpha),sin(alpha)) * 
+                        Amp(xPoints[t],pPoints[tPrime]) * beta *
                         oldWeightGridList[key][tPrime];
                 }
             }

@@ -18,8 +18,9 @@ The goal of the project is to efficiently approximate the application of
 operators of the form
 
 .. math:: f(x) := \int a(x,\xi) e^{2\pi i\Phi(x,\xi)} \hat f(\xi) d\xi,
-on large parallel machines, where :math:`\Phi(x,\xi)` is required to be 
-real-valued and also linear in its second argument.
+on large parallel machines, where :math:`a(x,\xi)` is the complex-valued 
+*amplitude function* and :math:`\Phi(x,\xi)` is the real-valued 
+*phase function*.
 
 The spatial and frequency domains are each allowed to be arbitrary boxes aligned
 with :math:`R^d`.

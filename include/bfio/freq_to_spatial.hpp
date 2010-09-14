@@ -107,7 +107,7 @@ FreqToSpatial
         for( unsigned j=0; j<d; ++j )
         {
             unsigned i = (t/qToThej)%q;
-            chebyGrid[t][j] = 0.5*cos(i*Pi/(q-1));
+            chebyGrid[t][j] = 0.5*cos(static_cast<R>(i*Pi/(q-1)));
             qToThej *= q;
         }
     }

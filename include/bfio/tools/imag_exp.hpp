@@ -16,17 +16,44 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_TOOLS_HPP
-#define BFIO_TOOLS_HPP 1
+#ifndef BFIO_TOOLS_IMAG_EXP_HPP
+#define BFIO_TOOLS_IMAG_EXP_HPP 1
 
-#include "bfio/tools/blas.hpp"
-#include "bfio/tools/flatten_htree_index.hpp"
-#include "bfio/tools/imag_exp.hpp"
-#include "bfio/tools/lagrange.hpp"
-#include "bfio/tools/local_data.hpp"
-#include "bfio/tools/mpi.hpp"
-#include "bfio/tools/twiddle.hpp"
-#include "bfio/tools/uniform.hpp"
+#include <math.h>
 
-#endif // BFIO_TOOLS_HPP
+namespace bfio {
+
+template<typename R>
+inline std::complex<R>
+ImagExp( R alpha );
+
+template<>
+inline std::complex<float>
+ImagExp( float alpha )
+{
+#ifdef _GNU_SOURCE
+    float sinAlpha, cosAlpha;
+    sincosf( alpha, &sinAlpha, &cosAlpha );
+    return std::complex<float>( cosAlpha, sinAlpha );
+#else
+    return std::complex<float>( cos(alpha), sin(alpha) );
+#endif
+}
+
+template<>
+inline std::complex<double>
+ImagExp( double alpha )
+{
+#ifdef _GNU_SOURCE
+    double sinAlpha, cosAlpha;
+    sincos( alpha, &sinAlpha, &cosAlpha );
+    return std::complex<double>( cosAlpha, sinAlpha );
+#else
+    return std::complex<double>( cos(alpha), sin(alpha) );
+#endif
+}
+
+} // bfio
+
+#endif // BFIO_TOOLS_IMAG_EXP_HPP
 

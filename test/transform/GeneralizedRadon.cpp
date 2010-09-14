@@ -35,30 +35,32 @@ Usage()
 static const unsigned d = 2;
 static const unsigned q = 12;
 
-class Unity : public AmplitudeFunctor<double,d>
+template<typename R>
+class Unity : public AmplitudeFunctor<R,d>
 {
 public:
     Unity( AmplitudeAlgorithm alg )
-    : AmplitudeFunctor<double,d>(alg) { }
+    : AmplitudeFunctor<R,d>(alg) { }
 
-    complex<double>
-    operator() ( const Array<double,d>& x, const Array<double,d>& p ) const
-    { return complex<double>(1); }
+    complex<R>
+    operator() ( const Array<R,d>& x, const Array<R,d>& p ) const
+    { return complex<R>(1); }
 };
 
-class GenRadon : public PhaseFunctor<double,d>
+template<typename R>
+class GenRadon : public PhaseFunctor<R,d>
 {
-    double c1( const Array<double,d>& x ) const
+    R c1( const Array<R,d>& x ) const
     { return (2+sin(TwoPi*x[0])*sin(TwoPi*x[1]))/3.; }
 
-    double c2( const Array<double,d>& x ) const
+    R c2( const Array<R,d>& x ) const
     { return (2+cos(TwoPi*x[0])*cos(TwoPi*x[1]))/3.; }
 public:
-    double
-    operator() ( const Array<double,d>& x, const Array<double,d>& p ) const
+    R
+    operator() ( const Array<R,d>& x, const Array<R,d>& p ) const
     {
-        double a = c1(x)*p[0];
-        double b = c2(x)*p[1];
+        R a = c1(x)*p[0];
+        R b = c2(x)*p[1];
         return x[0]*p[0]+x[1]*p[1] + sqrt(a*a+b*b);
     }
 };
@@ -189,8 +191,8 @@ main
         }
 
         // Set up our amplitude and phase functors
-        Unity unity(algorithm);
-        GenRadon genRadon;
+        Unity<double> unity(algorithm);
+        GenRadon<double> genRadon;
 
         // Create vectors for storing the results
         unsigned numLocalLRPs = NumLocalBoxes<d>( N, MPI_COMM_WORLD );
@@ -227,10 +229,9 @@ main
                 complex<double> uTruth(0.,0.);
                 for( unsigned m=0; m<globalSources.size(); ++m )
                 {
-                    double alpha = 
-                        TwoPi*genRadon(x,globalSources[m].p);
-                    uTruth += complex<double>(cos(alpha),sin(alpha))*
-                              globalSources[m].magnitude;
+                    complex<double> beta = 
+                        ImagExp( TwoPi*genRadon(x,globalSources[m].p) );
+                    uTruth += beta * globalSources[m].magnitude;
                 }
                 double relError = abs(u-uTruth)/max(abs(uTruth),1.);
                 myMaxRelError = max( myMaxRelError, relError );

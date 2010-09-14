@@ -115,26 +115,25 @@ LowRankSource<R,d,q>::operator()( const Array<R,d>& p )
     C value(0.,0.);
     for( unsigned t=0; t<Pow<q,d>::val; ++t )
     {
-        R alpha = TwoPi * _Phi(_x0,_pointGrid[t]);
+        C beta = ImagExp( TwoPi*_Phi(_x0,_pointGrid[t]) );
         if( _Amp.algorithm == MiddleSwitch )
         {
-            value += Lagrange<R,d,q>(t,pRef) * _weightGrid[t] / 
-                     C(cos(alpha),sin(alpha));
+            value += Lagrange<R,d,q>(t,pRef) * _weightGrid[t] / beta;
         }
         else if( _Amp.algorithm == Prefactor )
         {
             value += Lagrange<R,d,q>(t,pRef) * _weightGrid[t] /
-                     ( _Amp(_x0,_pointGrid[t]) * C(cos(alpha),sin(alpha)) );
+                     ( _Amp(_x0,_pointGrid[t]) * beta );
         }
     }
-    R alpha = TwoPi * _Phi(_x0,p);
+    C beta = ImagExp( TwoPi*_Phi(_x0,p) );
     if( _Amp.algorithm == MiddleSwitch )
     {
-        value *= C(cos(alpha),sin(alpha));
+        value *= beta;
     }
     else if( _Amp.algorithm == Prefactor )
     {
-        value *= _Amp(_x0,p) * C(cos(alpha),sin(alpha));
+        value *= _Amp(_x0,p) * beta;
     }
 
     return value;

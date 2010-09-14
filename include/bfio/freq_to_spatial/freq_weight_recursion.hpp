@@ -101,16 +101,16 @@ FreqWeightRecursion
             for( unsigned j=0; j<d; ++j )
                 ptPrime[j] = p0B[j] + wB[j]*pRefB[c*q_to_d*d+tPrime*d+j];
 
-            const R alpha = TwoPi*Phi(x0A,ptPrime);
+            const C beta = ImagExp( TwoPi*Phi(x0A,ptPrime) );
             if( Amp.algorithm == MiddleSwitch )
             {
                 scaledWeightGrid[tPrime] = 
-                    C(cos(alpha),sin(alpha)) * oldWeightGridList[key][tPrime];
+                    beta * oldWeightGridList[key][tPrime];
             }
             else if( Amp.algorithm == Prefactor )
             {
                 scaledWeightGrid[tPrime] = Amp(x0A,ptPrime) * 
-                    C(cos(alpha),sin(alpha)) * oldWeightGridList[key][tPrime];
+                    beta * oldWeightGridList[key][tPrime];
             }
         }
         
@@ -127,14 +127,14 @@ FreqWeightRecursion
         for( unsigned j=0; j<d; ++j )
             ptB[j] = p0B[j] + wB[j]*chebyGrid[t][j];
 
-        const R alpha = TwoPi * Phi(x0A,ptB);
+        const C beta = ImagExp( TwoPi*Phi(x0A,ptB) );
         if( Amp.algorithm == MiddleSwitch )
         {
-            weightGrid[t] /= C(cos(alpha),sin(alpha));
+            weightGrid[t] /= beta;
         }
         else if( Amp.algorithm == Prefactor )
         {
-            weightGrid[t] /= Amp(x0A,ptB) * C(cos(alpha),sin(alpha));
+            weightGrid[t] /= Amp(x0A,ptB) * beta;
         }
     }
 }

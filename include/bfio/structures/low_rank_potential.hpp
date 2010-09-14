@@ -114,26 +114,25 @@ LowRankPotential<R,d,q>::operator()( const Array<R,d>& x )
     C value(0.,0.);
     for( unsigned t=0; t<Pow<q,d>::val; ++t )
     {
-        R alpha = TwoPi * _Phi(_pointGrid[t],_p0);
+        C beta = ImagExp( TwoPi*_Phi(_pointGrid[t],_p0) );
         if( _Amp.algorithm == MiddleSwitch )
         {
-            value += Lagrange<R,d,q>(t,xRef) * _weightGrid[t] / 
-                     C(cos(alpha),sin(alpha));
+            value += Lagrange<R,d,q>(t,xRef) * _weightGrid[t] / beta;
         }
         else if( _Amp.algorithm == Prefactor )
         {
             value += Lagrange<R,d,q>(t,xRef) * _weightGrid[t] / 
-                     ( _Amp(_pointGrid[t],_p0) * C(cos(alpha),sin(alpha)) );
+                     ( _Amp(_pointGrid[t],_p0) * beta );
         }
     }
-    R alpha = TwoPi * _Phi(x,_p0);
+    C beta = ImagExp( TwoPi*_Phi(x,_p0) );
     if( _Amp.algorithm == MiddleSwitch )
     {
-        value *= C(cos(alpha),sin(alpha));
+        value *= beta;
     }
     else if( _Amp.algorithm == Prefactor )
     {
-        value *= _Amp(x,_p0) * C(cos(alpha),sin(alpha));
+        value *= _Amp(x,_p0) * beta;
     }
     return value;
 }

@@ -16,8 +16,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_LOCAL_DATA_HPP
-#define BFIO_LOCAL_DATA_HPP 1
+#ifndef BFIO_TOOLS_LOCAL_DATA_HPP
+#define BFIO_TOOLS_LOCAL_DATA_HPP 1
 
 #include <bitset>
 #include "mpi.h"
@@ -100,5 +100,5 @@ LocalFreqPartitionData
 
 } // bfio
 
-#endif // BFIO_LOCAL_DATA_HPP
+#endif // BFIO_TOOLS_LOCAL_DATA_HPP
 

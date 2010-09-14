@@ -102,17 +102,17 @@ SpatialWeightRecursion
             Array<R,d> xtPrimeAp;
             for( unsigned j=0; j<d; ++j )
                 xtPrimeAp[j] = x0Ap[j] + (2*wA[j])*chebyGrid[tPrime][j];
-            const R alpha = TwoPi * Phi(xtPrimeAp,p0Bc);
+            const C beta = ImagExp( TwoPi*Phi(xtPrimeAp,p0Bc) );
             if( Amp.algorithm == MiddleSwitch )
             {
                 scaledWeightGrid[tPrime] = 
-                    oldWeightGridList[key][tPrime] / C(cos(alpha),sin(alpha));
+                    oldWeightGridList[key][tPrime] / beta;
             }
             else if( Amp.algorithm == Prefactor )
             {
                 scaledWeightGrid[tPrime] = 
                     oldWeightGridList[key][tPrime] / 
-                    ( Amp(xtPrimeAp,p0Bc) * C(cos(alpha),sin(alpha)) );
+                    ( Amp(xtPrimeAp,p0Bc) * beta );
             }
         }
 
@@ -130,16 +130,14 @@ SpatialWeightRecursion
             Array<R,d> xtA;
             for( unsigned j=0; j<d; ++j )
                 xtA[j] = x0A[j] + wA[j]*chebyGrid[t][j];
-            const R alpha = TwoPi * Phi(xtA,p0Bc);
+            const C beta = ImagExp( TwoPi*Phi(xtA,p0Bc) );
             if( Amp.algorithm == MiddleSwitch )
             {
-                weightGrid[t] += C(cos(alpha),sin(alpha)) * 
-                                 expandedWeightGrid[t];
+                weightGrid[t] += beta * expandedWeightGrid[t];
             }
             else if( Amp.algorithm == Prefactor )
             {
-                weightGrid[t] += Amp(xtA,p0Bc) * C(cos(alpha),sin(alpha)) *
-                                 expandedWeightGrid[t];
+                weightGrid[t] += Amp(xtA,p0Bc) * beta * expandedWeightGrid[t];
             }
         }
     }

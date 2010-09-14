@@ -35,26 +35,28 @@ Usage()
 static const unsigned d = 2;
 static const unsigned q = 12;
 
-class Oscillatory : public AmplitudeFunctor<double,d>
+template<typename R>
+class Oscillatory : public AmplitudeFunctor<R,d>
 {
 public:
-    Oscillatory( AmplitudeAlgorithm alg )
-    : AmplitudeFunctor<double,d>(alg) 
+    Oscillatory<R>( AmplitudeAlgorithm alg )
+    : AmplitudeFunctor<R,d>(alg) 
     { }
 
-    complex<double>
-    operator() ( const Array<double,d>& x, const Array<double,d>& p ) const
+    complex<R>
+    operator() ( const Array<R,d>& x, const Array<R,d>& p ) const
     { 
-        return 1. + 
-               0.5*sin(Pi*x[0])*sin(4*Pi*x[1])*sin(3*Pi*p[0])*cos(4*Pi*p[1]);
+        return 1. + 0.5*sin(1*Pi*x[0])*sin(4*Pi*x[1])*
+                        sin(3*Pi*p[0])*cos(4*Pi*p[1]);
     }
 };
 
-class UpWave : public PhaseFunctor<double,d>
+template<typename R>
+class UpWave : public PhaseFunctor<R,d>
 {
 public:
-    double
-    operator() ( const Array<double,d>& x, const Array<double,d>& p ) const
+    R
+    operator() ( const Array<R,d>& x, const Array<R,d>& p ) const
     {
         return x[0]*p[0]+x[1]*p[1]+0.5*sqrt(p[0]*p[0]+p[1]*p[1]);
     }
@@ -173,8 +175,8 @@ main
         }
 
         // Set up our amplitude and phase functors
-        Oscillatory oscillatory(algorithm);
-        UpWave upWave;
+        Oscillatory<double> oscillatory(algorithm);
+        UpWave<double> upWave;
 
         // Create a vector for storing the results
         unsigned numLocalLRPs = NumLocalBoxes<d>( N, MPI_COMM_WORLD );
@@ -211,10 +213,8 @@ main
                 for( unsigned m=0; m<globalSources.size(); ++m )
                 {
                     Array<double,d>& p = globalSources[m].p;
-                    double alpha = TwoPi * upWave(x,p);
-                    uTruth += oscillatory(x,p)*
-                              complex<double>(cos(alpha),sin(alpha))*
-                              globalSources[m].magnitude;
+                    complex<double> beta = ImagExp( TwoPi*upWave(x,p) );
+                    uTruth += oscillatory(x,p)*beta*globalSources[m].magnitude;
                 }
                 double relError = abs(u-uTruth)/max(abs(uTruth),1.);
                 myMaxRelError = max( myMaxRelError, relError );

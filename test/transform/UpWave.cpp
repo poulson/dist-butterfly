@@ -34,19 +34,21 @@ Usage()
 static const unsigned d = 3;
 static const unsigned q = 8;
 
-class Unity : public AmplitudeFunctor<double,d>
+template<typename R>
+class Unity : public AmplitudeFunctor<R,d>
 {
 public:
-    complex<double>
-    operator() ( const Array<double,d>& x, const Array<double,d>& p ) const
-    { return complex<double>(1); }
+    complex<R>
+    operator() ( const Array<R,d>& x, const Array<R,d>& p ) const
+    { return complex<R>(1); }
 };
 
-class UpWave : public PhaseFunctor<double,d>
+template<typename R>
+class UpWave : public PhaseFunctor<R,d>
 {
 public:
-    double
-    operator() ( const Array<double,d>& x, const Array<double,d>& p ) const
+    R
+    operator() ( const Array<R,d>& x, const Array<R,d>& p ) const
     {
         return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
                0.5*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]); 
@@ -161,8 +163,8 @@ main
         }
 
         // Set up our amplitude and phase functors
-        Unity unity;
-        UpWave upWave;
+        Unity<double> unity;
+        UpWave<double> upWave;
 
         // Create a vector for storing the results
         unsigned numLocalLRPs = NumLocalBoxes<d>( N, MPI_COMM_WORLD );
@@ -198,10 +200,9 @@ main
                 complex<double> uTruth(0.,0.);
                 for( unsigned m=0; m<globalSources.size(); ++m )
                 {
-                    double alpha = 
-                        TwoPi*upWave(x,globalSources[m].p);
-                    uTruth += complex<double>(cos(alpha),sin(alpha))*
-                              globalSources[m].magnitude;
+                    complex<double> beta = 
+                        ImagExp( TwoPi*upWave(x,globalSources[m].p) );
+                    uTruth += beta * globalSources[m].magnitude;
                 }
                 double relError = abs(u-uTruth)/max(abs(uTruth),1.);
                 myMaxRelError = max( myMaxRelError, relError );

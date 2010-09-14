@@ -16,8 +16,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_MPI_HPP
-#define BFIO_MPI_HPP 1
+#ifndef BFIO_TOOLS_MPI_HPP
+#define BFIO_TOOLS_MPI_HPP 1
 
 #include <complex>
 #include <stdexcept>
@@ -127,5 +127,5 @@ inline SumScatter< std::complex<double> >
 
 } // bfio
 
-#endif // BFIO_MPI_HPP
+#endif // BFIO_TOOLS_MPI_HPP
 

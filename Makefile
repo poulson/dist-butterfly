@@ -25,9 +25,9 @@ bindir = bin
 #
 # Defining 'FUNDERSCORE' appends an underscore to BLAS routine names
 CXX = mpicxx
-CXXFLAGS = -I$(incdir) -DFUNDERSCORE -DAVOID_COMPLEX_MPI
+CXXFLAGS = -I$(incdir) -DFUNDERSCORE -DAVOID_COMPLEX_MPI 
 CXXFLAGS_DEBUG = -g -Wall $(CXXFLAGS)
-CXXFLAGS_RELEASE = -O3 -Wall -DRELEASE $(CXXFLAGS)
+CXXFLAGS_RELEASE = -O3 -fast -ffast-math -Wall -DRELEASE $(CXXFLAGS)
 LDFLAGS = -L/usr/lib -lblas
 AR = ar
 ARFLAGS = rc
