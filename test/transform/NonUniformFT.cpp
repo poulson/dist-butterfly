@@ -25,7 +25,7 @@ using namespace bfio;
 void 
 Usage()
 {
-    cout << "GeneralizedRadon <N> <M> <testAccuracy?>" << endl;
+    cout << "NonUniformFT <N> <M> <testAccuracy?>" << endl;
     cout << "  N: power of 2, the frequency spread in each dimension" << endl;
     cout << "  M: number of random sources to instantiate" << endl;
     cout << "  testAccuracy?: tests accuracy iff 1" << endl;
@@ -49,20 +49,13 @@ public:
 };
 
 template<typename R>
-class GenRadon : public PhaseFunctor<R,d>
+class Fourier : public PhaseFunctor<R,d>
 {
-    R c1( const Array<R,d>& x ) const
-    { return (2+sin(TwoPi*x[0])*sin(TwoPi*x[1]))/3.; }
-
-    R c2( const Array<R,d>& x ) const
-    { return (2+cos(TwoPi*x[0])*cos(TwoPi*x[1]))/3.; }
 public:
     R
     operator() ( const Array<R,d>& x, const Array<R,d>& p ) const
     {
-        R a = c1(x)*p[0];
-        R b = c2(x)*p[1];
-        return x[0]*p[0]+x[1]*p[1] + sqrt(a*a+b*b);
+        return x[0]*p[0]+x[1]*p[1];
     }
 };
 
@@ -191,18 +184,18 @@ main
 
         // Set up our amplitude and phase functors
         Unity<double> unity;
-        GenRadon<double> genRadon;
+        Fourier<double> fourier;
 
         // Create vectors for storing the results
         unsigned numLocalLRPs = NumLocalBoxes<d>( N, comm );
-        vector< LowRankPotential<double,d,q> > myGenRadonLRPs
-        ( numLocalLRPs, LowRankPotential<double,d,q>(unity,genRadon) );
+        vector< LowRankPotential<double,d,q> > myFourierLRPs
+        ( numLocalLRPs, LowRankPotential<double,d,q>(unity,fourier) );
 
         // Run the algorithm
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
         FreqToSpatial
-        ( N, freqBox, spatialBox, mySources, myGenRadonLRPs, comm );
+        ( N, freqBox, spatialBox, mySources, myFourierLRPs, comm );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
         if( rank == 0 )
@@ -217,18 +210,18 @@ main
             double myLinfError256 = 0;
             for( unsigned s=0; s<256; ++s )
             {
-                unsigned k = rand() % myGenRadonLRPs.size();
+                unsigned k = rand() % myFourierLRPs.size();
 
                 // Retrieve the spatial center of LRP k
-                Array<double,d> x0 = myGenRadonLRPs[k].GetSpatialCenter();
+                Array<double,d> x0 = myFourierLRPs[k].GetSpatialCenter();
                 
                 // Evaluate our LRP at x0 and compare against truth
-                complex<double> u = myGenRadonLRPs[k]( x0 );
+                complex<double> u = myFourierLRPs[k]( x0 );
                 complex<double> uTruth(0,0);
                 for( unsigned m=0; m<globalSources.size(); ++m )
                 {
                     complex<double> beta = 
-                        ImagExp( TwoPi*genRadon(x0,globalSources[m].p) );
+                        ImagExp( TwoPi*fourier(x0,globalSources[m].p) );
                     uTruth += beta * globalSources[m].magnitude;
                 }
                 double absError = abs(u-uTruth);
@@ -275,7 +268,7 @@ main
                      absErrorFile;
             {
                 ostringstream basenameStream;
-                basenameStream << "genRadon-N=" << N << "-" << "q=" << q 
+                basenameStream << "nuft-N=" << N << "-" << "q=" << q 
                     << "-rank=" << rank;
                 string basename = basenameStream.str();
                 string realTruthName = basename + "-realTruth.dat";
@@ -293,11 +286,11 @@ main
             double myL2ErrorSquared = 0;
             double myL2TruthSquared = 0;
             double myLinfError = 0;
-            for( unsigned k=0; k<myGenRadonLRPs.size(); ++k )
+            for( unsigned k=0; k<myFourierLRPs.size(); ++k )
             {
                 // Retrieve the spatial center of LRP k
                 Array<double,d> x0 = 
-                    myGenRadonLRPs[k].GetSpatialCenter();
+                    myFourierLRPs[k].GetSpatialCenter();
 
                 for( unsigned s=0; s<numTestsPerBox; ++s )
                 {
@@ -310,12 +303,12 @@ main
                     }
 
                     // Evaluate our LRP at x  and compare against truth
-                    complex<double> u = myGenRadonLRPs[k]( x );
+                    complex<double> u = myFourierLRPs[k]( x );
                     complex<double> uTruth(0.,0.);
                     for( unsigned m=0; m<globalSources.size(); ++m )
                     {
                         complex<double> beta = 
-                            ImagExp( TwoPi*genRadon(x,globalSources[m].p) );
+                            ImagExp( TwoPi*fourier(x,globalSources[m].p) );
                         uTruth += beta * globalSources[m].magnitude;
                     }
                     double absError = abs(u-uTruth);

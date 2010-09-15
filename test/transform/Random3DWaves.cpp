@@ -32,6 +32,7 @@ Usage()
     cout << endl;
 }
 
+// Define the dimension of the problem and the order of interpolation
 static const unsigned d = 3;
 static const unsigned q = 5;
 
@@ -84,10 +85,12 @@ int
 main
 ( int argc, char* argv[] )
 {
-    int rank, numProcesses;
     MPI_Init( &argc, &argv );
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank );
-    MPI_Comm_size( MPI_COMM_WORLD, &numProcesses );
+
+    int rank, numProcesses;
+    MPI_Comm comm = MPI_COMM_WORLD;
+    MPI_Comm_rank( comm, &rank );
+    MPI_Comm_size( comm, &numProcesses );
 
     if( !IsPowerOfTwo(numProcesses) )
     {
@@ -135,8 +138,7 @@ main
     {
         // Compute the box that our process owns
         Box<double,d> myFreqBox;
-        LocalFreqPartitionData
-        ( freqBox, myFreqBox, MPI_COMM_WORLD );
+        LocalFreqPartitionData( freqBox, myFreqBox, comm );
 
         // Seed our process
         long seed = time(0);
@@ -164,7 +166,7 @@ main
         // Loop over each timestep, computing in parallel, gathering the 
         // results, and then dumping to file
         double deltaT = T/(nT-1);
-        unsigned numLocalLRPs = NumLocalBoxes<d>( N, MPI_COMM_WORLD );
+        unsigned numLocalLRPs = NumLocalBoxes<d>( N, comm );
         for( unsigned i=0; i<nT; ++i )
         {
             const double t = i*deltaT;
@@ -180,7 +182,7 @@ main
             vector< LowRankPotential<double,d,q> > myUpWaveLRPs
             ( numLocalLRPs, LowRankPotential<double,d,q>(unity,upWave) );
             FreqToSpatial
-            ( N, freqBox, spatialBox, mySources, myUpWaveLRPs, MPI_COMM_WORLD );
+            ( N, freqBox, spatialBox, mySources, myUpWaveLRPs, comm );
 
             if( rank == 0 )
             {
@@ -190,8 +192,7 @@ main
             vector< LowRankPotential<double,d,q> > myDownWaveLRPs
             ( numLocalLRPs, LowRankPotential<double,d,q>(unity,downWave) );
             FreqToSpatial
-            ( N, freqBox, spatialBox, mySources, myDownWaveLRPs, 
-              MPI_COMM_WORLD );
+            ( N, freqBox, spatialBox, mySources, myDownWaveLRPs, comm );
             if( rank == 0 )
             {
                 cout << "done" << endl;
