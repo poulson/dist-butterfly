@@ -404,61 +404,38 @@ main
                 << "-rank=" << rank;
             string basename = basenameStream.str();
 
+            // Columns 0-(d-1) contain the coordinates of the sources, 
+            // and columns d and d+1 contain the real and complex components of
+            // the magnitudes of the sources.
             ofstream file;
-            file.open( (basename+"-realTruth.dat").c_str() );
+            file.open( (basename+"-sources.dat").c_str() );
+            for( unsigned i=0; i<globalSources.size(); ++i )
+            {
+                for( unsigned j=0; j<d; ++j )
+                    file << globalSources[i].p[j] << " ";
+                file << real(globalSources[i].magnitude) << " "
+                     << imag(globalSources[i].magnitude) << endl;
+            }
+            file.close();
+
+            // Columns 0-(d-1) contain the coordinates of the samples, 
+            // columns d and d+1 contain the real and complex components of 
+            // the true solution, d+2 and d+3 contain the real and complex 
+            // components of the approximate solution, and columns d+4 and d+5
+            // contain the real and complex parts of the error, truth-approx.
+            file.open( (basename+"-results.dat").c_str() );
             for( unsigned i=0; i<vizSamples.size(); ++i )
             {
                 for( unsigned j=0; j<d; ++j )
                     file << vizSamples[i].point[j] << " ";
-                file << real(vizSamples[i].truth) << endl;
+                file << real(vizSamples[i].truth) << " "
+                     << imag(vizSamples[i].truth) << " "
+                     << real(vizSamples[i].approx) << " "
+                     << imag(vizSamples[i].approx) << " "
+                     << real(vizSamples[i].error) << " "
+                     << imag(vizSamples[i].error) << endl;
             }
             file.close();
-
-            file.open( (basename+"-imagTruth.dat").c_str() );
-            for( unsigned i=0; i<vizSamples.size(); ++i )
-            {
-                for( unsigned j=0; j<d; ++j )
-                    file << vizSamples[i].point[j] << " ";
-                file << imag(vizSamples[i].truth) << endl;
-            }
-            file.close();
-
-            file.open( (basename+"-realApprox.dat").c_str() );
-            for( unsigned i=0; i<vizSamples.size(); ++i )
-            {
-                for( unsigned j=0; j<d; ++j )
-                    file << vizSamples[i].point[j] << " ";
-                file << real(vizSamples[i].approx) << endl;
-            }
-            file.close();
-
-            file.open( (basename+"-imagApprox.dat").c_str() );
-            for( unsigned i=0; i<vizSamples.size(); ++i )
-            {
-                for( unsigned j=0; j<d; ++j )
-                    file << vizSamples[i].point[j] << " ";
-                file << imag(vizSamples[i].approx) << endl;
-            }
-            file.close();
-
-            file.open( (basename+"-realError.dat").c_str() );
-            for( unsigned i=0; i<vizSamples.size(); ++i )
-            {
-                for( unsigned j=0; j<d; ++j )
-                    file << vizSamples[i].point[j] << " ";
-                file << real(vizSamples[i].error) << endl;
-            }
-            file.close();
-
-            file.open( (basename+"-imagError.dat").c_str() );
-            for( unsigned i=0; i<vizSamples.size(); ++i )
-            {
-                for( unsigned j=0; j<d; ++j )
-                    file << vizSamples[i].point[j] << " ";
-                file << imag(vizSamples[i].error) << endl;
-            }
-            file.close();
-
         }
     }
     catch( const exception& e )
