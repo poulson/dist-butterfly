@@ -29,6 +29,7 @@ Usage()
     cout << "  N: power of 2, the frequency spread in each dimension" << endl;
     cout << "  M: number of random sources to instantiate" << endl;
     cout << "  testAccuracy?: tests accuracy iff 1" << endl;
+    cout << "  visualize?: creates data files iff 1" << endl;
     cout << endl;
 }
 
@@ -37,7 +38,23 @@ static const unsigned d = 2;
 static const unsigned q = 8;
 
 // If we test the accuracy, define the number of tests to perform per box
-static const unsigned numTestsPerBox = 10;
+static const unsigned numAccuracyTestsPerBox = 10;
+
+// If we visualize the results, define the number of samples per box per dim.
+static const unsigned numVizSamplesPerBoxDim = 3;
+
+struct VizSample {
+    Array<double,d> point;
+    complex<double> truth;
+    complex<double> approx;
+    complex<double> error;
+};
+
+// This must be modified if d != 2
+bool
+VizSampleSort( const VizSample& a, const VizSample& b )
+{ return a.point[1]<b.point[1] ||
+         (a.point[1]==b.point[1] && a.point[0]<b.point[0]); }
 
 template<typename R>
 class Unity : public AmplitudeFunctor<R,d>
@@ -78,7 +95,7 @@ main
         return 0;
     }
 
-    if( argc != 4 )
+    if( argc != 5 )
     {
         if( rank == 0 )
             Usage();
@@ -88,6 +105,7 @@ main
     const unsigned N = atoi(argv[1]);
     const unsigned M = atoi(argv[2]);
     const bool testAccuracy = atoi(argv[3]);
+    const bool visualize = atoi(argv[4]);
 
     const unsigned log2N = Log2( N );
     const unsigned log2NumProcesses = Log2( numProcesses );
@@ -137,7 +155,7 @@ main
         double L1Sources = 0;
         vector< Source<double,d> > mySources;
         vector< Source<double,d> > globalSources;
-        if( testAccuracy )
+        if( testAccuracy || visualize )
         {
             globalSources.resize( M );
             for( unsigned i=0; i<M; ++i )
@@ -188,35 +206,41 @@ main
 
         // Create vectors for storing the results
         unsigned numLocalLRPs = NumLocalBoxes<d>( N, comm );
-        vector< LowRankPotential<double,d,q> > myFourierLRPs
+        vector< LowRankPotential<double,d,q> > myLRPs
         ( numLocalLRPs, LowRankPotential<double,d,q>(unity,fourier) );
 
         // Run the algorithm
+        if( rank == 0 )
+            cout << "Starting transform..." << endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        FreqToSpatial
-        ( N, freqBox, spatialBox, mySources, myFourierLRPs, comm );
+        FreqToSpatial( N, freqBox, spatialBox, mySources, myLRPs, comm );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
         if( rank == 0 )
+        {
             cout << "Runtime: " << stopTime-startTime << " seconds." << endl;
+            cout << endl;
+        }
 
         if( testAccuracy )
         {
             // Compute the relative error using 256 random samples on the grid 
             // as in Candes et al.'s ButterflyFIO paper.
+            if( rank == 0 )
+                cout << "Testing accuracy with 256 samples..." << endl;
             double myL2ErrorSquared256 = 0;
             double myL2TruthSquared256 = 0;
             double myLinfError256 = 0;
             for( unsigned s=0; s<256; ++s )
             {
-                unsigned k = rand() % myFourierLRPs.size();
+                unsigned k = rand() % myLRPs.size();
 
                 // Retrieve the spatial center of LRP k
-                Array<double,d> x0 = myFourierLRPs[k].GetSpatialCenter();
+                Array<double,d> x0 = myLRPs[k].GetSpatialCenter();
                 
                 // Evaluate our LRP at x0 and compare against truth
-                complex<double> u = myFourierLRPs[k]( x0 );
+                complex<double> u = myLRPs[k]( x0 );
                 complex<double> uTruth(0,0);
                 for( unsigned m=0; m<globalSources.size(); ++m )
                 {
@@ -244,8 +268,6 @@ main
             ( &myLinfError256, &LinfError256, 1, MPI_DOUBLE, MPI_MAX, 0, comm );
             if( rank == 0 )
             {   
-                cout << endl;
-                cout << "256 samples " << endl;
                 cout << "---------------------------------------------" << endl;
                 cout << "Estimate of relative ||e||_2:    "
                      << sqrt(L2ErrorSquared256/L2TruthSquared256) << endl;
@@ -260,39 +282,18 @@ main
 
             // Compute error estimates using a constant number of samples within
             // each box in the resulting approximation of the transform.
-            // 
-            // We also have each process generate a file with its true solution,
-            // approximate solution, and error.
-            ofstream realTruthFile, imagTruthFile, 
-                     realApproxFile, imagApproxFile, 
-                     absErrorFile;
-            {
-                ostringstream basenameStream;
-                basenameStream << "nuft-N=" << N << "-" << "q=" << q 
-                    << "-rank=" << rank;
-                string basename = basenameStream.str();
-                string realTruthName = basename + "-realTruth.dat";
-                string imagTruthName = basename + "-imagTruth.dat";
-                string realApproxName = basename + "-realApprox.dat";
-                string imagApproxName = basename + "-imagApprox.dat";
-                string absErrorName = basename + "-absError.dat";
-
-                realTruthFile.open( realTruthName.c_str() );
-                imagTruthFile.open( imagTruthName.c_str() );
-                realApproxFile.open( realApproxName.c_str() );
-                imagApproxFile.open( imagApproxName.c_str() );
-                absErrorFile.open( absErrorName.c_str() );
-            }
+            if( rank == 0 )
+                cout << "Testing accuracy with O(N^d) samples..." << endl;
             double myL2ErrorSquared = 0;
             double myL2TruthSquared = 0;
             double myLinfError = 0;
-            for( unsigned k=0; k<myFourierLRPs.size(); ++k )
+            for( unsigned k=0; k<myLRPs.size(); ++k )
             {
                 // Retrieve the spatial center of LRP k
                 Array<double,d> x0 = 
-                    myFourierLRPs[k].GetSpatialCenter();
+                    myLRPs[k].GetSpatialCenter();
 
-                for( unsigned s=0; s<numTestsPerBox; ++s )
+                for( unsigned s=0; s<numAccuracyTestsPerBox; ++s )
                 {
                     // Find a random point in that box
                     Array<double,d> x;
@@ -303,7 +304,7 @@ main
                     }
 
                     // Evaluate our LRP at x  and compare against truth
-                    complex<double> u = myFourierLRPs[k]( x );
+                    complex<double> u = myLRPs[k]( x );
                     complex<double> uTruth(0.,0.);
                     for( unsigned m=0; m<globalSources.size(); ++m )
                     {
@@ -316,28 +317,8 @@ main
                     myL2ErrorSquared += absError*absError;
                     myL2TruthSquared += absTruth*absTruth;
                     myLinfError = max( myLinfError, absError );
-
-                    // Write to our files in "X Y Z" format
-                    for( unsigned j=0; j<d; ++j )
-                    {
-                        realTruthFile << x[j] << " ";
-                        imagTruthFile << x[j] << " ";
-                        realApproxFile << x[j] << " ";
-                        imagApproxFile << x[j] << " ";
-                        absErrorFile << x[j] << " ";
-                    }
-                    realTruthFile << real(uTruth) << endl;
-                    imagTruthFile << imag(uTruth) << endl;
-                    realApproxFile << real(u) << endl;
-                    imagApproxFile << imag(u) << endl;
-                    absErrorFile << absError << endl;
                 }
             }
-            realTruthFile.close();
-            imagTruthFile.close();
-            realApproxFile.close();
-            imagApproxFile.close();
-            absErrorFile.close();
 
             double L2ErrorSquared;
             double L2TruthSquared;
@@ -352,7 +333,6 @@ main
             ( &myLinfError, &LinfError, 1, MPI_DOUBLE, MPI_MAX, 0, comm );
             if( rank == 0 )
             {   
-                cout << "O(N^d) samples " << endl;
                 cout << "---------------------------------------------" << endl;
                 cout << "Estimate of relative ||e||_2:    "
                      << sqrt(L2ErrorSquared/L2TruthSquared) << endl;
@@ -362,7 +342,123 @@ main
                      << L1Sources << endl;
                 cout << "Estimate of ||e||_inf / ||f||_1: "
                      << LinfError/L1Sources << endl;
+                cout << endl;
             }
+        }
+
+        if( visualize )
+        {
+            // Each process creates a sorted Cartesian grid of the true 
+            // solution, the approximate solution, and the error.
+            if( rank == 0 )
+                cout << "Sampling to create files for visualization..." << endl;
+            const unsigned numVizSamplesPerBox =
+                Pow<numVizSamplesPerBoxDim,d>::val;
+            const unsigned numVizSamples = numVizSamplesPerBox*myLRPs.size();
+            vector<VizSample> vizSamples( numVizSamples );
+
+            const Array<double,d> wA = myLRPs[0].GetSpatialWidths();
+
+            // Fill the unsorted vector
+            for( unsigned k=0; k<myLRPs.size(); ++k )
+            {
+                // Retrieve the bottom-left corner of LRP k
+                const Array<double,d> x0 = myLRPs[k].GetSpatialCenter();
+                Array<double,d> xBL;
+                for( unsigned j=0; j<d; ++j )
+                    xBL[j] = x0[j] - wA[j]/2.;
+
+                for( unsigned s=0; s<numVizSamplesPerBox; ++s )
+                {
+                    unsigned pow = 1;
+                    VizSample& v =
+                        vizSamples[numVizSamplesPerBox*k+s];
+                    for( unsigned j=0; j<d; ++j )
+                    {
+                        unsigned i = (s/pow) % numVizSamplesPerBoxDim;
+                        v.point[j] = xBL[j] + i*wA[j]/numVizSamplesPerBoxDim;
+                        pow *= numVizSamplesPerBoxDim;
+                    }
+
+                    v.truth = complex<double>(0,0);
+                    for( unsigned m=0; m<globalSources.size(); ++m )
+                    {
+                        complex<double> beta =
+                            ImagExp(TwoPi*fourier(v.point,globalSources[m].p));
+                        v.truth += beta * globalSources[m].magnitude;
+                    }
+                    v.approx = myLRPs[k]( v.point );
+                    v.error = v.truth-v.approx;
+                }
+            }
+
+            // Sort the vectors from the highest to lowest dimensions
+            if( rank == 0 )
+                cout << "Sorting samples..." << endl;
+            sort( vizSamples.begin(), vizSamples.end(), VizSampleSort );
+
+            if( rank == 0 )
+                cout << "Writing out sorted data..." << endl;
+            ostringstream basenameStream;
+            basenameStream << "nuft-N=" << N << "-" << "q=" << q
+                << "-rank=" << rank;
+            string basename = basenameStream.str();
+
+            ofstream file;
+            file.open( (basename+"-realTruth.dat").c_str() );
+            for( unsigned i=0; i<vizSamples.size(); ++i )
+            {
+                for( unsigned j=0; j<d; ++j )
+                    file << vizSamples[i].point[j] << " ";
+                file << real(vizSamples[i].truth) << endl;
+            }
+            file.close();
+
+            file.open( (basename+"-imagTruth.dat").c_str() );
+            for( unsigned i=0; i<vizSamples.size(); ++i )
+            {
+                for( unsigned j=0; j<d; ++j )
+                    file << vizSamples[i].point[j] << " ";
+                file << imag(vizSamples[i].truth) << endl;
+            }
+            file.close();
+
+            file.open( (basename+"-realApprox.dat").c_str() );
+            for( unsigned i=0; i<vizSamples.size(); ++i )
+            {
+                for( unsigned j=0; j<d; ++j )
+                    file << vizSamples[i].point[j] << " ";
+                file << real(vizSamples[i].approx) << endl;
+            }
+            file.close();
+
+            file.open( (basename+"-imagApprox.dat").c_str() );
+            for( unsigned i=0; i<vizSamples.size(); ++i )
+            {
+                for( unsigned j=0; j<d; ++j )
+                    file << vizSamples[i].point[j] << " ";
+                file << imag(vizSamples[i].approx) << endl;
+            }
+            file.close();
+
+            file.open( (basename+"-realError.dat").c_str() );
+            for( unsigned i=0; i<vizSamples.size(); ++i )
+            {
+                for( unsigned j=0; j<d; ++j )
+                    file << vizSamples[i].point[j] << " ";
+                file << real(vizSamples[i].error) << endl;
+            }
+            file.close();
+
+            file.open( (basename+"-imagError.dat").c_str() );
+            for( unsigned i=0; i<vizSamples.size(); ++i )
+            {
+                for( unsigned j=0; j<d; ++j )
+                    file << vizSamples[i].point[j] << " ";
+                file << imag(vizSamples[i].error) << endl;
+            }
+            file.close();
+
         }
     }
     catch( const exception& e )
