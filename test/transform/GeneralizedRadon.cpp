@@ -212,10 +212,15 @@ main
         Unity<double> unity;
         GenRadon<double> genRadon;
 
+        // Create a context, which includes all of the precomputation
+        if( rank == 0 )
+            cout << "Creating context..." << endl;
+        Context<double,d,q> context;
+
         // Create vectors for storing the results
         unsigned numLocalLRPs = NumLocalBoxes<d>( N, comm );
         vector< LowRankPotential<double,d,q> > myLRPs
-        ( numLocalLRPs, LowRankPotential<double,d,q>(unity,genRadon) );
+        ( numLocalLRPs, LowRankPotential<double,d,q>(unity,genRadon,context) );
 
         // Run the algorithm
         if( rank == 0 )

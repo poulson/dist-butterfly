@@ -20,7 +20,6 @@
 #define BFIO_FREQ_TO_SPATIAL_SWITCH_TO_SPATIAL_INTERP_HPP 1
 
 #include "bfio/structures/htree_walker.hpp"
-#include "bfio/tools/lagrange.hpp"
 
 namespace bfio {
 namespace freq_to_spatial {
@@ -39,7 +38,7 @@ SwitchToSpatialInterp
   const unsigned log2LocalSpatialBoxes,
   const Array<unsigned,d>& log2LocalFreqBoxesPerDim,
   const Array<unsigned,d>& log2LocalSpatialBoxesPerDim,
-  const std::vector< Array<R,d> >& chebyGrid,
+  const Context<R,d,q>& context,
         WeightGridList<R,d,q>& weightGridList
 )
 {
@@ -55,6 +54,7 @@ SwitchToSpatialInterp
         wB[j] = freqBox.widths[j] / (1<<(log2N-level));
     }
 
+    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
     CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
     WeightGridList<R,d,q> oldWeightGridList( weightGridList );
     for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i, AWalker.Walk() )
@@ -69,7 +69,7 @@ SwitchToSpatialInterp
         std::vector< Array<R,d> > xPoints( q_to_d );
         for( unsigned t=0; t<q_to_d; ++t )
             for( unsigned j=0; j<d; ++j )
-                xPoints[t][j] = x0A[j] + wA[j]*chebyGrid[t][j];
+                xPoints[t][j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
 
         CHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
         for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k, BWalker.Walk() )
@@ -84,7 +84,7 @@ SwitchToSpatialInterp
             std::vector< Array<R,d> > pPoints( q_to_d );
             for( unsigned t=0; t<q_to_d; ++t )
                 for( unsigned j=0; j<d; ++j )
-                    pPoints[t][j] = p0B[j] + wB[j]*chebyGrid[t][j];
+                    pPoints[t][j] = p0B[j] + wB[j]*chebyshevGrid[t][j];
 
             const unsigned key = k+(i<<log2LocalFreqBoxes);
             for( unsigned t=0; t<q_to_d; ++t )

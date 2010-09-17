@@ -19,8 +19,6 @@
 #ifndef BFIO_FREQ_TO_SPATIAL_FREQ_WEIGHT_RECURSION_HPP
 #define BFIO_FREQ_TO_SPATIAL_FREQ_WEIGHT_RECURSION_HPP 1
 
-#include "bfio/tools/lagrange.hpp"
-
 namespace bfio {
 namespace freq_to_spatial {
 
@@ -32,7 +30,7 @@ FreqWeightRecursion
   const unsigned log2NumMergingProcesses,
   const unsigned myTeamRank,
   const unsigned N, 
-  const std::vector< Array<R,d> >& chebyGrid,
+  const Context<R,d,q>& context,
   const Array<R,d>& x0A,
   const Array<R,d>& p0B,
   const Array<R,d>& wB,
@@ -44,35 +42,6 @@ FreqWeightRecursion
     typedef std::complex<R> C;
     const unsigned q_to_d = Pow<q,d>::val;
     const unsigned q_to_2d = Pow<q,2*d>::val;
-
-    static bool initialized = false;
-    static std::vector<R> pRefB( (q_to_d << d)*d );
-    static std::vector<R> LFreq( q_to_2d << d );
-
-    if( !initialized )
-    {
-        for( unsigned c=0; c<(1u<<d); ++c )
-        {
-            for( unsigned t=0; t<q_to_d; ++t )
-            {
-                for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
-                {
-                    // Map p_t'(Bc) to the reference domain of B and 
-                    // store the Lagrangian evaluation
-                    Array<R,d> ptPrimeBcRefB;
-                    for( unsigned j=0; j<d; ++j )
-                    {
-                        pRefB[c*q_to_d*d+tPrime*d+j] = ptPrimeBcRefB[j] = 
-                            ( (c>>j)&1 ? (2*chebyGrid[tPrime][j]+1)/4 :
-                                         (2*chebyGrid[tPrime][j]-1)/4  );
-                    }
-                    LFreq[c*q_to_2d+t+tPrime*q_to_d] = 
-                        Lagrange<R,d,q>( t, ptPrimeBcRefB );
-                }
-            }
-        }
-        initialized = true;
-    }
 
     // We seek performance by isolating the Lagrangian interpolation as
     // a matrix-vector multiplication
@@ -88,6 +57,9 @@ FreqWeightRecursion
     for( unsigned t=0; t<q_to_d; ++t )
         weightGrid[t] = 0;
 
+    const std::vector<R>& freqMaps = context.GetFreqMaps();
+    const std::vector< Array<R,d> >& freqChildGrids = 
+        context.GetFreqChildGrids();
     for( unsigned cLocal=0; cLocal<(1u<<(d-log2NumMergingProcesses)); ++cLocal )
     {
         // Step 1
@@ -99,7 +71,10 @@ FreqWeightRecursion
         {
             Array<R,d> ptPrime;
             for( unsigned j=0; j<d; ++j )
-                ptPrime[j] = p0B[j] + wB[j]*pRefB[c*q_to_d*d+tPrime*d+j];
+            {
+                ptPrime[j] = 
+                    p0B[j] + wB[j]*freqChildGrids[c*q_to_d*d+tPrime*d][j];
+            }
 
             const C beta = ImagExp( TwoPi*Phi(x0A,ptPrime) );
             if( Amp.algorithm == MiddleSwitch )
@@ -116,16 +91,17 @@ FreqWeightRecursion
         
         // Step 2
         RealMatrixComplexVec
-        ( q_to_d, q_to_d, (R)1, &LFreq[c*q_to_2d], q_to_d, 
+        ( q_to_d, q_to_d, (R)1, &freqMaps[c*q_to_2d], q_to_d, 
           &scaledWeightGrid[0], (R)1, &weightGrid[0] );
     }
 
     // Step 3
+    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
     for( unsigned t=0; t<q_to_d; ++t )
     {
         Array<R,d> ptB;
         for( unsigned j=0; j<d; ++j )
-            ptB[j] = p0B[j] + wB[j]*chebyGrid[t][j];
+            ptB[j] = p0B[j] + wB[j]*chebyshevGrid[t][j];
 
         const C beta = ImagExp( TwoPi*Phi(x0A,ptB) );
         if( Amp.algorithm == MiddleSwitch )

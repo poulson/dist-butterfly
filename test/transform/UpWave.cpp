@@ -200,10 +200,15 @@ main
         Unity<double> unity;
         UpWave<double> upWave;
 
+        // Create a context, which includes all of the precomputation
+        if( rank == 0 )
+            cout << "Creating context..." << endl;
+        Context<double,d,q> context;
+
         // Create a vector for storing the results
         unsigned numLocalLRPs = NumLocalBoxes<d>( N, comm );
         vector< LowRankPotential<double,d,q> > myLRPs
-        ( numLocalLRPs, LowRankPotential<double,d,q>(unity,upWave) );
+        ( numLocalLRPs, LowRankPotential<double,d,q>(unity,upWave,context) );
 
         // Run the algorithm
         if( rank == 0 )

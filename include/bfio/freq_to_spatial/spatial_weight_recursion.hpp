@@ -20,7 +20,6 @@
 #define BFIO_FREQ_TO_SPATIAL_SPATIAL_WEIGHT_RECURSION_HPP 1
 
 #include "bfio/tools/blas.hpp"
-#include "bfio/tools/lagrange.hpp"
 
 namespace bfio {
 namespace freq_to_spatial {
@@ -33,7 +32,7 @@ SpatialWeightRecursion
   const unsigned log2NumMergingProcesses,
   const unsigned myTeamRank,
   const unsigned N, 
-  const std::vector< Array<R,d> >& chebyGrid,
+  const Context<R,d,q>& context,
   const unsigned ARelativeToAp,
   const Array<R,d>& x0A,
   const Array<R,d>& x0Ap,
@@ -49,34 +48,6 @@ SpatialWeightRecursion
     const unsigned q_to_d = Pow<q,d>::val;
     const unsigned q_to_2d = Pow<q,2*d>::val;
 
-    static bool initialized = false;
-    static std::vector<R> LSpatial( q_to_2d << d );
-
-    if( !initialized )
-    {
-        for( unsigned p=0; p<(1u<<d); ++p )
-        {
-            for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
-            {
-                for( unsigned t=0; t<q_to_d; ++t )
-                {
-                    // Map x_t(A) to the reference domain of its parent
-                    Array<R,d> xtARefAp;
-                    for( unsigned j=0; j<d; ++j )
-                    {
-                        xtARefAp[j] = 
-                            ( (p>>j)&1 ? (2*chebyGrid[t][j]+1)/4 :
-                                         (2*chebyGrid[t][j]-1)/4  );
-                    }
-
-                    LSpatial[p*q_to_2d + t+tPrime*q_to_d] = 
-                        Lagrange<R,d,q>( tPrime, xtARefAp );
-                }
-            }
-        }
-        initialized = true;
-    }
-
     for( unsigned t=0; t<q_to_d; ++t )
         weightGrid[t] = 0;
 
@@ -88,6 +59,8 @@ SpatialWeightRecursion
     //  1) scale the old weights with the appropriate exponentials
     //  2) multiply the lagrangian matrix against the scaled weights
     //  3) scale and accumulate the result of the lagrangian mat-vec
+    const std::vector<R>& spatialMaps = context.GetSpatialMaps();
+    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
     for( unsigned cLocal=0; cLocal<(1u<<(d-log2NumMergingProcesses)); ++cLocal )
     {
         // Step 1: scale the old weights
@@ -101,7 +74,7 @@ SpatialWeightRecursion
         {
             Array<R,d> xtPrimeAp;
             for( unsigned j=0; j<d; ++j )
-                xtPrimeAp[j] = x0Ap[j] + (2*wA[j])*chebyGrid[tPrime][j];
+                xtPrimeAp[j] = x0Ap[j] + (2*wA[j])*chebyshevGrid[tPrime][j];
             const C beta = ImagExp( TwoPi*Phi(xtPrimeAp,p0Bc) );
             if( Amp.algorithm == MiddleSwitch )
             {
@@ -120,7 +93,7 @@ SpatialWeightRecursion
         WeightGrid<R,d,q> expandedWeightGrid;
         RealMatrixComplexVec
         ( q_to_d, q_to_d, 
-          (R)1, &LSpatial[ARelativeToAp*q_to_2d], q_to_d, 
+          (R)1, &spatialMaps[ARelativeToAp*q_to_2d], q_to_d, 
                 &scaledWeightGrid[0],
           (R)0, &expandedWeightGrid[0] );
 
@@ -129,7 +102,7 @@ SpatialWeightRecursion
         {
             Array<R,d> xtA;
             for( unsigned j=0; j<d; ++j )
-                xtA[j] = x0A[j] + wA[j]*chebyGrid[t][j];
+                xtA[j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
             const C beta = ImagExp( TwoPi*Phi(xtA,p0Bc) );
             if( Amp.algorithm == MiddleSwitch )
             {

@@ -60,6 +60,7 @@ FreqToSpatial
     // Extract our amplitude and phase functions, as well as N
     const AmplitudeFunctor<R,d>& Amp = myLRPs[0].GetAmplitudeFunctor();
     const PhaseFunctor<R,d>& Phi = myLRPs[0].GetPhaseFunctor();
+    const Context<R,d,q>& context = myLRPs[0].GetContext();
 
     // Assert that N and size are powers of 2
     if( ! IsPowerOfTwo(N) )
@@ -99,24 +100,11 @@ FreqToSpatial
         log2LocalFreqBoxes += log2LocalFreqBoxesPerDim[j];
     }
 
-    // Compute the Chebyshev grid over [-1/2,+1/2]^d
-    std::vector< Array<R,d> > chebyGrid( q_to_d );
-    for( unsigned t=0; t<q_to_d; ++t )
-    {
-        unsigned qToThej = 1;
-        for( unsigned j=0; j<d; ++j )
-        {
-            unsigned i = (t/qToThej)%q;
-            chebyGrid[t][j] = 0.5*cos(static_cast<R>(i*Pi/(q-1)));
-            qToThej *= q;
-        }
-    }
-
     // Initialize the weights using Lagrangian interpolation on the 
     // smooth component of the kernel.
     WeightGridList<R,d,q> weightGridList( 1<<log2LocalFreqBoxes );
     freq_to_spatial::InitializeWeights<R,d,q>
-    ( Amp, Phi, N, mySources, chebyGrid, freqBox, spatialBox, myFreqBox,
+    ( Amp, Phi, N, mySources, context, freqBox, spatialBox, myFreqBox,
       log2LocalFreqBoxes, log2LocalFreqBoxesPerDim, weightGridList );
 
     // Start the main recursion loop
@@ -128,7 +116,7 @@ FreqToSpatial
         ( Amp, Phi, log2N, freqBox, spatialBox, myFreqBox, mySpatialBox,
           log2LocalFreqBoxes, log2LocalSpatialBoxes,
           log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
-          chebyGrid, weightGridList );
+          context, weightGridList );
     }
     for( unsigned level=1; level<=log2N; ++level )
     {
@@ -187,7 +175,7 @@ FreqToSpatial
                     if( level <= log2N/2 )
                     {
                         freq_to_spatial::FreqWeightRecursion<R,d,q>
-                        ( Amp, Phi, 0, 0, N, chebyGrid, 
+                        ( Amp, Phi, 0, 0, N, context, 
                           x0A, p0B, wB, parentOffset,
                           oldWeightGridList, weightGridList[key] );
                     }
@@ -206,7 +194,7 @@ FreqToSpatial
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
                         freq_to_spatial::SpatialWeightRecursion<R,d,q>
-                        ( Amp, Phi, 0, 0, N, chebyGrid, 
+                        ( Amp, Phi, 0, 0, N, context, 
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentOffset, oldWeightGridList, 
                           weightGridList[key] );
@@ -318,7 +306,7 @@ FreqToSpatial
                 {
                     freq_to_spatial::FreqWeightRecursion<R,d,q>
                     ( Amp, Phi, log2NumMergingProcesses, myTeamRank, 
-                      N, chebyGrid, x0A, p0B, wB, parentOffset,
+                      N, context, x0A, p0B, wB, parentOffset,
                       weightGridList, partialWeightGridList[i] );
                 }
                 else
@@ -336,9 +324,8 @@ FreqToSpatial
                     }
                     freq_to_spatial::SpatialWeightRecursion<R,d,q>
                     ( Amp, Phi, log2NumMergingProcesses, myTeamRank,
-                      N, chebyGrid, ARelativeToAp,
-                      x0A, x0Ap, p0B, wA, wB, parentOffset,
-                      weightGridList, partialWeightGridList[i] );
+                      N, context, ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
+                      parentOffset, weightGridList, partialWeightGridList[i] );
                 }
             }
 
@@ -377,12 +364,20 @@ FreqToSpatial
             ( Amp, Phi, log2N, freqBox, spatialBox, myFreqBox, mySpatialBox,
               log2LocalFreqBoxes, log2LocalSpatialBoxes,
               log2LocalFreqBoxesPerDim, log2LocalSpatialBoxesPerDim,
-              chebyGrid, weightGridList );
+              context, weightGridList );
         }
     }
     
     // Construct Low-Rank Potentials (LRPs) from weights
+    //
+    // TODO: Get rid of LRPs in favor of a PotentialField class.
+    //       This change would get rid of a lot of duplication, as well as 
+    //       making the user's life much easier for evaluating the potential at
+    //       an arbitrary point.
     {
+        const std::vector< Array<R,d> >& chebyshevGrid = 
+            context.GetChebyshevGrid();
+
         Array<R,d> wA;
         for( unsigned j=0; j<d; ++j )
             wA[j] = spatialBox.widths[j] / N;
@@ -406,7 +401,7 @@ FreqToSpatial
             PointGrid<R,d,q> pointGrid;
             for( unsigned t=0; t<q_to_d; ++t )             
                 for( unsigned j=0; j<d; ++j )    
-                    pointGrid[t][j] = x0A[j] + wA[j]*chebyGrid[t][j];
+                    pointGrid[t][j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
             myLRPs[i].SetPointGrid( pointGrid );
 
             myLRPs[i].SetWeightGrid( weightGridList[i] );

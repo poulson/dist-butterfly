@@ -34,7 +34,7 @@ InitializeWeights
   const PhaseFunctor<R,d>& Phi,
   const unsigned N,
   const std::vector< Source<R,d> >& mySources,
-  const std::vector< Array<R,d> >& chebyGrid,
+  const Context<R,d,q>& context,
   const Box<R,d>& freqBox,
   const Box<R,d>& spatialBox,
   const Box<R,d>& myFreqBox,
@@ -115,24 +115,19 @@ InitializeWeights
         {
             const C gamma = beta * f;
             for( unsigned t=0; t<q_to_d; ++t )
-            {
-                weightGridList[k][t] += 
-                    gamma*Lagrange<R,d,q>(t,pRef);
-            }
+                weightGridList[k][t] += gamma*context.Lagrange(t,pRef);
         }
         else if( Amp.algorithm == Prefactor )
         {
             const C gamma = Amp(x0,p) * beta * f;
             for( unsigned t=0; t<q_to_d; ++t )
-            {
-                weightGridList[k][t] +=
-                    gamma*Lagrange<R,d,q>(t,pRef);
-            }
+                weightGridList[k][t] += gamma*context.Lagrange(t,pRef);
         }
     }
 
     // Loop over all of the boxes to compute the {p_t^B} and prefactors
     // for each delta weight {delta_t^AB}
+    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
     CHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
     for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k, BWalker.Walk() ) 
     {
@@ -150,7 +145,7 @@ InitializeWeights
             // Compute the spatial location of pt
             Array<R,d> pt;
             for( unsigned j=0; j<d; ++j )
-                pt[j] = p0[j] + wB[j]*chebyGrid[t][j];
+                pt[j] = p0[j] + wB[j]*chebyshevGrid[t][j];
 
             const C beta = ImagExp( TwoPi*Phi(x0,pt) );
             if( Amp.algorithm == MiddleSwitch )

@@ -163,6 +163,11 @@ main
         UpWave<double> upWave;
         DownWave<double> downWave;
 
+        // Create a context, which includes all of the precomputation
+        if( rank == 0 )
+            cout << "Creating context..." << endl;
+        Context<double,d,q> context;
+
         // Loop over each timestep, computing in parallel, gathering the 
         // results, and then dumping to file
         double deltaT = T/(nT-1);
@@ -180,7 +185,7 @@ main
                 cout.flush();
             }
             vector< LowRankPotential<double,d,q> > myUpWaveLRPs
-            ( numLocalLRPs, LowRankPotential<double,d,q>(unity,upWave) );
+            (numLocalLRPs,LowRankPotential<double,d,q>(unity,upWave,context));
             FreqToSpatial
             ( N, freqBox, spatialBox, mySources, myUpWaveLRPs, comm );
 
@@ -190,7 +195,7 @@ main
                 cout << "  Starting downWave transform...";
             }
             vector< LowRankPotential<double,d,q> > myDownWaveLRPs
-            ( numLocalLRPs, LowRankPotential<double,d,q>(unity,downWave) );
+            (numLocalLRPs,LowRankPotential<double,d,q>(unity,downWave,context));
             FreqToSpatial
             ( N, freqBox, spatialBox, mySources, myDownWaveLRPs, comm );
             if( rank == 0 )

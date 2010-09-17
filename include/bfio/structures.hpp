@@ -19,6 +19,7 @@
 #ifndef BFIO_STRUCTURES_HPP
 #define BFIO_STRUCTURES_HPP 1
 
+#include "bfio/structures/context.hpp"
 #include "bfio/structures/data.hpp"
 #include "bfio/structures/htree_walker.hpp"
 #include "bfio/structures/low_rank_potential.hpp"

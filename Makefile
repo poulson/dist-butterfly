@@ -43,6 +43,7 @@ includefiles = bfio.hpp \
                bfio/freq_to_spatial/initialize_weights.hpp \
                bfio/freq_to_spatial/spatial_weight_recursion.hpp \
                bfio/freq_to_spatial/switch_to_spatial_interp.hpp  \
+               bfio/structures/context.hpp \
                bfio/structures/data.hpp \
                bfio/structures/htree_walker.hpp \
                bfio/structures/low_rank_potential.hpp \
@@ -51,7 +52,6 @@ includefiles = bfio.hpp \
                bfio/tools/blas.hpp \
                bfio/tools/flatten_htree_index.hpp \
                bfio/tools/imag_exp.hpp \
-               bfio/tools/lagrange.hpp \
                bfio/tools/local_data.hpp \
                bfio/tools/mpi.hpp \
                bfio/tools/twiddle.hpp \

@@ -22,7 +22,6 @@
 #include "bfio/structures/data.hpp"
 #include "bfio/structures/amplitude_functor.hpp"
 #include "bfio/structures/phase_functor.hpp"
-#include "bfio/tools/lagrange.hpp"
 
 namespace bfio {
 
@@ -32,6 +31,7 @@ class LowRankSource
 {
     const AmplitudeFunctor<R,d>& _Amp;
     const PhaseFunctor<R,d>& _Phi;
+    const Context<R,d,q>& _context;
     Array<R,d> _wB;
     Array<R,d> _x0;
     Array<R,d> _p0;
@@ -41,8 +41,9 @@ class LowRankSource
 public:
     LowRankSource
     ( const AmplitudeFunctor<R,d>& Amp,
-      const PhaseFunctor<R,d>& Phi )
-    : _Amp(Amp), _Phi(Phi)
+      const PhaseFunctor<R,d>& Phi,
+      const Context<R,d,q>& context )
+    : _Amp(Amp), _Phi(Phi), _context(context)
     { }
 
     const AmplitudeFunctor<R,d>&
@@ -52,6 +53,10 @@ public:
     const PhaseFunctor<R,d>&
     GetPhaseFunctor() const
     { return _Phi; }
+
+    const Context<R,d,q>&
+    GetContext() const
+    { return _context; }
 
     const Array<R,d>&
     GetSpatialCenter() const
@@ -118,23 +123,19 @@ LowRankSource<R,d,q>::operator()( const Array<R,d>& p )
         C beta = ImagExp( TwoPi*_Phi(_x0,_pointGrid[t]) );
         if( _Amp.algorithm == MiddleSwitch )
         {
-            value += Lagrange<R,d,q>(t,pRef) * _weightGrid[t] / beta;
+            value += _context.Lagrange(t,pRef) * _weightGrid[t] / beta;
         }
         else if( _Amp.algorithm == Prefactor )
         {
-            value += Lagrange<R,d,q>(t,pRef) * _weightGrid[t] /
+            value += _context.Lagrange(t,pRef) * _weightGrid[t] /
                      ( _Amp(_x0,_pointGrid[t]) * beta );
         }
     }
     C beta = ImagExp( TwoPi*_Phi(_x0,p) );
     if( _Amp.algorithm == MiddleSwitch )
-    {
         value *= beta;
-    }
     else if( _Amp.algorithm == Prefactor )
-    {
         value *= _Amp(_x0,p) * beta;
-    }
 
     return value;
 }
