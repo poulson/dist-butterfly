@@ -16,20 +16,21 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "bfio.hpp"
-using namespace std;
-using namespace bfio;
 
+namespace {
 void 
 Usage()
 {
-    cout << "ConstrainedHTreeWalker <N> <log2Dim[0]> ... <log2Dim[d-1]>" 
-         << endl;
-    cout << "  N: number of indices of the HTree to iterate over" << endl;
-    cout << "  log2Dim[j]: log2 of the number of boxes in dimension j" << endl;
-    cout << endl;
+    std::cout << "ConstrainedHTreeWalker <N> <log2Dim[0]> ... <log2Dim[d-1]>" 
+              << std::endl
+              << "  N: number of indices of the HTree to iterate over" 
+              << std::endl
+              << "  log2Dim[j]: log2 of the number of boxes in dimension j" 
+              << std::endl << std::endl;
 }
+} // anonymous namespace
 
-static const size_t d = 3;
+static const std::size_t d = 3;
 
 int
 main
@@ -46,34 +47,34 @@ main
         MPI_Finalize();
         return 0;
     }
-    const size_t N = atoi(argv[1]);
-    tr1::array<size_t,d> log2BoxesPerDim;
-    for( size_t j=0; j<d; ++j )
+    const std::size_t N = atoi(argv[1]);
+    std::tr1::array<std::size_t,d> log2BoxesPerDim;
+    for( std::size_t j=0; j<d; ++j )
         log2BoxesPerDim[j] = atoi(argv[2+j]);
 
     try
     {
         if( rank == 0 )
         {
-            ConstrainedHTreeWalker<d> walker( log2BoxesPerDim );
-            for( size_t i=0; i<N; ++i, walker.Walk() )
+            bfio::ConstrainedHTreeWalker<d> walker( log2BoxesPerDim );
+            for( std::size_t i=0; i<N; ++i, walker.Walk() )
             {
-                tr1::array<size_t,d> A = walker.State();
-                cout << i << ": ";
-                for( size_t j=0; j<d; ++j )
-                    cout << A[j] << " ";
-                cout << "; flattened=" 
-                     << FlattenConstrainedHTreeIndex( A, log2BoxesPerDim ) 
-                     << endl;
+                const std::tr1::array<std::size_t,d> A = walker.State();
+                const size_t k = 
+                    bfio::FlattenConstrainedHTreeIndex( A, log2BoxesPerDim );
+                std::cout << i << ": ";
+                for( std::size_t j=0; j<d; ++j )
+                    std::cout << A[j] << " ";
+                std::cout << "; flattened=" << k << std::endl;
             }
         }
     }
-    catch( const exception& e )
+    catch( const std::exception& e )
     {
-        ostringstream msg;
-        msg << "Caught exception on process " << rank << ":" << endl;
-        msg << "   " << e.what() << endl;
-        cout << msg.str();
+        std::ostringstream msg;
+        msg << "Caught exception on process " << rank << ":" << std::endl
+            << "   " << e.what() << std::endl;
+        std::cout << msg.str();
     }
 
     MPI_Finalize();

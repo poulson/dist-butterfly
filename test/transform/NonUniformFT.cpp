@@ -20,46 +20,53 @@
 #include <fstream>
 #include <memory>
 #include "bfio.hpp"
-using namespace std;
-using namespace bfio;
 
+namespace {
 void 
 Usage()
 {
-    cout << "NonUniformFT <N> <M> <testAccuracy?>" << endl;
-    cout << "  N: power of 2, the frequency spread in each dimension" << endl;
-    cout << "  M: number of random sources to instantiate" << endl;
-    cout << "  testAccuracy?: tests accuracy iff 1" << endl;
-    cout << "  visualize?: creates data files iff 1" << endl;
-    cout << endl;
+    std::cout << "NonUniformFT <N> <M> <testAccuracy?>" 
+              << std::endl
+              << "  N: power of 2, the frequency spread in each dimension" 
+              << std::endl 
+              << "  M: number of random sources to instantiate" 
+              << std::endl
+              << "  testAccuracy?: tests accuracy iff 1" 
+              << std::endl 
+              << "  visualize?: creates data files iff 1" 
+              << std::endl << std::endl;
 }
+} // anonymous namespace
 
 // Define the dimension of the problem and the order of interpolation
-static const size_t d = 2;
-static const size_t q = 8;
+static const std::size_t d = 2;
+static const std::size_t q = 8;
 
 // If we test the accuracy, define the number of tests to perform per box
-static const size_t numAccuracyTestsPerBox = 10;
+static const std::size_t numAccuracyTestsPerBox = 10;
 
 // If we visualize the results, define the number of samples per box per dim.
-static const size_t numVizSamplesPerBoxDim = 3;
-static const size_t numVizSamplesPerBox = Pow<numVizSamplesPerBoxDim,d>::val;
+static const std::size_t numVizSamplesPerBoxDim = 3;
+static const std::size_t numVizSamplesPerBox = 
+    bfio::Pow<numVizSamplesPerBoxDim,d>::val;
 
 template<typename R>
-class Unity : public AmplitudeFunctor<R,d>
+class Unity : public bfio::AmplitudeFunctor<R,d>
 {
 public:
-    complex<R>
-    operator() ( const tr1::array<R,d>& x, const tr1::array<R,d>& p ) const
-    { return complex<R>(1); }
+    std::complex<R>
+    operator() 
+    ( const std::tr1::array<R,d>& x, const std::tr1::array<R,d>& p ) const
+    { return std::complex<R>(1); }
 };
 
 template<typename R>
-class Fourier : public PhaseFunctor<R,d>
+class Fourier : public bfio::PhaseFunctor<R,d>
 {
 public:
     R
-    operator() ( const tr1::array<R,d>& x, const tr1::array<R,d>& p ) const
+    operator() 
+    ( const std::tr1::array<R,d>& x, const std::tr1::array<R,d>& p ) const
     {
         return x[0]*p[0]+x[1]*p[1];
     }
@@ -76,10 +83,13 @@ main
     MPI_Comm_rank( comm, &rank );
     MPI_Comm_size( comm, &numProcesses );
 
-    if( !IsPowerOfTwo(numProcesses) )
+    if( !bfio::IsPowerOfTwo(numProcesses) )
     {
         if( rank == 0 )
-            cout << "Must run with a power of two number of cores." << endl;
+        {
+            std::cout << "Must run with a power of two number of cores." 
+                      << std::endl;
+        }
         MPI_Finalize();
         return 0;
     }
@@ -91,24 +101,27 @@ main
         MPI_Finalize();
         return 0;
     }
-    const size_t N = atoi(argv[1]);
-    const size_t M = atoi(argv[2]);
+    const std::size_t N = atoi(argv[1]);
+    const std::size_t M = atoi(argv[2]);
     const bool testAccuracy = atoi(argv[3]);
     const bool visualize = atoi(argv[4]);
 
-    const size_t log2N = Log2( N );
-    const size_t log2NumProcesses = Log2( numProcesses );
+    const std::size_t log2N = bfio::Log2( N );
+    const std::size_t log2NumProcesses = bfio::Log2( numProcesses );
     if( log2NumProcesses > d*log2N )
     {
         if( rank == 0 )
-            cout << "Cannot run with more than N^d processes." << endl;
+        {
+            std::cout << "Cannot run with more than N^d processes." 
+                      << std::endl;
+        }
         MPI_Finalize();
         return 0;
     }
 
     // Set our spatial and frequency boxes
-    Box<double,d> freqBox, spatialBox;
-    for( size_t j=0; j<d; ++j )
+    bfio::Box<double,d> freqBox, spatialBox;
+    for( std::size_t j=0; j<d; ++j )
     {
         freqBox.offsets[j] = -0.5*N;
         freqBox.widths[j] = N;
@@ -118,12 +131,13 @@ main
 
     if( rank == 0 )
     {
-        ostringstream msg;
+        std::ostringstream msg;
         msg << "Will distribute " << M << " random sources over the frequency " 
             << "domain, which will be split into " << N 
             << " boxes in each of the " << d << " dimensions and distributed "
-            << "amongst " << numProcesses << " processes." << endl << endl;
-        cout << msg.str();
+            << "amongst " << numProcesses << " processes." 
+            << std::endl << std::endl;
+        std::cout << msg.str();
     }
 
     try 
@@ -136,30 +150,30 @@ main
         srand( seed );
 
         // Compute the box that our process owns within the frequency box
-        Box<double,d> myFreqBox;
-        LocalFreqPartitionData( freqBox, myFreqBox, comm );
+        bfio::Box<double,d> myFreqBox;
+        bfio::LocalFreqPartitionData( freqBox, myFreqBox, comm );
 
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
         double L1Sources = 0;
-        vector< Source<double,d> > mySources;
-        vector< Source<double,d> > globalSources;
+        std::vector< bfio::Source<double,d> > mySources;
+        std::vector< bfio::Source<double,d> > globalSources;
         if( testAccuracy || visualize )
         {
             globalSources.resize( M );
-            for( size_t i=0; i<M; ++i )
+            for( std::size_t i=0; i<M; ++i )
             {
-                for( size_t j=0; j<d; ++j )
+                for( std::size_t j=0; j<d; ++j )
                 {
                     globalSources[i].p[j] = freqBox.offsets[j] + 
-                        freqBox.widths[j]*Uniform<double>(); 
+                        freqBox.widths[j]*bfio::Uniform<double>(); 
                 }
-                globalSources[i].magnitude = 1.*(2*Uniform<double>()-1); 
-                L1Sources += abs(globalSources[i].magnitude);
+                globalSources[i].magnitude = 1.*(2*bfio::Uniform<double>()-1); 
+                L1Sources += std::abs(globalSources[i].magnitude);
 
                 // Check if we should push this source onto our local list
                 bool isMine = true;
-                for( size_t j=0; j<d; ++j )
+                for( std::size_t j=0; j<d; ++j )
                 {
                     double u = globalSources[i].p[j];
                     double start = myFreqBox.offsets[j];
@@ -173,19 +187,20 @@ main
         }
         else
         {
-            size_t numLocalSources = 
+            std::size_t numLocalSources = 
                 ( rank<(int)(M%numProcesses) 
                   ? M/numProcesses+1 : M/numProcesses );
             mySources.resize( numLocalSources );
-            for( size_t i=0; i<numLocalSources; ++i )
+            for( std::size_t i=0; i<numLocalSources; ++i )
             {
-                for( size_t j=0; j<d; ++j )
+                for( std::size_t j=0; j<d; ++j )
                 {
-                    mySources[i].p[j] = myFreqBox.offsets[j] + 
-                                        Uniform<double>()*myFreqBox.widths[j];
+                    mySources[i].p[j] = 
+                        myFreqBox.offsets[j] + 
+                        bfio::Uniform<double>()*myFreqBox.widths[j];
                 }
-                mySources[i].magnitude = 1.*(2*Uniform<double>()-1);
-                L1Sources += abs(mySources[i].magnitude);
+                mySources[i].magnitude = 1.*(2*bfio::Uniform<double>()-1);
+                L1Sources += std::abs(mySources[i].magnitude);
             }
         }
 
@@ -195,60 +210,65 @@ main
 
         // Create a context, which includes all of the precomputation
         if( rank == 0 )
-            cout << "Creating context..." << endl;
-        Context<double,d,q> context;
+            std::cout << "Creating context..." << std::endl;
+        bfio::Context<double,d,q> context;
 
         // Run the algorithm
-        auto_ptr< const PotentialField<double,d,q> > u;
+        std::auto_ptr< const bfio::PotentialField<double,d,q> > u;
         if( rank == 0 )
-            cout << "Starting transform..." << endl;
+            std::cout << "Starting transform..." << std::endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        u = FreqToSpatial
+        u = bfio::FreqToSpatial
         ( N, freqBox, spatialBox, unity, fourier, context, mySources, comm );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
         if( rank == 0 )
         {
-            cout << "Runtime: " << stopTime-startTime << " seconds." << endl;
-            cout << endl;
+            std::cout << "Runtime: " << stopTime-startTime << " seconds." 
+                      << std::endl << std::endl;
         }
 
         if( testAccuracy )
         {
-            const Box<double,d>& myBox = u->GetBox();
-            const size_t numSubboxes = u->GetNumSubboxes();
-            const size_t numTests = numSubboxes*numAccuracyTestsPerBox;
+            const bfio::Box<double,d>& myBox = u->GetBox();
+            const std::size_t numSubboxes = u->GetNumSubboxes();
+            const std::size_t numTests = numSubboxes*numAccuracyTestsPerBox;
 
             // Compute error estimates using a constant number of samples within
             // each box in the resulting approximation of the transform.
             if( rank == 0 )
-                cout << "Testing accuracy with O(N^d) samples..." << endl;
+            {
+                std::cout << "Testing accuracy with O(N^d) samples..." 
+                          << std::endl;
+            }
             double myL2ErrorSquared = 0;
             double myL2TruthSquared = 0;
             double myLinfError = 0;
-            for( size_t k=0; k<numTests; ++k )
+            for( std::size_t k=0; k<numTests; ++k )
             {
                 // Compute a random point in our process's spatial box
-                tr1::array<double,d> x;
-                for( size_t j=0; j<d; ++j )
-                    x[j] = myBox.offsets[j] + Uniform<double>()*myBox.widths[j];
+                std::tr1::array<double,d> x;
+                for( std::size_t j=0; j<d; ++j )
+                    x[j] = myBox.offsets[j] + 
+                           bfio::Uniform<double>()*myBox.widths[j];
 
                 // Evaluate our potential field at x and compare against truth
-                complex<double> approx = u->Evaluate( x );
-                complex<double> truth(0.,0.);
-                for( size_t m=0; m<globalSources.size(); ++m )
+                std::complex<double> approx = u->Evaluate( x );
+                std::complex<double> truth(0.,0.);
+                for( std::size_t m=0; m<globalSources.size(); ++m )
                 {
-                    complex<double> beta =
-                        ImagExp( TwoPi*fourier(x,globalSources[m].p) );
+                    std::complex<double> beta =
+                        bfio::ImagExp
+                        ( bfio::TwoPi*fourier(x,globalSources[m].p) );
                     truth += beta * globalSources[m].magnitude;
                 }
-                double absError = abs(approx-truth);
-                double absTruth = abs(truth);
+                double absError = std::abs(approx-truth);
+                double absTruth = std::abs(truth);
 
                 myL2ErrorSquared += absError*absError;
                 myL2TruthSquared += absTruth*absTruth;
-                myLinfError = max( myLinfError, absError );
+                myLinfError = std::max( myLinfError, absError );
             }
 
             double L2ErrorSquared;
@@ -264,39 +284,39 @@ main
             ( &myLinfError, &LinfError, 1, MPI_DOUBLE, MPI_MAX, 0, comm );
             if( rank == 0 )
             {   
-                cout << "---------------------------------------------" << endl;
-                cout << "Estimate of relative ||e||_2:    "
-                     << sqrt(L2ErrorSquared/L2TruthSquared) << endl;
-                cout << "Estimate of ||e||_inf:           "                     
-                     << LinfError << endl;
-                cout << "||f||_1:                         "
-                     << L1Sources << endl;
-                cout << "Estimate of ||e||_inf / ||f||_1: "
-                     << LinfError/L1Sources << endl;
-                cout << endl;
+                std::cout << "---------------------------------------------" 
+                          << std::endl 
+                          << "Estimate of relative ||e||_2:    "
+                          << sqrt(L2ErrorSquared/L2TruthSquared) << std::endl
+                          << "Estimate of ||e||_inf:           "  
+                          << LinfError << std::endl
+                          << "||f||_1:                         "
+                          << L1Sources << std::endl
+                          << "Estimate of ||e||_inf / ||f||_1: "
+                          << LinfError/L1Sources << std::endl << std::endl;
             }
         }
 
         if( visualize )
         {
-            ostringstream basenameStream;
+            std::ostringstream basenameStream;
             basenameStream << "fourier-N=" << N << "-" << "q=" << q
                            << "-rank=" << rank;
-            string basename = basenameStream.str();
+            std::string basename = basenameStream.str();
 
             // Columns 0-(d-1) contain the coordinates of the sources, 
             // and columns d and d+1 contain the real and complex components of
             // the magnitudes of the sources.
             if( rank == 0 )
-                cout << "Creating sources file..." << endl;
-            ofstream file;
+                std::cout << "Creating sources file..." << std::endl;
+            std::ofstream file;
             file.open( (basename+"-sources.dat").c_str() );
-            for( size_t i=0; i<globalSources.size(); ++i )
+            for( std::size_t i=0; i<globalSources.size(); ++i )
             {
-                for( size_t j=0; j<d; ++j )
+                for( std::size_t j=0; j<d; ++j )
                     file << globalSources[i].p[j] << " ";
-                file << real(globalSources[i].magnitude) << " "
-                     << imag(globalSources[i].magnitude) << endl;
+                file << std::real(globalSources[i].magnitude) << " "
+                     << std::imag(globalSources[i].magnitude) << std::endl;
             }
             file.close();
 
@@ -306,68 +326,70 @@ main
             // components of the approximate solution, and columns d+4 and d+5
             // contain the real and complex parts of the error, truth-approx.
             if( rank == 0 )
-                cout << "Creating results file..." << endl;
+                std::cout << "Creating results file..." << std::endl;
             file.open( (basename+"-results.dat").c_str() );
-            const Box<double,d>& myBox = u->GetBox();
-            const tr1::array<double,d>& wA = u->GetSubboxWidths();
-            const tr1::array<size_t,d>& log2SubboxesPerDim =
+            const bfio::Box<double,d>& myBox = u->GetBox();
+            const std::tr1::array<double,d>& wA = u->GetSubboxWidths();
+            const std::tr1::array<std::size_t,d>& log2SubboxesPerDim =
                 u->GetLog2SubboxesPerDim();
-            const size_t numSubboxes = u->GetNumSubboxes();
-            const size_t numVizSamples = numVizSamplesPerBox*numSubboxes;
+            const std::size_t numSubboxes = u->GetNumSubboxes();
+            const std::size_t numVizSamples = numVizSamplesPerBox*numSubboxes;
 
-            tr1::array<size_t,d> numSamplesUpToDim;
-            for( size_t j=0; j<d; ++j )
+            std::tr1::array<std::size_t,d> numSamplesUpToDim;
+            for( std::size_t j=0; j<d; ++j )
             {
                 numSamplesUpToDim[j] = 1;
-                for( size_t i=0; i<j; ++i )
+                for( std::size_t i=0; i<j; ++i )
                 {
                     numSamplesUpToDim[j] *=
                         numVizSamplesPerBoxDim << log2SubboxesPerDim[i];
                 }
             }
 
-            for( size_t k=0; k<numVizSamples; ++k )
+            for( std::size_t k=0; k<numVizSamples; ++k )
             {
                 // Extract our indices in each dimension
-                tr1::array<size_t,d> coords;
-                for( size_t j=0; j<d; ++j )
+                std::tr1::array<std::size_t,d> coords;
+                for( std::size_t j=0; j<d; ++j )
                     coords[j] = (k/numSamplesUpToDim[j]) %
                                 (numVizSamplesPerBoxDim<<log2SubboxesPerDim[j]);
 
                 // Compute the location of our sample
-                tr1::array<double,d> x;
-                for( size_t j=0; j<d; ++j )
+                std::tr1::array<double,d> x;
+                for( std::size_t j=0; j<d; ++j )
                 {
                     x[j] = myBox.offsets[j] +
                            coords[j]*wA[j]/numVizSamplesPerBoxDim;
                 }
 
-                complex<double> truth(0,0);
-                for( size_t m=0; m<globalSources.size(); ++m )
+                std::complex<double> truth(0,0);
+                for( std::size_t m=0; m<globalSources.size(); ++m )
                 {
-                    complex<double> beta =
-                        ImagExp(TwoPi*fourier(x,globalSources[m].p));
+                    std::complex<double> beta =
+                        bfio::ImagExp
+                        ( bfio::TwoPi*fourier(x,globalSources[m].p) );
                     truth += beta * globalSources[m].magnitude;
                 }
-                complex<double> approx = u->Evaluate( x );
-                complex<double> error = truth - approx;
+                std::complex<double> approx = u->Evaluate( x );
+                std::complex<double> error = truth - approx;
 
                 // Write out this sample
-                for( size_t j=0; j<d; ++j )
+                for( std::size_t j=0; j<d; ++j )
                     file << x[j] << " ";
-                file << real(truth)  << " " << imag(truth)  << " "
-                     << real(approx) << " " << imag(approx) << " "
-                     << real(error)  << " " << imag(error)  << endl;
+                file << std::real(truth)  << " " << std::imag(truth)  << " "
+                     << std::real(approx) << " " << std::imag(approx) << " "
+                     << std::real(error)  << " " << std::imag(error)  
+                     << std::endl;
             }
             file.close();
         }
     }
-    catch( const exception& e )
+    catch( const std::exception& e )
     {
-        ostringstream msg;
-        msg << "Caught exception on process " << rank << ":" << endl;
-        msg << "   " << e.what() << endl;
-        cout << msg.str();
+        std::ostringstream msg;
+        msg << "Caught exception on process " << rank << ":" << std::endl
+            << "   " << e.what() << std::endl;
+        std::cout << msg.str();
     }
 
     MPI_Finalize();

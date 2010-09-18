@@ -18,35 +18,40 @@
 #include <ctime>
 #include <memory>
 #include "bfio.hpp"
-using namespace std;
-using namespace bfio;
 
+namespace {
 void 
 Usage()
 {
-    cout << "Random3DWaves <N> <M> <T> <nT>" << endl;
-    cout << "  N: power of 2, the frequency spread in each dimension" << endl;
-    cout << "  M: number of random sources to instantiate" << endl;
-    cout << "  T: time to simulate to" << endl;
-    cout << "  nT: number of timesteps" << endl;
-    cout << endl;
+    std::cout << "Random3DWaves <N> <M> <T> <nT>" 
+              << std::endl
+              << "  N: power of 2, the frequency spread in each dimension" 
+              << std::endl
+              << "  M: number of random sources to instantiate" 
+              << std::endl
+              << "  T: time to simulate to" 
+              << std::endl
+              << "  nT: number of timesteps" 
+              << std::endl << std::endl;
 }
+} // anonymous namespace
 
 // Define the dimension of the problem and the order of interpolation
-static const size_t d = 3;
-static const size_t q = 5;
+static const std::size_t d = 3;
+static const std::size_t q = 5;
 
 template<typename R>
-class Unity : public AmplitudeFunctor<R,d>
+class Unity : public bfio::AmplitudeFunctor<R,d>
 {
 public:
-    complex<R>
-    operator() ( const tr1::array<R,d>& x, const tr1::array<R,d>& p ) const
-    { return complex<R>(1); }
+    std::complex<R>
+    operator() 
+    ( const std::tr1::array<R,d>& x, const std::tr1::array<R,d>& p ) const
+    { return std::complex<R>(1); }
 };
  
 template<typename R>
-class UpWave : public PhaseFunctor<R,d>
+class UpWave : public bfio::PhaseFunctor<R,d>
 {
     R _t;
 public:
@@ -56,7 +61,8 @@ public:
     R GetTime() const { return _t; }
 
     R
-    operator() ( const tr1::array<R,d>& x, const tr1::array<R,d>& p ) const
+    operator() 
+    ( const std::tr1::array<R,d>& x, const std::tr1::array<R,d>& p ) const
     { 
         return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
                _t * sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
@@ -64,7 +70,7 @@ public:
 };
 
 template<typename R>
-class DownWave : public PhaseFunctor<R,d>
+class DownWave : public bfio::PhaseFunctor<R,d>
 {
     R _t;
 public:
@@ -74,7 +80,8 @@ public:
     R GetTime() const { return _t; }
 
     R
-    operator() ( const tr1::array<R,d>& x, const tr1::array<R,d>& p ) const
+    operator() 
+    ( const std::tr1::array<R,d>& x, const std::tr1::array<R,d>& p ) const
     {
         return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] - 
                 _t * sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
@@ -92,10 +99,13 @@ main
     MPI_Comm_rank( comm, &rank );
     MPI_Comm_size( comm, &numProcesses );
 
-    if( !IsPowerOfTwo(numProcesses) )
+    if( !bfio::IsPowerOfTwo(numProcesses) )
     {
         if( rank == 0 )
-            cout << "Must run with a power of two number of cores." << endl;
+        {
+            std::cout << "Must run with a power of two number of cores." 
+                      << std::endl;
+        }
         MPI_Finalize();
         return 0;
     }
@@ -107,14 +117,14 @@ main
         MPI_Finalize();
         return 0;
     }
-    const size_t N = atoi(argv[1]);
-    const size_t M = atoi(argv[2]);
-    const double   T = atof(argv[3]);
-    const size_t nT = atoi(argv[4]);
+    const std::size_t N = atoi(argv[1]);
+    const std::size_t M = atoi(argv[2]);
+    const double T = atof(argv[3]);
+    const std::size_t nT = atoi(argv[4]);
 
     // Define the spatial and frequency boxes
-    Box<double,d> freqBox, spatialBox;
-    for( size_t j=0; j<d; ++j )
+    bfio::Box<double,d> freqBox, spatialBox;
+    for( std::size_t j=0; j<d; ++j )
     {
         freqBox.offsets[j] = -0.5*N;
         freqBox.widths[j] = N;
@@ -124,38 +134,40 @@ main
 
     if( rank == 0 )
     {
-        ostringstream msg;
+        std::ostringstream msg;
         msg << "Will distribute " << M << " random sources over the frequency "
             << "domain, which will be split into " << N
             << " boxes in each of the " << d << " dimensions and distributed "
             << "amongst " << numProcesses << " processes. The simulation will "
             << "be over " << T << " units of time with " << nT << " timesteps." 
-            << endl << endl;
-        cout << msg.str();
+            << std::endl << std::endl;
+        std::cout << msg.str();
     }
 
     try 
     {
         // Compute the box that our process owns
-        Box<double,d> myFreqBox;
-        LocalFreqPartitionData( freqBox, myFreqBox, comm );
+        bfio::Box<double,d> myFreqBox;
+        bfio::LocalFreqPartitionData( freqBox, myFreqBox, comm );
 
         // Seed our process
         long seed = time(0);
         srand( seed );
 
         // Now generate random sources in our frequency box
-        size_t numLocalSources = ( rank<(int)(M%numProcesses) 
-                                     ? M/numProcesses+1 : M/numProcesses );
-        vector< Source<double,d> > mySources( numLocalSources );
-        for( size_t i=0; i<numLocalSources; ++i )
+        std::size_t numLocalSources = 
+            ( rank<(int)(M%numProcesses) 
+              ? M/numProcesses+1 : M/numProcesses );
+        std::vector< bfio::Source<double,d> > mySources( numLocalSources );
+        for( std::size_t i=0; i<numLocalSources; ++i )
         {
-            for( size_t j=0; j<d; ++j )
+            for( std::size_t j=0; j<d; ++j )
             {
                 mySources[i].p[j] = 
-                    myFreqBox.offsets[j]+Uniform<double>()*myFreqBox.widths[j];
+                    myFreqBox.offsets[j] +
+                    bfio::Uniform<double>()*myFreqBox.widths[j];
             }
-            mySources[i].magnitude = 200*Uniform<double>()-100;
+            mySources[i].magnitude = 200*bfio::Uniform<double>()-100;
         }
 
         // Set up our amplitude and phase functors
@@ -165,49 +177,50 @@ main
 
         // Create a context, which includes all of the precomputation
         if( rank == 0 )
-            cout << "Creating context..." << endl;
-        Context<double,d,q> context;
+            std::cout << "Creating context..." << std::endl;
+        bfio::Context<double,d,q> context;
 
         // Loop over each timestep, computing in parallel, gathering the 
         // results, and then dumping to file
         double deltaT = T/(nT-1);
-        for( size_t i=0; i<nT; ++i )
+        for( std::size_t i=0; i<nT; ++i )
         {
             const double t = i*deltaT;
             upWave.SetTime( t );
             downWave.SetTime( t );
 
-            auto_ptr< const PotentialField<double,d,q> > u;
+            std::auto_ptr< const bfio::PotentialField<double,d,q> > u;
             if( rank == 0 )
             {
-                cout << "t=" << t << endl;
-                cout << "  Starting upWave transform...";
-                cout.flush();
+                std::cout << "t=" << t << std::endl
+                          << "  Starting upWave transform...";
+                std::cout.flush();
             }
-            u = FreqToSpatial
+            u = bfio::FreqToSpatial
             ( N, freqBox, spatialBox, unity, upWave, context, mySources, comm );
 
-            auto_ptr< const PotentialField<double,d,q> > v;
+            std::auto_ptr< const bfio::PotentialField<double,d,q> > v;
             if( rank == 0 )
             {
-                cout << "done" << endl;
-                cout << "  Starting downWave transform...";
+                std::cout << "done" << std::endl
+                          << "  Starting downWave transform...";
+                std::cout.flush();
             }
-            v = FreqToSpatial
+            v = bfio::FreqToSpatial
             ( N, freqBox, spatialBox, unity, downWave, context, mySources, 
               comm );
             if( rank == 0 )
-                cout << "done" << endl;
+                std::cout << "done" << std::endl;
 
-            // TODO: Gather potentials and then dump to VTK file 
+            // TODO: Gather potentials and then dump to VTK file
         }
     }
-    catch( const exception& e )
+    catch( const std::exception& e )
     {
-        ostringstream msg;
-        msg << "Caught exception on process " << rank << ":" << endl;
-        msg << "   " << e.what() << endl;
-        cout << msg.str();
+        std::ostringstream msg;
+        msg << "Caught exception on process " << rank << ":" << std::endl
+            << "   " << e.what() << std::endl << std::endl;
+        std::cout << msg.str();
     }
 
     MPI_Finalize();

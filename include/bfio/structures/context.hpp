@@ -71,7 +71,7 @@ template<typename R,std::size_t d,std::size_t q>
 void Context<R,d,q>::GenerateChebyshevNodes()
 {
     for( std::size_t t=0; t<q; ++t )
-        _chebyshevNodes[t] = 0.5*std::cos<R>(t*Pi/(q-1));
+        _chebyshevNodes[t] = 0.5*cos(static_cast<R>(t*Pi/(q-1)));
 }
 
 template<typename R,std::size_t d,std::size_t q>
@@ -102,7 +102,7 @@ void Context<R,d,q>::GenerateChebyshevGrid()
         for( std::size_t j=0; j<d; ++j )
         {
             std::size_t i = (t/qToThej)%q;
-            _chebyshevGrid[t][j] = 0.5*std::cos<R>(i*Pi/(q-1));
+            _chebyshevGrid[t][j] = 0.5*cos(static_cast<R>(i*Pi/(q-1)));
             qToThej *= q;
         }
     }
