@@ -26,10 +26,10 @@ using namespace bfio;
 void 
 Usage()
 {
-    cout << "VariableUpWave <N> <M> <Amp. Alg.> <testAccuracy?>" << endl;
+    cout << "VariableUpWave <N> <M> <Amp Alg> <testAccuracy?>" << endl;
     cout << "  N: power of 2, the frequency spread in each dimension" << endl;
     cout << "  M: number of random sources to instantiate" << endl;
-    cout << "  Amp. Alg.: 0 for MiddleSwitch, 1 for Prefactor" << endl;
+    cout << "  Amp Alg: middle switch iff 0" << endl;
     cout << "  testAccuracy?: test accuracy iff 1" << endl;
     cout << "  visualize?: create data files iff 1" << endl;
     cout << endl;
@@ -39,36 +39,24 @@ Usage()
 static const unsigned d = 2;
 static const unsigned q = 12;
 
-// Define the number of samples to take from each box
-static const unsigned numTestsPerBox = 1;
+// Define the number of samples to take from each box if testing accuracy
+static const unsigned numAccuracyTestsPerBox = 1;
 
 // If we visualize the results, define the number of samples per box per dim.
 static const unsigned numVizSamplesPerBoxDim = 3;
-
-struct VizSample {
-    Array<double,d> point;
-    complex<double> truth;
-    complex<double> approx;
-    complex<double> error;
-};
-
-// This must be modified if d != 2
-bool
-VizSampleSort( const VizSample& a, const VizSample& b )
-{ return a.point[1]<b.point[1] ||
-         (a.point[1]==b.point[1] && a.point[0]<b.point[0]); }
+static const unsigned numVizSamplesPerBox = Pow<numVizSamplesPerBoxDim,d>::val;
 
 template<typename R>
 class Oscillatory : public AmplitudeFunctor<R,d>
 {
 public:
     Oscillatory<R>( AmplitudeAlgorithm alg )
-    : AmplitudeFunctor<R,d>(alg) 
+    : AmplitudeFunctor<R,d>(alg)
     { }
 
     complex<R>
     operator() ( const Array<R,d>& x, const Array<R,d>& p ) const
-    { 
+    {
         return 1. + 0.5*sin(1*Pi*x[0])*sin(4*Pi*x[1])*
                         sin(3*Pi*p[0])*cos(4*Pi*p[1]);
     }
@@ -80,7 +68,10 @@ class UpWave : public PhaseFunctor<R,d>
 public:
     R
     operator() ( const Array<R,d>& x, const Array<R,d>& p ) const
-    { return x[0]*p[0]+x[1]*p[1]+0.5*sqrt(p[0]*p[0]+p[1]*p[1]); }
+    {
+        return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
+               0.5*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]); 
+    }
 };
 
 int
@@ -120,8 +111,8 @@ main
     Box<double,d> freqBox, spatialBox;
     for( unsigned j=0; j<d; ++j )
     {
-        freqBox.offsets[j] = -0.5*N/8.;
-        freqBox.widths[j] = N/8.;
+        freqBox.offsets[j] = -0.5*N;
+        freqBox.widths[j] = N;
         spatialBox.offsets[j] = 0;
         spatialBox.widths[j] = 1;
     }
@@ -133,9 +124,6 @@ main
             << "domain, which will be split into " << N
             << " boxes in each of the " << d << " dimensions and distributed "
             << "amongst " << numProcesses << " processes." << endl << endl;
-        msg << "We will use the "
-            << ( algorithm==Prefactor ? "Prefactor" : "MiddleSwitch" )
-            << " amplitude algorithm." << endl << endl; 
         cout << msg.str();
     }
 
@@ -163,8 +151,10 @@ main
             for( unsigned i=0; i<M; ++i )
             {
                 for( unsigned j=0; j<d; ++j )
+                {
                     globalSources[i].p[j] = freqBox.offsets[j] + 
                         freqBox.widths[j]*Uniform<double>(); 
+                }
                 globalSources[i].magnitude = 10*(2*Uniform<double>()-1); 
                 L1Sources += abs(globalSources[i].magnitude);
 
@@ -209,17 +199,15 @@ main
             cout << "Creating context..." << endl;
         Context<double,d,q> context;
 
-        // Create a vector for storing the results
-        unsigned numLocalLRPs = NumLocalBoxes<d>( N, comm );
-        vector< LowRankPotential<double,d,q> > myLRPs
-        (numLocalLRPs,LowRankPotential<double,d,q>(oscillatory,upWave,context));
-
         // Run the algorithm
+        auto_ptr< const PotentialField<double,d,q> > u;
         if( rank == 0 )
             cout << "Starting transform..." << endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        FreqToSpatial( N, freqBox, spatialBox, mySources, myLRPs, comm );
+        u = FreqToSpatial
+        ( N, freqBox, spatialBox, oscillatory, upWave, context, mySources, 
+          comm );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
         if( rank == 0 )
@@ -230,105 +218,44 @@ main
 
         if( testAccuracy )
         {
-            // Compute the relative error using 256 random samples on the grid
-            // as in Candes et al.'s ButterflyFIO paper.
+            const Box<double,d>& myBox = u->GetBox();
+            const unsigned numSubboxes = u->GetNumSubboxes();
+            const unsigned numTests = numSubboxes*numAccuracyTestsPerBox;
+
+            // Compute error estimates using a constant number of samples within
+            // each box in the resulting approximation of the transform.
             if( rank == 0 )
-                cout << "Testing accuracy with 256 samples..." << endl;
-            double myL2ErrorSquared256 = 0;
-            double myL2TruthSquared256 = 0;
-            double myLinfError256 = 0;
-            for( unsigned s=0; s<256; ++s )
+                cout << "Test accuracy with O(N^d) samples..." << endl;
+            double myL2ErrorSquared = 0.;
+            double myL2TruthSquared = 0.;
+            double myLinfError = 0.;
+            for( unsigned k=0; k<numTests; ++k )
             {
-                unsigned k = rand() % myLRPs.size();
+                // Compute a random point in our process's spatial box
+                Array<double,d> x;
+                for( unsigned j=0; j<d; ++j )
+                    x[j] = myBox.offsets[j] + Uniform<double>()*myBox.widths[j];
 
-                // Retrieve the spatial center of LRP k
-                Array<double,d> x0 = myLRPs[k].GetSpatialCenter();
-
-                // Evaluate our LRP at x0 and compare against the truth
-                complex<double> u = myLRPs[k]( x0 );
-                complex<double> uTruth(0,0);
+                // Evaluate our potential field at x and compare against truth
+                complex<double> approx = u->Evaluate( x );
+                complex<double> truth(0.,0.);
                 for( unsigned m=0; m<globalSources.size(); ++m )
                 {
-                    complex<double> beta = oscillatory(x0,globalSources[m].p) *
-                        ImagExp( TwoPi*upWave(x0,globalSources[m].p) );
-                    uTruth += beta * globalSources[m].magnitude;
+                    complex<double> beta = 
+                        ImagExp( TwoPi*upWave(x,globalSources[m].p) );
+                    truth += beta * globalSources[m].magnitude;
                 }
-                double absError = abs(u-uTruth);
-                double absTruth = abs(uTruth);
-                myL2ErrorSquared256 += absError*absError;
-                myL2TruthSquared256 += absTruth*absTruth;
-                myLinfError256 = max( myLinfError256, absError );
+                double absError = abs(approx-truth);
+                double absTruth = abs(truth);
+                myL2ErrorSquared += absError*absError;
+                myL2TruthSquared += absTruth*absTruth;
+                myLinfError = max( myLinfError, absError );
             }
-
-            double L2ErrorSquared256;
-            double L2TruthSquared256;
-            double LinfError256;
-            MPI_Reduce
-            ( &myL2ErrorSquared256, &L2ErrorSquared256, 1, MPI_DOUBLE,
-              MPI_SUM, 0, comm );
-            MPI_Reduce
-            ( &myL2TruthSquared256, &L2TruthSquared256, 1, MPI_DOUBLE,
-              MPI_SUM, 0, comm );
-            MPI_Reduce
-            ( &myLinfError256, &LinfError256, 1, MPI_DOUBLE, MPI_MAX, 0, comm );
-            if( rank == 0 )
-            {
-                cout << "---------------------------------------------" << endl;
-                cout << "Estimate of relative ||e||_2:    "
-                     << sqrt(L2ErrorSquared256/L2TruthSquared256) << endl;
-                cout << "Estimate of ||e||_inf:           "
-                     << LinfError256 << endl;
-                cout << "||f||_1:                         "
-                     << L1Sources << endl;
-                cout << "Estimate of ||e||_inf / ||f||_1: "
-                     << LinfError256/L1Sources << endl;
-                cout << endl;
-            }
-
-            // Estimate the error by sampling in all of the N^d boxes
-            if( rank == 0 )
-                cout << "Testing accuracy with O(N^d) samples..." << endl;
-            double myL2ErrorSquared = 0;
-            double myL2TruthSquared = 0;
-            double myLinfError = 0;
-            for( unsigned k=0; k<myLRPs.size(); ++k )
-            {
-                // Retrieve the spatial center of LRP k
-                Array<double,d> x0 = myLRPs[k].GetSpatialCenter();
-
-                for( unsigned s=0; s<numTestsPerBox; ++s )
-                {
-                    // Find a random point in that box
-                    Array<double,d> x;
-                    for( unsigned j=0; j<d; ++j )
-                    {
-                        x[j] = x0[j] + spatialBox.widths[j] /
-                                       (2*N)*(2*Uniform<double>()-1.);
-                    }
-
-                    // Evaluate our LRP at x and compare against truth
-                    complex<double> u = myLRPs[k]( x );
-                    complex<double> uTruth(0.,0.);
-                    for( unsigned m=0; m<globalSources.size(); ++m )
-                    {
-                        Array<double,d>& p = globalSources[m].p;
-                        complex<double> beta = ImagExp( TwoPi*upWave(x,p) );
-                        uTruth += oscillatory(x,p)*beta*
-                                  globalSources[m].magnitude;
-                    }
-                    double absError = abs(u-uTruth);
-                    double absTruth = abs(uTruth);
-                    myL2ErrorSquared += absError*absError;
-                    myL2TruthSquared += absTruth*absTruth;
-                    myLinfError = max( myLinfError, absError );
-                }
-            }
-
             double L2ErrorSquared;
             double L2TruthSquared;
             double LinfError;
             MPI_Reduce
-            ( &myL2ErrorSquared, &L2ErrorSquared, 1, MPI_DOUBLE, MPI_SUM, 0,
+            ( &myL2ErrorSquared, &L2ErrorSquared, 1, MPI_DOUBLE, MPI_SUM, 0, 
               comm );
             MPI_Reduce
             ( &myL2TruthSquared, &L2TruthSquared, 1, MPI_DOUBLE, MPI_SUM, 0,
@@ -336,15 +263,15 @@ main
             MPI_Reduce
             ( &myLinfError, &LinfError, 1, MPI_DOUBLE, MPI_MAX, 0, comm );
             if( rank == 0 )
-            {
+            {   
                 cout << "---------------------------------------------" << endl;
-                cout << "Estimate of relative ||e||_2:    "
+                cout << "Estimate of relative ||e||_2:    " 
                      << sqrt(L2ErrorSquared/L2TruthSquared) << endl;
                 cout << "Estimate of ||e||_inf:           " 
                      << LinfError << endl;
-                cout << "||f||_1:                         "
+                cout << "||f||_1:                         " 
                      << L1Sources << endl;
-                cout << "Estimate of ||e||_inf / ||f||_1: "
+                cout << "Estimate of ||e||_inf / ||f||_1: "  
                      << LinfError/L1Sources << endl;
                 cout << endl;
             }
@@ -352,65 +279,16 @@ main
 
         if( visualize )
         {
-            // Each process creates a sorted Cartesian grid of the true 
-            // solution, the approximate solution, and the error.
-            if( rank == 0 )
-                cout << "Sampling to create files for visualization..." << endl;
-            const unsigned numVizSamplesPerBox =
-                Pow<numVizSamplesPerBoxDim,d>::val;
-            const unsigned numVizSamples = numVizSamplesPerBox*myLRPs.size();
-            vector<VizSample> vizSamples( numVizSamples );
-
-            const Array<double,d> wA = myLRPs[0].GetSpatialWidths();
-
-            // Fill the unsorted vector
-            for( unsigned k=0; k<myLRPs.size(); ++k )
-            {
-                // Retrieve the bottom-left corner of LRP k
-                const Array<double,d> x0 = myLRPs[k].GetSpatialCenter();
-                Array<double,d> xBL;
-                for( unsigned j=0; j<d; ++j )
-                    xBL[j] = x0[j] - wA[j]/2.;
-
-                for( unsigned s=0; s<numVizSamplesPerBox; ++s )
-                {
-                    unsigned pow = 1;
-                    VizSample& v =
-                        vizSamples[numVizSamplesPerBox*k+s];
-                    for( unsigned j=0; j<d; ++j )
-                    {
-                        unsigned i = (s/pow) % numVizSamplesPerBoxDim;
-                        v.point[j] = xBL[j] + i*wA[j]/numVizSamplesPerBoxDim;
-                        pow *= numVizSamplesPerBoxDim;
-                    }
-
-                    v.truth = complex<double>(0,0);
-                    for( unsigned m=0; m<globalSources.size(); ++m )
-                    {
-                        complex<double> beta =
-                            ImagExp(TwoPi*upWave(v.point,globalSources[m].p));
-                        v.truth += beta * globalSources[m].magnitude;
-                    }
-                    v.approx = myLRPs[k]( v.point );
-                    v.error = v.truth-v.approx;
-                }
-            }
-
-            // Sort the vectors from the highest to lowest dimensions
-            if( rank == 0 )
-                cout << "Sorting samples..." << endl;
-            sort( vizSamples.begin(), vizSamples.end(), VizSampleSort );
-
-            if( rank == 0 )
-                cout << "Writing out sorted data..." << endl;
             ostringstream basenameStream;
-            basenameStream << "variableUpWave-N=" << N << "-" << "q=" << q
-                << "-rank=" << rank;
+            basenameStream << "variableUpWave-N=" << N << "-q=" << q 
+                           << "-rank=" << rank;
             string basename = basenameStream.str();
 
             // Columns 0-(d-1) contain the coordinates of the sources, 
             // and columns d and d+1 contain the real and complex components of
             // the magnitudes of the sources.
+            if( rank == 0 )
+                cout << "Creating sources file..." << endl;
             ofstream file;
             file.open( (basename+"-sources.dat").c_str() );
             for( unsigned i=0; i<globalSources.size(); ++i )
@@ -427,17 +305,59 @@ main
             // the true solution, d+2 and d+3 contain the real and complex 
             // components of the approximate solution, and columns d+4 and d+5
             // contain the real and complex parts of the error, truth-approx.
+            if( rank == 0 )
+                cout << "Creating results file..." << endl;
             file.open( (basename+"-results.dat").c_str() );
-            for( unsigned i=0; i<vizSamples.size(); ++i )
+            const Box<double,d>& myBox = u->GetBox();
+            const Array<double,d>& wA = u->GetSubboxWidths();
+            const Array<unsigned,d>& log2SubboxesPerDim =
+                u->GetLog2SubboxesPerDim();
+            const unsigned numSubboxes = u->GetNumSubboxes();
+            const unsigned numVizSamples = numVizSamplesPerBox*numSubboxes;
+
+            Array<unsigned,d> numSamplesUpToDim;
+            for( unsigned j=0; j<d; ++j )
             {
+                numSamplesUpToDim[j] = 1;
+                for( unsigned i=0; i<j; ++i )
+                {
+                    numSamplesUpToDim[j] *=
+                        numVizSamplesPerBoxDim << log2SubboxesPerDim[i];
+                }
+            }
+
+            for( unsigned k=0; k<numVizSamples; ++k )
+            {
+                // Extract our indices in each dimension
+                Array<unsigned,d> coords;
                 for( unsigned j=0; j<d; ++j )
-                    file << vizSamples[i].point[j] << " ";
-                file << real(vizSamples[i].truth) << " "
-                     << imag(vizSamples[i].truth) << " "
-                     << real(vizSamples[i].approx) << " "
-                     << imag(vizSamples[i].approx) << " "
-                     << real(vizSamples[i].error) << " "
-                     << imag(vizSamples[i].error) << endl;
+                    coords[j] = (k/numSamplesUpToDim[j]) %
+                                (numVizSamplesPerBoxDim<<log2SubboxesPerDim[j]);
+
+                // Compute the location of our sample
+                Array<double,d> x;
+                for( unsigned j=0; j<d; ++j )
+                {
+                    x[j] = myBox.offsets[j] +
+                           coords[j]*wA[j]/numVizSamplesPerBoxDim;
+                }
+
+                complex<double> truth(0,0);
+                for( unsigned m=0; m<globalSources.size(); ++m )
+                {
+                    complex<double> beta =
+                        ImagExp(TwoPi*upWave(x,globalSources[m].p));
+                    truth += beta * globalSources[m].magnitude;
+                }
+                complex<double> approx = u->Evaluate( x );
+                complex<double> error = truth - approx;
+
+                // Write out this sample
+                for( unsigned j=0; j<d; ++j )
+                    file << x[j] << " ";
+                file << real(truth)  << " " << imag(truth)  << " "
+                     << real(approx) << " " << imag(approx) << " "
+                     << real(error)  << " " << imag(error)  << endl;
             }
             file.close();
         }

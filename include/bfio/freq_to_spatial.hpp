@@ -20,6 +20,7 @@
 #define BFIO_FREQ_TO_SPATIAL_HPP 1
 
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 
 #include "bfio/structures.hpp"
@@ -39,13 +40,15 @@ namespace bfio {
 // spatial and frequency dimension. q is the number of points in each dimension 
 // of the Chebyshev tensor-product grid (q^d points total).
 template<typename R,unsigned d,unsigned q>
-void
+std::auto_ptr< const PotentialField<R,d,q> >
 FreqToSpatial
 ( const unsigned N,
   const Box<R,d>& freqBox,
   const Box<R,d>& spatialBox,
+  const AmplitudeFunctor<R,d>& Amp,
+  const PhaseFunctor<R,d>& Phi,
+  const Context<R,d,q>& context,
   const std::vector< Source<R,d> >& mySources,
-        std::vector< LowRankPotential<R,d,q> >& myLRPs,
         MPI_Comm comm )
 {
     typedef std::complex<R> C;
@@ -57,18 +60,11 @@ FreqToSpatial
     MPI_Comm_size( comm, &numProcesses ); 
     std::bitset<sizeof(int)*8> rankBits(rank); 
 
-    // Extract our amplitude and phase functions, as well as N
-    const AmplitudeFunctor<R,d>& Amp = myLRPs[0].GetAmplitudeFunctor();
-    const PhaseFunctor<R,d>& Phi = myLRPs[0].GetPhaseFunctor();
-    const Context<R,d,q>& context = myLRPs[0].GetContext();
-
     // Assert that N and size are powers of 2
     if( ! IsPowerOfTwo(N) )
         throw std::runtime_error( "Must use a power of 2 problem size" );
     if( ! IsPowerOfTwo(numProcesses) ) 
         throw std::runtime_error( "Must use a power of 2 number of processes" );
-    if( myLRPs.size() != NumLocalBoxes<d>( N, comm ) )
-        throw std::runtime_error( "Incorrect length for vector of LRPs" );
     const unsigned log2N = Log2( N );
     const unsigned log2NumProcesses = Log2( numProcesses );
     if( log2NumProcesses > d*log2N )
@@ -143,7 +139,7 @@ FreqToSpatial
             // Loop over boxes in spatial domain. 'i' will represent the
             // leaf # w.r.t. the tree implied by cyclically assigning
             // the spatial bisections across the d dims.
-            CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
+            ConstrainedHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
             WeightGridList<R,d,q> oldWeightGridList( weightGridList );
             for( unsigned i=0; 
                  i<(1u<<log2LocalSpatialBoxes); 
@@ -157,7 +153,7 @@ FreqToSpatial
                     x0A[j] = mySpatialBox.offsets[j] + (A[j]+0.5)*wA[j];
 
                 // Loop over the B boxes in frequency domain
-                CHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
+                ConstrainedHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
                 for( unsigned k=0; 
                      k<(1u<<log2LocalFreqBoxes); 
                      ++k, BWalker.Walk() )
@@ -286,7 +282,7 @@ FreqToSpatial
             // distribute the data cyclically in the reverse order over 
             // the d dims, then the ReduceScatter will not require any
             // packing or unpacking.
-            CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
+            ConstrainedHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
             WeightGridList<R,d,q> partialWeightGridList
             ( 1<<log2LocalSpatialBoxes );
             for( unsigned i=0; 
@@ -367,46 +363,15 @@ FreqToSpatial
               context, weightGridList );
         }
     }
-    
-    // Construct Low-Rank Potentials (LRPs) from weights
-    //
-    // TODO: Get rid of LRPs in favor of a PotentialField class.
-    //       This change would get rid of a lot of duplication, as well as 
-    //       making the user's life much easier for evaluating the potential at
-    //       an arbitrary point.
-    {
-        const std::vector< Array<R,d> >& chebyshevGrid = 
-            context.GetChebyshevGrid();
 
-        Array<R,d> wA;
-        for( unsigned j=0; j<d; ++j )
-            wA[j] = spatialBox.widths[j] / N;
+    // Construct the PotentialField
+    std::auto_ptr< const PotentialField<R,d,q> > potentialField( 
+        new PotentialField<R,d,q>
+            ( mySpatialBox,freqBox, log2LocalSpatialBoxesPerDim, Amp, Phi,
+              context, weightGridList )
+    );
 
-        CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
-        for( unsigned i=0; i<myLRPs.size(); ++i, AWalker.Walk() )
-        {
-            const Array<unsigned,d> A = AWalker.State();
-
-            Array<R,d> x0A;
-            for( unsigned j=0; j<d; ++j )
-                x0A[j] = mySpatialBox.offsets[j] + (A[j]+0.5)*wA[j];
-            myLRPs[i].SetSpatialWidths( wA );
-            myLRPs[i].SetSpatialCenter( x0A );
-
-            Array<R,d> p0B;
-            for( unsigned j=0; j<d; ++j )
-                p0B[j] = freqBox.widths[j] / 2;
-            myLRPs[i].SetFreqCenter( p0B );
-
-            PointGrid<R,d,q> pointGrid;
-            for( unsigned t=0; t<q_to_d; ++t )             
-                for( unsigned j=0; j<d; ++j )    
-                    pointGrid[t][j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
-            myLRPs[i].SetPointGrid( pointGrid );
-
-            myLRPs[i].SetWeightGrid( weightGridList[i] );
-        }
-    }
+    return potentialField;
 }
 
 } // bfio

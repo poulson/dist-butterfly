@@ -46,9 +46,8 @@ includefiles = bfio.hpp \
                bfio/structures/context.hpp \
                bfio/structures/data.hpp \
                bfio/structures/htree_walker.hpp \
-               bfio/structures/low_rank_potential.hpp \
-               bfio/structures/low_rank_source.hpp \
                bfio/structures/phase_functor.hpp \
+               bfio/structures/potential_field.hpp \
                bfio/tools/blas.hpp \
                bfio/tools/flatten_htree_index.hpp \
                bfio/tools/imag_exp.hpp \
@@ -65,7 +64,7 @@ includes = $(addprefix $(incdir)/,$(includefiles))
 bindir_debug = $(bindir)/debug
 bindir_release = $(bindir)/release
 
-tests = htree/CHTreeWalker \
+tests = htree/ConstrainedHTreeWalker \
         htree/HTreeWalker \
         transform/GeneralizedRadon \
         transform/NonUniformFT \

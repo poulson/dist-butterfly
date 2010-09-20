@@ -171,37 +171,33 @@ main
         // Loop over each timestep, computing in parallel, gathering the 
         // results, and then dumping to file
         double deltaT = T/(nT-1);
-        unsigned numLocalLRPs = NumLocalBoxes<d>( N, comm );
         for( unsigned i=0; i<nT; ++i )
         {
             const double t = i*deltaT;
             upWave.SetTime( t );
             downWave.SetTime( t );
 
+            auto_ptr< const PotentialField<double,d,q> > u;
             if( rank == 0 )
             {
                 cout << "t=" << t << endl;
                 cout << "  Starting upWave transform...";
                 cout.flush();
             }
-            vector< LowRankPotential<double,d,q> > myUpWaveLRPs
-            (numLocalLRPs,LowRankPotential<double,d,q>(unity,upWave,context));
-            FreqToSpatial
-            ( N, freqBox, spatialBox, mySources, myUpWaveLRPs, comm );
+            u = FreqToSpatial
+            ( N, freqBox, spatialBox, unity, upWave, context, mySources, comm );
 
+            auto_ptr< const PotentialField<double,d,q> > v;
             if( rank == 0 )
             {
                 cout << "done" << endl;
                 cout << "  Starting downWave transform...";
             }
-            vector< LowRankPotential<double,d,q> > myDownWaveLRPs
-            (numLocalLRPs,LowRankPotential<double,d,q>(unity,downWave,context));
-            FreqToSpatial
-            ( N, freqBox, spatialBox, mySources, myDownWaveLRPs, comm );
+            v = FreqToSpatial
+            ( N, freqBox, spatialBox, unity, downWave, context, mySources, 
+              comm );
             if( rank == 0 )
-            {
                 cout << "done" << endl;
-            }
 
             // TODO: Gather potentials and then dump to VTK file 
         }

@@ -16,8 +16,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_AMPLITUDE_FUNCTOR_HPP
-#define BFIO_AMPLITUDE_FUNCTOR_HPP 1
+#ifndef BFIO_STRUCTURES_AMPLITUDE_FUNCTOR_HPP
+#define BFIO_STRUCTURES_AMPLITUDE_FUNCTOR_HPP 1
 
 #include "bfio/structures/data.hpp"
 
@@ -54,5 +54,5 @@ public:
 
 } // bfio
 
-#endif // BFIO_AMPLITUDE_FUNCTOR_HPP
+#endif // BFIO_STRUCTURES_AMPLITUDE_FUNCTOR_HPP
 

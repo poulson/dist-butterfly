@@ -101,7 +101,8 @@ InitializeWeights
             p0[j] = myFreqBox.offsets[j] + (B[j]+0.5)*wB[j];
 
         // Flatten the integer coordinates of B
-        unsigned k = FlattenCHTreeIndex( B, log2LocalFreqBoxesPerDim );
+        unsigned k = 
+            FlattenConstrainedHTreeIndex( B, log2LocalFreqBoxesPerDim );
 
         // Add this point's contribution to the unscaled weights of B. 
         // We evaluate the Lagrangian polynomial on the reference grid, 
@@ -128,7 +129,7 @@ InitializeWeights
     // Loop over all of the boxes to compute the {p_t^B} and prefactors
     // for each delta weight {delta_t^AB}
     const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
-    CHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
+    ConstrainedHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
     for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k, BWalker.Walk() ) 
     {
         const Array<unsigned,d> B = BWalker.State();

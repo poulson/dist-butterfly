@@ -48,7 +48,7 @@ FlattenHTreeIndex
 
 template<unsigned d>
 unsigned
-FlattenCHTreeIndex
+FlattenConstrainedHTreeIndex
 ( const Array<unsigned,d>& x, const Array<unsigned,d>& log2BoxesPerDim )
 {
     // We will accumulate the index into this variable

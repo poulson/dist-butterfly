@@ -16,8 +16,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_DATA_HPP
-#define BFIO_DATA_HPP 1
+#ifndef BFIO_STRUCTURES_DATA_HPP
+#define BFIO_STRUCTURES_DATA_HPP 1
 
 #include <complex>
 
@@ -168,5 +168,5 @@ public:
 
 } // bfio
 
-#endif // BFIO_DATA_HPP
+#endif // BFIO_STRUCTURES_DATA_HPP
 

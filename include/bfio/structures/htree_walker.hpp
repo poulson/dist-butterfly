@@ -16,8 +16,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_HTREE_WALKER_HPP
-#define BFIO_HTREE_WALKER_HPP 1
+#ifndef BFIO_STRUCTURES_HTREE_WALKER_HPP
+#define BFIO_STRUCTURES_HTREE_WALKER_HPP 1
 
 #include <stdexcept>
 #include "bfio/structures/data.hpp"
@@ -91,7 +91,7 @@ public:
 
 // Constrained HTree Walker
 template<unsigned d>
-class CHTreeWalker
+class ConstrainedHTreeWalker
 {
     bool _overflowed;
     unsigned _firstOpenDim;
@@ -100,7 +100,7 @@ class CHTreeWalker
     Array<unsigned,d> _state;
     Array<unsigned,d> _log2BoxesPerDim;
 public:
-    CHTreeWalker( const Array<unsigned,d>& log2BoxesPerDim ) 
+    ConstrainedHTreeWalker( const Array<unsigned,d>& log2BoxesPerDim ) 
     : _overflowed(false), _nextZeroLevel(0), _state(0), 
       _log2BoxesPerDim(log2BoxesPerDim) 
     {
@@ -110,7 +110,7 @@ public:
         _nextZeroDim = _firstOpenDim;
     }
 
-    ~CHTreeWalker() {}
+    ~ConstrainedHTreeWalker() {}
 
     Array<unsigned,d> State()
     { 
@@ -174,5 +174,5 @@ public:
 
 } // bfio
 
-#endif // BFIO_HTREE_WALKER_HPP
+#endif // BFIO_STRUCTURES_HTREE_WALKER_HPP
 

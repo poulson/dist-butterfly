@@ -55,7 +55,7 @@ SwitchToSpatialInterp
     }
 
     const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
-    CHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
+    ConstrainedHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
     WeightGridList<R,d,q> oldWeightGridList( weightGridList );
     for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i, AWalker.Walk() )
     {
@@ -71,7 +71,7 @@ SwitchToSpatialInterp
             for( unsigned j=0; j<d; ++j )
                 xPoints[t][j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
 
-        CHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
+        ConstrainedHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
         for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k, BWalker.Walk() )
         {
             const Array<unsigned,d> B = BWalker.State();

@@ -22,7 +22,8 @@ using namespace bfio;
 void 
 Usage()
 {
-    cout << "HTreeWalker <N> <log2Dim[0]> ... <log2Dim[d-1]>" << endl;
+    cout << "ConstrainedHTreeWalker <N> <log2Dim[0]> ... <log2Dim[d-1]>" 
+         << endl;
     cout << "  N: number of indices of the HTree to iterate over" << endl;
     cout << "  log2Dim[j]: log2 of the number of boxes in dimension j" << endl;
     cout << endl;
@@ -54,7 +55,7 @@ main
     {
         if( rank == 0 )
         {
-            CHTreeWalker<d> walker( log2BoxesPerDim );
+            ConstrainedHTreeWalker<d> walker( log2BoxesPerDim );
             for( unsigned i=0; i<N; ++i, walker.Walk() )
             {
                 Array<unsigned,d> A = walker.State();
@@ -62,7 +63,8 @@ main
                 for( unsigned j=0; j<d; ++j )
                     cout << A[j] << " ";
                 cout << "; flattened=" 
-                     << FlattenCHTreeIndex( A, log2BoxesPerDim ) << endl;
+                     << FlattenConstrainedHTreeIndex( A, log2BoxesPerDim ) 
+                     << endl;
             }
         }
     }

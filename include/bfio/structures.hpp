@@ -22,8 +22,7 @@
 #include "bfio/structures/context.hpp"
 #include "bfio/structures/data.hpp"
 #include "bfio/structures/htree_walker.hpp"
-#include "bfio/structures/low_rank_potential.hpp"
-#include "bfio/structures/low_rank_source.hpp"
+#include "bfio/structures/potential_field.hpp"
 
 #include "bfio/structures/amplitude_functor.hpp"
 #include "bfio/structures/phase_functor.hpp"
