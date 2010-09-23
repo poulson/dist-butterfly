@@ -171,21 +171,9 @@ PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
         for( unsigned j=0; j<d; ++j )
             xt[j] = lrp.x0[j] + _wA[j]*chebyshevGrid[t][j];
         C beta = ImagExp( TwoPi*_Phi(xt,_p0) );
-        if( _Amp.algorithm == MiddleSwitch )
-        {
-            value += _context.Lagrange(t,xRef) * lrp.weightGrid[t] / beta;
-        }
-        else if( _Amp.algorithm == Prefactor )
-        {
-            value += _context.Lagrange(t,xRef) * lrp.weightGrid[t] / 
-                     ( _Amp(xt,_p0) * beta );
-        }
+        value += _context.Lagrange(t,xRef) * lrp.weightGrid[t] / beta;
     }
-    C beta = ImagExp( TwoPi*_Phi(x,_p0) );
-    if( _Amp.algorithm == MiddleSwitch )
-        value *= beta;
-    else if( _Amp.algorithm == Prefactor )
-        value *= _Amp(x,_p0) * beta;
+    value *= ImagExp( TwoPi*_Phi(x,_p0) );
     return value;
 }
 

@@ -110,20 +110,9 @@ InitializeWeights
         Array<R,d> pRef;
         for( unsigned j=0; j<d; ++j )
             pRef[j] = (p[j]-p0[j])/wB[j];
-        const C f = mySources[i].magnitude;
-        const C beta = ImagExp( TwoPi*Phi(x0,p) );
-        if( Amp.algorithm == MiddleSwitch )
-        {
-            const C gamma = beta * f;
-            for( unsigned t=0; t<q_to_d; ++t )
-                weightGridList[k][t] += gamma*context.Lagrange(t,pRef);
-        }
-        else if( Amp.algorithm == Prefactor )
-        {
-            const C gamma = Amp(x0,p) * beta * f;
-            for( unsigned t=0; t<q_to_d; ++t )
-                weightGridList[k][t] += gamma*context.Lagrange(t,pRef);
-        }
+        const C beta = ImagExp( TwoPi*Phi(x0,p) ) * mySources[i].magnitude;
+        for( unsigned t=0; t<q_to_d; ++t )
+            weightGridList[k][t] += beta*context.Lagrange(t,pRef);
     }
 
     // Loop over all of the boxes to compute the {p_t^B} and prefactors
@@ -148,15 +137,7 @@ InitializeWeights
             for( unsigned j=0; j<d; ++j )
                 pt[j] = p0[j] + wB[j]*chebyshevGrid[t][j];
 
-            const C beta = ImagExp( TwoPi*Phi(x0,pt) );
-            if( Amp.algorithm == MiddleSwitch )
-            {
-                weightGridList[k][t] /= beta;
-            }
-            else if( Amp.algorithm == Prefactor )
-            {
-                weightGridList[k][t] /= Amp(x0,pt) * beta; 
-            }
+            weightGridList[k][t] /= ImagExp( TwoPi*Phi(x0,pt) );
         }
     }
 }

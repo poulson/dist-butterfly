@@ -29,7 +29,6 @@ Usage()
     cout << "VariableUpWave <N> <M> <Amp Alg> <testAccuracy?>" << endl;
     cout << "  N: power of 2, the frequency spread in each dimension" << endl;
     cout << "  M: number of random sources to instantiate" << endl;
-    cout << "  Amp Alg: middle switch iff 0" << endl;
     cout << "  testAccuracy?: test accuracy iff 1" << endl;
     cout << "  visualize?: create data files iff 1" << endl;
     cout << endl;
@@ -50,10 +49,6 @@ template<typename R>
 class Oscillatory : public AmplitudeFunctor<R,d>
 {
 public:
-    Oscillatory<R>( AmplitudeAlgorithm alg )
-    : AmplitudeFunctor<R,d>(alg)
-    { }
-
     complex<R>
     operator() ( const Array<R,d>& x, const Array<R,d>& p ) const
     {
@@ -93,7 +88,7 @@ main
         return 0;
     }
 
-    if( argc != 6 )
+    if( argc != 5 )
     {
         if( rank == 0 )
             Usage();
@@ -102,10 +97,8 @@ main
     }
     const unsigned N = atoi(argv[1]);
     const unsigned M = atoi(argv[2]);
-    const AmplitudeAlgorithm algorithm = 
-        ( atoi(argv[3]) ? Prefactor : MiddleSwitch );
-    const bool testAccuracy = atoi(argv[4]);
-    const bool visualize = atoi(argv[5]);
+    const bool testAccuracy = atoi(argv[3]);
+    const bool visualize = atoi(argv[4]);
 
     // Set the frequency and spatial boxes
     Box<double,d> freqBox, spatialBox;
@@ -191,7 +184,7 @@ main
         }
 
         // Set up our amplitude and phase functors
-        Oscillatory<double> oscillatory(algorithm);
+        Oscillatory<double> oscillatory;
         UpWave<double> upWave;
 
         // Create a context, which includes all of the precomputation

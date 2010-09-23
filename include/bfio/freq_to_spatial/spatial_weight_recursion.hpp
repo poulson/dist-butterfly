@@ -76,17 +76,7 @@ SpatialWeightRecursion
             for( unsigned j=0; j<d; ++j )
                 xtPrimeAp[j] = x0Ap[j] + (2*wA[j])*chebyshevGrid[tPrime][j];
             const C beta = ImagExp( TwoPi*Phi(xtPrimeAp,p0Bc) );
-            if( Amp.algorithm == MiddleSwitch )
-            {
-                scaledWeightGrid[tPrime] = 
-                    oldWeightGridList[key][tPrime] / beta;
-            }
-            else if( Amp.algorithm == Prefactor )
-            {
-                scaledWeightGrid[tPrime] = 
-                    oldWeightGridList[key][tPrime] / 
-                    ( Amp(xtPrimeAp,p0Bc) * beta );
-            }
+            scaledWeightGrid[tPrime] = oldWeightGridList[key][tPrime]/beta;
         }
 
         // Step 2: perform the matrix-vector multiply
@@ -104,14 +94,7 @@ SpatialWeightRecursion
             for( unsigned j=0; j<d; ++j )
                 xtA[j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
             const C beta = ImagExp( TwoPi*Phi(xtA,p0Bc) );
-            if( Amp.algorithm == MiddleSwitch )
-            {
-                weightGrid[t] += beta * expandedWeightGrid[t];
-            }
-            else if( Amp.algorithm == Prefactor )
-            {
-                weightGrid[t] += Amp(xtA,p0Bc) * beta * expandedWeightGrid[t];
-            }
+            weightGrid[t] += beta * expandedWeightGrid[t];
         }
     }
 }
