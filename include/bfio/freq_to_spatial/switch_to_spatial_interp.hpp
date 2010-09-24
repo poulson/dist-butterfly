@@ -72,7 +72,7 @@ SwitchToSpatialInterp
                 xPoints[t][j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
 
         std::vector<C> ampResults( q_to_d*q_to_d );
-        std::vector<R> phiResults( q_to_d*q_to_d ); 
+        std::vector<R> phiResults( q_to_d*q_to_d );
         std::vector<C> imagExpResults( q_to_d*q_to_d );
         ConstrainedHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
         for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k, BWalker.Walk() )

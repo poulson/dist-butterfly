@@ -45,7 +45,7 @@ public:
         results.resize( x.size()*p.size() );
         for( unsigned i=0; i<x.size(); ++i )
             for( unsigned j=0; j<p.size(); ++j )
-                results[i*p.size()+j] = this->operator()(x[i],p[j]);
+                results[i*p.size()+j] = (*this)(x[i],p[j]);
     }
 };
 

@@ -43,13 +43,6 @@ FreqWeightRecursion
     const unsigned q_to_d = Pow<q,d>::val;
     const unsigned q_to_2d = Pow<q,2*d>::val;
 
-    // Form a vector out of the point x0A so that we can batch evaluations. 
-    // Also create vectors for the p points and the results.
-    const std::vector< Array<R,d> > xPoint( 1, x0A );
-    std::vector< Array<R,d> > pPoints( q_to_d );
-    std::vector<R> phiResults( q_to_d );
-    std::vector<C> imagExpResults( q_to_d );
-
     // We seek performance by isolating the Lagrangian interpolation as
     // a matrix-vector multiplication
     //
@@ -64,7 +57,11 @@ FreqWeightRecursion
     for( unsigned t=0; t<q_to_d; ++t )
         weightGrid[t] = 0;
 
-    const std::vector<R>& freqMaps = context.GetFreqMaps();
+    std::vector< Array<R,d> > xPoint( 1, x0A );
+    std::vector< Array<R,d> > pPoints( q_to_d );
+    std::vector< R          > phiResults( q_to_d );
+    std::vector< C          > imagExpResults( q_to_d );
+    const std::vector< R          >& freqMaps = context.GetFreqMaps();
     const std::vector< Array<R,d> >& freqChildGrids = 
         context.GetFreqChildGrids();
     for( unsigned cLocal=0; cLocal<(1u<<(d-log2NumMergingProcesses)); ++cLocal )
@@ -73,16 +70,16 @@ FreqWeightRecursion
         const unsigned c = (cLocal<<log2NumMergingProcesses) + myTeamRank;
         const unsigned key = parentOffset + cLocal;
 
-        // Form the vector of p points to evaluate at
+        // Form the set of p points to evaluate
         for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
             for( unsigned j=0; j<d; ++j )
                 pPoints[tPrime][j] = 
-                    p0B[j] + wB[j]*freqChildGrids[c*q_to_d*d+tPrime*d][j];
+                    p0B[j] + wB[j]*freqChildGrids[c*q_to_d+tPrime][j];
 
-        // Form all of the phase factors
+        // Form the phase factors
         Phi.BatchEvaluate( xPoint, pPoints, phiResults );
-        for( unsigned j=0; j<q_to_d; ++j )
-            phiResults[j] *= TwoPi;
+        for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
+            phiResults[tPrime] *= TwoPi;
         ImagExpBatch<R>( phiResults, imagExpResults );
 
         WeightGrid<R,d,q> scaledWeightGrid;

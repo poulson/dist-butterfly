@@ -123,7 +123,7 @@ void Context<R,d,q>::GenerateFreqMapsAndChildGrids()
             // Map p_t'(Bc) to the reference domain ([-1/2,+1/2]^d) of B
             for( unsigned j=0; j<d; ++j )
             {
-                _freqChildGrids[(c*q_to_d+tPrime)*d][j] = 
+                _freqChildGrids[c*q_to_d+tPrime][j] = 
                     ( (c>>j)&1 ? (2*_chebyshevGrid[tPrime][j]+1)/4 
                                : (2*_chebyshevGrid[tPrime][j]-1)/4 );
             }
@@ -138,7 +138,7 @@ void Context<R,d,q>::GenerateFreqMapsAndChildGrids()
             for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
             {
                 _freqMaps[c*q_to_2d+tPrime*q_to_d+t] = 
-                    Lagrange( t, _freqChildGrids[(c*q_to_d+tPrime)*d] ); 
+                    Lagrange( t, _freqChildGrids[c*q_to_d+tPrime] ); 
             }
         }
     }
