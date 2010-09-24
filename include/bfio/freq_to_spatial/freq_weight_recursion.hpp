@@ -43,6 +43,13 @@ FreqWeightRecursion
     const unsigned q_to_d = Pow<q,d>::val;
     const unsigned q_to_2d = Pow<q,2*d>::val;
 
+    // Form a vector out of the point x0A so that we can batch evaluations. 
+    // Also create vectors for the p points and the results.
+    const std::vector< Array<R,d> > xPoint( 1, x0A );
+    std::vector< Array<R,d> > pPoints( q_to_d );
+    std::vector<R> phiResults( q_to_d );
+    std::vector<C> imagExpResults( q_to_d );
+
     // We seek performance by isolating the Lagrangian interpolation as
     // a matrix-vector multiplication
     //
@@ -66,19 +73,22 @@ FreqWeightRecursion
         const unsigned c = (cLocal<<log2NumMergingProcesses) + myTeamRank;
         const unsigned key = parentOffset + cLocal;
 
+        // Form the vector of p points to evaluate at
+        for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
+            for( unsigned j=0; j<d; ++j )
+                pPoints[tPrime][j] = 
+                    p0B[j] + wB[j]*freqChildGrids[c*q_to_d*d+tPrime*d][j];
+
+        // Form all of the phase factors
+        Phi.BatchEvaluate( xPoint, pPoints, phiResults );
+        for( unsigned j=0; j<q_to_d; ++j )
+            phiResults[j] *= TwoPi;
+        ImagExpBatch<R>( phiResults, imagExpResults );
+
         WeightGrid<R,d,q> scaledWeightGrid;
         for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
-        {
-            Array<R,d> ptPrime;
-            for( unsigned j=0; j<d; ++j )
-            {
-                ptPrime[j] = 
-                    p0B[j] + wB[j]*freqChildGrids[c*q_to_d*d+tPrime*d][j];
-            }
-
-            const C beta = ImagExp<R>( TwoPi*Phi(x0A,ptPrime) );
-            scaledWeightGrid[tPrime] = beta*oldWeightGridList[key][tPrime];
-        }
+            scaledWeightGrid[tPrime] = 
+                imagExpResults[tPrime]*oldWeightGridList[key][tPrime];
         
         // Step 2
         RealMatrixComplexVec
@@ -89,13 +99,14 @@ FreqWeightRecursion
     // Step 3
     const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
     for( unsigned t=0; t<q_to_d; ++t )
-    {
-        Array<R,d> ptB;
         for( unsigned j=0; j<d; ++j )
-            ptB[j] = p0B[j] + wB[j]*chebyshevGrid[t][j];
-
-        weightGrid[t] /= ImagExp<R>( TwoPi*Phi(x0A,ptB) );
-    }
+            pPoints[t][j] = p0B[j] + wB[j]*chebyshevGrid[t][j];
+    Phi.BatchEvaluate( xPoint, pPoints, phiResults );
+    for( unsigned t=0; t<q_to_d; ++t )
+        phiResults[t] *= TwoPi;
+    ImagExpBatch<R>( phiResults, imagExpResults );
+    for( unsigned t=0; t<q_to_d; ++t )
+        weightGrid[t] /= imagExpResults[t];
 }
 
 } // freq_to_spatial

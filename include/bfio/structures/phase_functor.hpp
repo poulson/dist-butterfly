@@ -38,14 +38,14 @@ public:
     // supplies a clas that overrides the method with an efficient vectorized
     // implementation, then eventually there will be a large speedup.
     virtual void BatchEvaluate
-    ( const std::vector< Array<R,d>      >& x,
-      const std::vector< Array<R,d>      >& p,
-            std::vector< std::complex<R> >& results ) const
+    ( const std::vector< Array<R,d> >& x,
+      const std::vector< Array<R,d> >& p,
+            std::vector< R          >& results ) const
     {
         results.resize( x.size()*p.size() );
-        for( unsigned j=0; j<p.size(); ++j )
-            for( unsigned i=0; i<x.size(); ++i )
-                results[i+j*x.size()] = this->operator()(x[i],p[j]);
+        for( unsigned i=0; i<x.size(); ++i )
+            for( unsigned j=0; j<p.size(); ++j )
+                results[i*p.size()+j] = this->operator()(x[i],p[j]);
     }
 };
 

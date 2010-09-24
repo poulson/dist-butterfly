@@ -20,9 +20,11 @@
 #define BFIO_TOOLS_IMAG_EXP_HPP 1
 
 #include <math.h>
+#include <vector>
 
 namespace bfio {
 
+// For single-point imaginary exponentials
 template<typename R>
 inline std::complex<R>
 ImagExp( R alpha );
@@ -31,26 +33,50 @@ template<>
 inline std::complex<float>
 ImagExp( float alpha )
 {
-#ifdef _GNU_SOURCE
-    float sinAlpha, cosAlpha;
-    sincosf( alpha, &sinAlpha, &cosAlpha );
-    return std::complex<float>( cosAlpha, sinAlpha );
-#else
+    // TODO: Add fast sincos support for various architectures
     return std::complex<float>( cos(alpha), sin(alpha) );
-#endif
 }
 
 template<>
 inline std::complex<double>
 ImagExp( double alpha )
 {
-#ifdef _GNU_SOURCE
-    double sinAlpha, cosAlpha;
-    sincos( alpha, &sinAlpha, &cosAlpha );
-    return std::complex<double>( cosAlpha, sinAlpha );
-#else
+    // TODO: Add fast sincos support for various architectures
     return std::complex<double>( cos(alpha), sin(alpha) );
-#endif
+}
+
+// For vector imaginary exponentials
+template<typename R>
+inline void
+ImagExpBatch
+( const std::vector<R>& alpha, std::vector< std::complex<R> >& results );
+
+template<>
+inline void
+ImagExpBatch
+( const std::vector< float               >& alpha, 
+        std::vector< std::complex<float> >& results )
+{
+    results.resize( alpha.size() );
+    // TODO: Add vectorization support here for various architectures
+    for( unsigned j=0; j<alpha.size(); ++j )
+    {
+        results[j] = std::complex<float>( cos(alpha[j]), sin(alpha[j]) );
+    }
+}
+
+template<>
+inline void
+ImagExpBatch
+( const std::vector< double               >& alpha, 
+        std::vector< std::complex<double> >& results )
+{
+    results.resize( alpha.size() );
+    // TODO: Add vectorization support here for various architectures
+    for( unsigned j=0; j<alpha.size(); ++j )
+    {
+        results[j] = std::complex<double>( cos(alpha[j]), sin(alpha[j]) );
+    }
 }
 
 } // bfio

@@ -71,6 +71,9 @@ SwitchToSpatialInterp
             for( unsigned j=0; j<d; ++j )
                 xPoints[t][j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
 
+        std::vector<C> ampResults( q_to_d*q_to_d );
+        std::vector<R> phiResults( q_to_d*q_to_d ); 
+        std::vector<C> imagExpResults( q_to_d*q_to_d );
         ConstrainedHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
         for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k, BWalker.Walk() )
         {
@@ -86,16 +89,21 @@ SwitchToSpatialInterp
                 for( unsigned j=0; j<d; ++j )
                     pPoints[t][j] = p0B[j] + wB[j]*chebyshevGrid[t][j];
 
+            Amp.BatchEvaluate( xPoints, pPoints, ampResults );
+            Phi.BatchEvaluate( xPoints, pPoints, phiResults );
+            for( unsigned j=0; j<phiResults.size(); ++j )
+                phiResults[j] *= TwoPi;
+            ImagExpBatch<R>( phiResults, imagExpResults );
+
             const unsigned key = k+(i<<log2LocalFreqBoxes);
             for( unsigned t=0; t<q_to_d; ++t )
             {
                 weightGridList[key][t] = 0;
                 for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
                 {
-                    const C beta = 
-                        ImagExp<R>( TwoPi*Phi(xPoints[t],pPoints[tPrime]) );
                     weightGridList[key][t] += 
-                        Amp(xPoints[t],pPoints[tPrime]) * beta *
+                        ampResults[t*q_to_d+tPrime]*
+                        imagExpResults[t*q_to_d+tPrime]*
                         oldWeightGridList[key][tPrime];
                 }
             }
