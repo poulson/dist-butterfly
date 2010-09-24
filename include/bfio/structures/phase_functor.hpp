@@ -29,8 +29,24 @@ class PhaseFunctor
 {
 public:
     virtual ~PhaseFunctor() {}
+
+    // Point-wise evaluation of the phase function
     virtual R operator() 
     ( const Array<R,d>& x, const Array<R,d>& p ) const = 0;
+
+    // The code will call BatchEvaluate whenever possible so that, if the user
+    // supplies a clas that overrides the method with an efficient vectorized
+    // implementation, then eventually there will be a large speedup.
+    virtual void BatchEvaluate
+    ( const std::vector< Array<R,d>      >& x,
+      const std::vector< Array<R,d>      >& p,
+            std::vector< std::complex<R> >& results ) const
+    {
+        results.resize( x.size()*p.size() );
+        for( unsigned j=0; j<p.size(); ++j )
+            for( unsigned i=0; i<x.size(); ++i )
+                results[i+j*x.size()] = this->operator()(x[i],p[j]);
+    }
 };
 
 } // bfio

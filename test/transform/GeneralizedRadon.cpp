@@ -247,7 +247,7 @@ main
                 for( unsigned m=0; m<globalSources.size(); ++m )
                 {
                     complex<double> beta = 
-                        ImagExp( TwoPi*genRadon(x,globalSources[m].p) );
+                        ImagExp<double>( TwoPi*genRadon(x,globalSources[m].p) );
                     truth += beta * globalSources[m].magnitude;
                 }
                 double absError = abs(approx-truth);
@@ -352,7 +352,7 @@ main
                 for( unsigned m=0; m<globalSources.size(); ++m )
                 {
                     complex<double> beta = 
-                        ImagExp(TwoPi*genRadon(x,globalSources[m].p));
+                        ImagExp<double>(TwoPi*genRadon(x,globalSources[m].p));
                     truth += beta * globalSources[m].magnitude;
                 }
                 complex<double> approx = u->Evaluate( x );

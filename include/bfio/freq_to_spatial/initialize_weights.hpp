@@ -110,7 +110,7 @@ InitializeWeights
         Array<R,d> pRef;
         for( unsigned j=0; j<d; ++j )
             pRef[j] = (p[j]-p0[j])/wB[j];
-        const C beta = ImagExp( TwoPi*Phi(x0,p) ) * mySources[i].magnitude;
+        const C beta = ImagExp<R>( TwoPi*Phi(x0,p) ) * mySources[i].magnitude;
         for( unsigned t=0; t<q_to_d; ++t )
             weightGridList[k][t] += beta*context.Lagrange(t,pRef);
     }
@@ -137,7 +137,7 @@ InitializeWeights
             for( unsigned j=0; j<d; ++j )
                 pt[j] = p0[j] + wB[j]*chebyshevGrid[t][j];
 
-            weightGridList[k][t] /= ImagExp( TwoPi*Phi(x0,pt) );
+            weightGridList[k][t] /= ImagExp<R>( TwoPi*Phi(x0,pt) );
         }
     }
 }

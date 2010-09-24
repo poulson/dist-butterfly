@@ -25,6 +25,7 @@
 #include "bfio/structures/htree_walker.hpp"
 #include "bfio/structures/amplitude_functor.hpp"
 #include "bfio/structures/phase_functor.hpp"
+#include "bfio/tools/imag_exp.hpp"
 
 namespace bfio {
 
@@ -170,10 +171,10 @@ PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
         Array<R,d> xt;
         for( unsigned j=0; j<d; ++j )
             xt[j] = lrp.x0[j] + _wA[j]*chebyshevGrid[t][j];
-        C beta = ImagExp( TwoPi*_Phi(xt,_p0) );
+        C beta = ImagExp<R>( TwoPi*_Phi(xt,_p0) );
         value += _context.Lagrange(t,xRef) * lrp.weightGrid[t] / beta;
     }
-    value *= ImagExp( TwoPi*_Phi(x,_p0) );
+    value *= ImagExp<R>( TwoPi*_Phi(x,_p0) );
     return value;
 }
 

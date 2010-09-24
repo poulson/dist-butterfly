@@ -75,7 +75,7 @@ SpatialWeightRecursion
             Array<R,d> xtPrimeAp;
             for( unsigned j=0; j<d; ++j )
                 xtPrimeAp[j] = x0Ap[j] + (2*wA[j])*chebyshevGrid[tPrime][j];
-            const C beta = ImagExp( TwoPi*Phi(xtPrimeAp,p0Bc) );
+            const C beta = ImagExp<R>( TwoPi*Phi(xtPrimeAp,p0Bc) );
             scaledWeightGrid[tPrime] = oldWeightGridList[key][tPrime]/beta;
         }
 
@@ -93,7 +93,7 @@ SpatialWeightRecursion
             Array<R,d> xtA;
             for( unsigned j=0; j<d; ++j )
                 xtA[j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
-            const C beta = ImagExp( TwoPi*Phi(xtA,p0Bc) );
+            const C beta = ImagExp<R>( TwoPi*Phi(xtA,p0Bc) );
             weightGrid[t] += beta * expandedWeightGrid[t];
         }
     }

@@ -41,8 +41,8 @@ SumScatter<float>
 ( const float* sendBuf, float* recvBuf, int* recvCounts, MPI_Comm comm )
 {
     int ierror = MPI_Reduce_scatter
-    ( const_cast<float*>(sendBuf), recvBuf, recvCounts, MPI_FLOAT, MPI_SUM, 
-      comm );
+    ( const_cast<float*>(sendBuf), 
+      recvBuf, recvCounts, MPI_FLOAT, MPI_SUM, comm );
     if( ierror != 0 )
     {
         std::ostringstream msg;

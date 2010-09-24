@@ -73,7 +73,7 @@ RealMatrixComplexVec<float>
     const char transpose = 'T';
     C2F(sgemm)
     ( &normal, &transpose, &realsPerComplex, &n, &m,
-      &alpha, (float*)x, &realsPerComplex, A, &lda, 
+      &alpha, (const float*)x, &realsPerComplex, A, &lda, 
       &beta,  (float*)y, &realsPerComplex );
 }
     

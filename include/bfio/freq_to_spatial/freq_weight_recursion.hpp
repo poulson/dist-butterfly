@@ -76,7 +76,7 @@ FreqWeightRecursion
                     p0B[j] + wB[j]*freqChildGrids[c*q_to_d*d+tPrime*d][j];
             }
 
-            const C beta = ImagExp( TwoPi*Phi(x0A,ptPrime) );
+            const C beta = ImagExp<R>( TwoPi*Phi(x0A,ptPrime) );
             scaledWeightGrid[tPrime] = beta*oldWeightGridList[key][tPrime];
         }
         
@@ -94,7 +94,7 @@ FreqWeightRecursion
         for( unsigned j=0; j<d; ++j )
             ptB[j] = p0B[j] + wB[j]*chebyshevGrid[t][j];
 
-        weightGrid[t] /= ImagExp( TwoPi*Phi(x0A,ptB) );
+        weightGrid[t] /= ImagExp<R>( TwoPi*Phi(x0A,ptB) );
     }
 }
 
