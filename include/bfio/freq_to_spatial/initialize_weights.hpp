@@ -15,7 +15,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#pragma once
 #ifndef BFIO_FREQ_TO_SPATIAL_INITIALIZE_WEIGHTS_HPP
 #define BFIO_FREQ_TO_SPATIAL_INITIALIZE_WEIGHTS_HPP 1
 
