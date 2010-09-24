@@ -57,9 +57,17 @@ InitializeWeights
     // Compute the unscaled weights for each local box by looping over our
     // sources and sorting them into the appropriate local box one at a time.
     // We throw an error if a source is outside of our frequency box.
-    for( unsigned i=0; i<mySources.size(); ++i )
+    const unsigned numSources = mySources.size();
+    const std::vector< Array<R,d> > xPoint( 1, x0 );
+    std::vector< Array<R,d> > pPoints( numSources );
+    std::vector< Array<R,d> > pRefPoints( numSources );
+    std::vector<R> phiResults( numSources );
+    std::vector<C> imagExpResults( numSources );
+    std::vector<unsigned> flattenedBoxIndices( numSources );
+    for( unsigned i=0; i<numSources; ++i )
     {
         const Array<R,d>& p = mySources[i].p;
+        pPoints[i] = mySources[i].p;
 
         // Determine which local box we're in (if any)
         Array<unsigned,d> B;
@@ -100,23 +108,34 @@ InitializeWeights
         for( unsigned j=0; j<d; ++j )
             p0[j] = myFreqBox.offsets[j] + (B[j]+0.5)*wB[j];
 
-        // Flatten the integer coordinates of B
-        unsigned k = 
-            FlattenConstrainedHTreeIndex( B, log2LocalFreqBoxesPerDim );
-
-        // Add this point's contribution to the unscaled weights of B. 
-        // We evaluate the Lagrangian polynomial on the reference grid, 
+        // In order to add this point's contribution to the unscaled weights of 
+        // B we will evaluate the Lagrangian polynomial on the reference grid,
         // so we need to map p to it first.
-        Array<R,d> pRef;
         for( unsigned j=0; j<d; ++j )
-            pRef[j] = (p[j]-p0[j])/wB[j];
-        const C beta = ImagExp<R>( TwoPi*Phi(x0,p) ) * mySources[i].magnitude;
+            pRefPoints[i][j] = (p[j]-p0[j])/wB[j];
+        
+        // Flatten the integer coordinates of B
+        flattenedBoxIndices[i] = 
+            FlattenConstrainedHTreeIndex( B, log2LocalFreqBoxesPerDim );
+    }
+    Phi.BatchEvaluate( xPoint, pPoints, phiResults );
+    for( unsigned i=0; i<numSources; ++i )
+        phiResults[i] *= TwoPi;
+    ImagExpBatch<R>( phiResults, imagExpResults );
+    for( unsigned i=0; i<numSources; ++i )
+    {
+        const unsigned k = flattenedBoxIndices[i];
+        const Array<R,d>& pRef = pRefPoints[i];
+        const C beta = imagExpResults[i]*mySources[i].magnitude;
         for( unsigned t=0; t<q_to_d; ++t )
             weightGridList[k][t] += beta*context.Lagrange(t,pRef);
     }
 
     // Loop over all of the boxes to compute the {p_t^B} and prefactors
     // for each delta weight {delta_t^AB}
+    pPoints.resize( q_to_d );
+    phiResults.resize( q_to_d );
+    imagExpResults.resize( q_to_d );
     const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
     ConstrainedHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
     for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k, BWalker.Walk() ) 
@@ -131,14 +150,14 @@ InitializeWeights
         // Compute the prefactors given this p0 and multiply it by 
         // the corresponding weights
         for( unsigned t=0; t<q_to_d; ++t )
-        {
-            // Compute the spatial location of pt
-            Array<R,d> pt;
             for( unsigned j=0; j<d; ++j )
-                pt[j] = p0[j] + wB[j]*chebyshevGrid[t][j];
-
-            weightGridList[k][t] /= ImagExp<R>( TwoPi*Phi(x0,pt) );
-        }
+                pPoints[t][j] = p0[j] + wB[j]*chebyshevGrid[t][j];
+        Phi.BatchEvaluate( xPoint, pPoints, phiResults );
+        for( unsigned t=0; t<q_to_d; ++t )
+            phiResults[t] *= TwoPi;
+        ImagExpBatch<R>( phiResults, imagExpResults );
+        for( unsigned t=0; t<q_to_d; ++t )
+            weightGridList[k][t] /= imagExpResults[t];
     }
 }
 

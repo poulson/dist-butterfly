@@ -59,6 +59,10 @@ SpatialWeightRecursion
     //  1) scale the old weights with the appropriate exponentials
     //  2) multiply the lagrangian matrix against the scaled weights
     //  3) scale and accumulate the result of the lagrangian mat-vec
+    std::vector< Array<R,d> > pPoint( 1 );
+    std::vector< Array<R,d> > xPoints( q_to_d );
+    std::vector<R> phiResults( q_to_d );
+    std::vector<C> imagExpResults( q_to_d );
     const std::vector<R>& spatialMaps = context.GetSpatialMaps();
     const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
     for( unsigned cLocal=0; cLocal<(1u<<(d-log2NumMergingProcesses)); ++cLocal )
@@ -67,17 +71,19 @@ SpatialWeightRecursion
         WeightGrid<R,d,q> scaledWeightGrid;
         const unsigned c = (cLocal<<log2NumMergingProcesses) + myTeamRank;
         const unsigned key = parentOffset + cLocal;
-        Array<R,d> p0Bc;
         for( unsigned j=0; j<d; ++j )
-            p0Bc[j] = p0B[j] + ( (c>>j)&1 ? wB[j]/4 : -wB[j]/4 );
+            pPoint[0][j] = p0B[j] + ( (c>>j)&1 ? wB[j]/4 : -wB[j]/4 );
         for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
-        {
-            Array<R,d> xtPrimeAp;
             for( unsigned j=0; j<d; ++j )
-                xtPrimeAp[j] = x0Ap[j] + (2*wA[j])*chebyshevGrid[tPrime][j];
-            const C beta = ImagExp<R>( TwoPi*Phi(xtPrimeAp,p0Bc) );
-            scaledWeightGrid[tPrime] = oldWeightGridList[key][tPrime]/beta;
-        }
+                xPoints[tPrime][j] = 
+                    x0Ap[j] + (2*wA[j])*chebyshevGrid[tPrime][j];
+        Phi.BatchEvaluate( xPoints, pPoint, phiResults );
+        for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
+            phiResults[tPrime] *= TwoPi;
+        ImagExpBatch<R>( phiResults, imagExpResults );
+        for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
+            scaledWeightGrid[tPrime] = 
+                oldWeightGridList[key][tPrime]/imagExpResults[tPrime];
 
         // Step 2: perform the matrix-vector multiply
         WeightGrid<R,d,q> expandedWeightGrid;
@@ -89,13 +95,14 @@ SpatialWeightRecursion
 
         // Step 3: scale the result
         for( unsigned t=0; t<Pow<q,d>::val; ++t )
-        {
-            Array<R,d> xtA;
             for( unsigned j=0; j<d; ++j )
-                xtA[j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
-            const C beta = ImagExp<R>( TwoPi*Phi(xtA,p0Bc) );
-            weightGrid[t] += beta * expandedWeightGrid[t];
-        }
+                xPoints[t][j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
+        Phi.BatchEvaluate( xPoints, pPoint, phiResults );
+        for( unsigned t=0; t<q_to_d; ++t )
+            phiResults[t] *= TwoPi;
+        ImagExpBatch<R>( phiResults, imagExpResults );
+        for( unsigned t=0; t<q_to_d; ++t )
+            weightGrid[t] += imagExpResults[t]*expandedWeightGrid[t];
     }
 }
 
