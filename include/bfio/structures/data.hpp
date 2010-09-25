@@ -19,6 +19,7 @@
 #define BFIO_STRUCTURES_DATA_HPP 1
 
 #include <complex>
+#include <cstring>
 #include <tr1/array>
 
 #include "bfio/constants.hpp"
@@ -119,7 +120,8 @@ public:
         if( weightGrid.HasBuffer() )
         {
             _buffer = new R[2*Pow<q,d>::val];
-            memcpy( _buffer, weightGrid.Buffer(), 2*Pow<q,d>::val*sizeof(R) );
+            std::memcpy
+            ( _buffer, weightGrid.Buffer(), 2*Pow<q,d>::val*sizeof(R) );
             _realWeights = &_buffer[0];
             _imagWeights = &_buffer[Pow<q,d>::val];
         }
@@ -194,7 +196,7 @@ public:
                 _hasBuffer = true;
                 _ownsBuffer = true;
             }
-            memcpy
+            std::memcpy
             ( _buffer, weightGrid.Buffer(), 2*Pow<q,d>::val*sizeof(R) );
         }
         else
@@ -245,7 +247,7 @@ public:
         // Copy the data
         const std::size_t weightGridSize = 2*Pow<q,d>::val;
         _buffer.resize( weightGridSize*_length );
-        memcpy
+        std::memcpy
         ( &_buffer[0], weightGridList.Buffer(), 
           _length*weightGridSize*sizeof(R) );
 
@@ -289,7 +291,7 @@ public:
         _buffer.resize( weightGridSize*_length );
 
         // Copy the data over
-        memcpy
+        std::memcpy
         ( &_buffer[0], weightGridList.Buffer(), 
           _length*weightGridSize*sizeof(R) );
 
