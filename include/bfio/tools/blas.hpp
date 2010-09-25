@@ -29,12 +29,11 @@
 namespace bfio {
 
 template<typename R>
-void
-RealMatrixComplexVec
-( int m, int n, 
-  const R alpha, const R* A, int lda, 
-                 const std::complex<R>* x, 
-  const R beta,        std::complex<R>* y );
+void Gemm
+( char transa, char transb, int m, int n, int k,
+  R alpha, const R* A, int lda,
+           const R* B, int ldb,
+  R beta,        R* C, int ldc );
 
 } // bfio
 
@@ -56,41 +55,33 @@ void C2F(dgemm)
 
 } // extern "C"
 
-// Implementations for {float,double,complex<float>,complex<double>}
+// Implementations
 namespace bfio {
 
 template<>
 inline void
-RealMatrixComplexVec<float>
-( int m, int n,
-  const float alpha, const float* A, int lda, 
-  const std::complex<float>* x,
-  const float beta,  std::complex<float>* y )
+Gemm<float>
+( char transa, char transb, int m, int n, int k,
+  float alpha, const float* A, int lda,
+               const float* B, int ldb,
+  float beta,        float* C, int ldc )
 {
-    const int realsPerComplex = 2;
-    const char normal = 'N';
-    const char transpose = 'T';
     C2F(sgemm)
-    ( &normal, &transpose, &realsPerComplex, &n, &m,
-      &alpha, (const float*)x, &realsPerComplex, A, &lda, 
-      &beta,  (float*)y, &realsPerComplex );
+    ( &transa, &transb, &m, &n, &k,
+      &alpha, A, &lda, B, &ldb, &beta, C, &ldc );
 }
-    
+ 
 template<>
 inline void
-RealMatrixComplexVec<double>
-( int m, int n,
-  const double alpha, const double* A, int lda, 
-  const std::complex<double>* x,
-  const double beta,  std::complex<double>* y )
+Gemm<double>
+( char transa, char transb, int m, int n, int k,
+  double alpha, const double* A, int lda,
+                const double* B, int ldb,
+  double beta,        double* C, int ldc )
 {
-    const int realsPerComplex = 2;
-    const char normal = 'N';
-    const char transpose = 'T';
     C2F(dgemm)
-    ( &normal, &transpose, &realsPerComplex, &n, &m,
-      &alpha, (const double*)x, &realsPerComplex, A, &lda,
-      &beta,  (double*)y, &realsPerComplex );
+    ( &transa, &transb, &m, &n, &k,
+      &alpha, A, &lda, B, &ldb, &beta, C, &ldc );
 }
 
 } // bfio

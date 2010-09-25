@@ -24,15 +24,15 @@
 
 namespace bfio {
 
-template<typename R,unsigned d,unsigned q>
+template<typename R,std::size_t d,std::size_t q>
 class Context
 {
-    Array<R,q> _chebyshevNodes;
-    std::vector< Array<unsigned,d> > _chebyshevIndices;
-    std::vector< Array<R,d> > _chebyshevGrid;
+    std::tr1::array<R,q> _chebyshevNodes;
+    std::vector< std::tr1::array<std::size_t,d> > _chebyshevIndices;
+    std::vector< std::tr1::array<R,d> > _chebyshevGrid;
     std::vector<R> _freqMaps;
     std::vector<R> _spatialMaps;
-    std::vector< Array<R,d> > _freqChildGrids;
+    std::vector< std::tr1::array<R,d> > _freqChildGrids;
 
     void GenerateChebyshevNodes();
     void GenerateChebyshevIndices();
@@ -44,15 +44,15 @@ public:
     Context();
 
     // Evaluate the t'th Lagrangian basis function at point p in [-1/2,+1/2]^d
-    R Lagrange( unsigned t, const Array<R,d>& p ) const;
+    R Lagrange( std::size_t t, const std::tr1::array<R,d>& p ) const;
 
-    const Array<R,d>&
+    const std::tr1::array<R,d>&
     GetChebyshevNodes() const;
 
-    const std::vector< Array<unsigned,d> >&
+    const std::vector< std::tr1::array<std::size_t,d> >&
     GetChebyshevIndices() const;
 
-    const std::vector< Array<R,d> >&
+    const std::vector< std::tr1::array<R,d> >&
     GetChebyshevGrid() const;
 
     const std::vector<R>&
@@ -61,66 +61,66 @@ public:
     const std::vector<R>&
     GetSpatialMaps() const;
 
-    const std::vector< Array<R,d> >&
+    const std::vector< std::tr1::array<R,d> >&
     GetFreqChildGrids() const;
 };
 
 // Implementations
 
-template<typename R,unsigned d,unsigned q>
+template<typename R,std::size_t d,std::size_t q>
 void Context<R,d,q>::GenerateChebyshevNodes()
 {
-    for( unsigned t=0; t<q; ++t )
+    for( std::size_t t=0; t<q; ++t )
         _chebyshevNodes[t] = 0.5*cos(t*Pi/(q-1));
 }
 
-template<typename R,unsigned d,unsigned q>
+template<typename R,std::size_t d,std::size_t q>
 void Context<R,d,q>::GenerateChebyshevIndices()
 {
-    const unsigned q_to_d = _chebyshevIndices.size();
+    const std::size_t q_to_d = _chebyshevIndices.size();
 
-    for( unsigned t=0; t<q_to_d; ++t )
+    for( std::size_t t=0; t<q_to_d; ++t )
     {
-        unsigned qToThej = 1;
-        for( unsigned j=0; j<d; ++j )
+        std::size_t qToThej = 1;
+        for( std::size_t j=0; j<d; ++j )
         {
-            unsigned i = (t/qToThej) % q;
+            std::size_t i = (t/qToThej) % q;
             _chebyshevIndices[t][j] = i;
             qToThej *= q;
         }
     }
 }
 
-template<typename R,unsigned d,unsigned q>
+template<typename R,std::size_t d,std::size_t q>
 void Context<R,d,q>::GenerateChebyshevGrid()
 {
-    const unsigned q_to_d = _chebyshevGrid.size();
+    const std::size_t q_to_d = _chebyshevGrid.size();
 
-    for( unsigned t=0; t<q_to_d; ++t )
+    for( std::size_t t=0; t<q_to_d; ++t )
     {
-        unsigned qToThej = 1;
-        for( unsigned j=0; j<d; ++j )
+        std::size_t qToThej = 1;
+        for( std::size_t j=0; j<d; ++j )
         {
-            unsigned i = (t/qToThej)%q;
+            std::size_t i = (t/qToThej)%q;
             _chebyshevGrid[t][j] = 0.5*cos(static_cast<R>(i*Pi/(q-1)));
             qToThej *= q;
         }
     }
 }
 
-template<typename R,unsigned d,unsigned q>
+template<typename R,std::size_t d,std::size_t q>
 void Context<R,d,q>::GenerateFreqMapsAndChildGrids()
 {
-    const unsigned q_to_d = _chebyshevGrid.size();
-    const unsigned q_to_2d = q_to_d * q_to_d;
+    const std::size_t q_to_d = _chebyshevGrid.size();
+    const std::size_t q_to_2d = q_to_d * q_to_d;
 
-    for( unsigned c=0; c<(1u<<d); ++c )
+    for( std::size_t c=0; c<(1u<<d); ++c )
     {
-        for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
+        for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
         {
 
             // Map p_t'(Bc) to the reference domain ([-1/2,+1/2]^d) of B
-            for( unsigned j=0; j<d; ++j )
+            for( std::size_t j=0; j<d; ++j )
             {
                 _freqChildGrids[c*q_to_d+tPrime][j] = 
                     ( (c>>j)&1 ? (2*_chebyshevGrid[tPrime][j]+1)/4 
@@ -130,11 +130,11 @@ void Context<R,d,q>::GenerateFreqMapsAndChildGrids()
     }
 
     // Store all of the Lagrangian evaluations on p_t'(Bc)'s
-    for( unsigned c=0; c<(1u<<d); ++c )
+    for( std::size_t c=0; c<(1u<<d); ++c )
     {
-        for( unsigned t=0; t<q_to_d; ++t )
+        for( std::size_t t=0; t<q_to_d; ++t )
         {
-            for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
+            for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
             {
                 _freqMaps[c*q_to_2d+tPrime*q_to_d+t] = 
                     Lagrange( t, _freqChildGrids[c*q_to_d+tPrime] ); 
@@ -143,25 +143,25 @@ void Context<R,d,q>::GenerateFreqMapsAndChildGrids()
     }
 }
 
-template<typename R,unsigned d,unsigned q>
+template<typename R,std::size_t d,std::size_t q>
 void Context<R,d,q>::GenerateSpatialMaps()
 {
-    const unsigned q_to_d = _chebyshevGrid.size();
-    const unsigned q_to_2d = q_to_d * q_to_d;
-    for( unsigned p=0; p<(1u<<d); ++p )
+    const std::size_t q_to_d = _chebyshevGrid.size();
+    const std::size_t q_to_2d = q_to_d * q_to_d;
+    for( std::size_t p=0; p<(1u<<d); ++p )
     {
-        for( unsigned t=0; t<q_to_d; ++t )
+        for( std::size_t t=0; t<q_to_d; ++t )
         {
             // Map x_t(A) to the reference domain ([-1/2,+1/2]^d) of its parent.
-            Array<R,d> xtARefAp;
-            for( unsigned j=0; j<d; ++j )
+            std::tr1::array<R,d> xtARefAp;
+            for( std::size_t j=0; j<d; ++j )
             {
                 xtARefAp[j] = 
                     ( (p>>j)&1 ? (2*_chebyshevGrid[t][j]+1)/4 
                                : (2*_chebyshevGrid[t][j]-1)/4 ); 
             }
 
-            for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
+            for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
             {
                 _spatialMaps[p*q_to_2d + t+tPrime*q_to_d] = 
                     Lagrange( tPrime, xtARefAp );
@@ -170,10 +170,9 @@ void Context<R,d,q>::GenerateSpatialMaps()
     }
 }
 
-template<typename R,unsigned d,unsigned q>
+template<typename R,std::size_t d,std::size_t q>
 Context<R,d,q>::Context() 
-: _chebyshevNodes(Pow<q,d>::val), 
-  _chebyshevIndices(Pow<q,d>::val), 
+: _chebyshevIndices(Pow<q,d>::val), 
   _chebyshevGrid(Pow<q,d>::val),
   _freqMaps( Pow<q,2*d>::val<<d ),
   _spatialMaps( Pow<q,2*d>::val<<d ),
@@ -186,16 +185,16 @@ Context<R,d,q>::Context()
     GenerateSpatialMaps();
 }
 
-template<typename R,unsigned d,unsigned q>
+template<typename R,std::size_t d,std::size_t q>
 R
 Context<R,d,q>::Lagrange
-( unsigned t, const Array<R,d>& z ) const
+( std::size_t t, const std::tr1::array<R,d>& z ) const
 {
     R product = static_cast<R>(1);
-    for( unsigned j=0; j<d; ++j )
+    for( std::size_t j=0; j<d; ++j )
     {
-        unsigned i = _chebyshevIndices[t][j];
-        for( unsigned k=0; k<q; ++k )
+        std::size_t i = _chebyshevIndices[t][j];
+        for( std::size_t k=0; k<q; ++k )
         {
             if( i != k )
             {
@@ -207,33 +206,33 @@ Context<R,d,q>::Lagrange
     return product;
 }
 
-template<typename R,unsigned d,unsigned q>
-const Array<R,d>&
+template<typename R,std::size_t d,std::size_t q>
+const std::tr1::array<R,d>&
 Context<R,d,q>::GetChebyshevNodes() const
 { return _chebyshevNodes; }
 
-template<typename R,unsigned d,unsigned q>
-const std::vector< Array<unsigned,d> >&
+template<typename R,std::size_t d,std::size_t q>
+const std::vector< std::tr1::array<std::size_t,d> >&
 Context<R,d,q>::GetChebyshevIndices() const
 { return _chebyshevIndices; }
 
-template<typename R,unsigned d,unsigned q>
-const std::vector< Array<R,d> >&
+template<typename R,std::size_t d,std::size_t q>
+const std::vector< std::tr1::array<R,d> >&
 Context<R,d,q>::GetChebyshevGrid() const
 { return _chebyshevGrid; }
 
-template<typename R,unsigned d,unsigned q>
+template<typename R,std::size_t d,std::size_t q>
 const std::vector<R>&
 Context<R,d,q>::GetFreqMaps() const
 { return _freqMaps; }
 
-template<typename R,unsigned d,unsigned q>
+template<typename R,std::size_t d,std::size_t q>
 const std::vector<R>&
 Context<R,d,q>::GetSpatialMaps() const
 { return _spatialMaps; }
 
-template<typename R,unsigned d,unsigned q>
-const std::vector< Array<R,d> >&
+template<typename R,std::size_t d,std::size_t q>
+const std::vector< std::tr1::array<R,d> >&
 Context<R,d,q>::GetFreqChildGrids() const
 { return _freqChildGrids; }
 

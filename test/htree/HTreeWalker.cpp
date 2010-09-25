@@ -27,7 +27,7 @@ Usage()
     cout << endl;
 }
 
-static const unsigned d = 3;
+static const size_t d = 3;
 
 int
 main
@@ -44,18 +44,18 @@ main
         MPI_Finalize();
         return 0;
     }
-    const unsigned N = atoi(argv[1]);
+    const size_t N = atoi(argv[1]);
 
     try
     {
         if( rank == 0 )
         {
             HTreeWalker<d> walker;
-            for( unsigned i=0; i<N; ++i, walker.Walk() )
+            for( size_t i=0; i<N; ++i, walker.Walk() )
             {
-                Array<unsigned,d> A = walker.State();
+                tr1::array<size_t,d> A = walker.State();
                 cout << i << ": ";
-                for( unsigned j=0; j<d; ++j )
+                for( size_t j=0; j<d; ++j )
                     cout << A[j] << " ";
                 cout << "; flattened=" << FlattenHTreeIndex( A ) << endl;
             }

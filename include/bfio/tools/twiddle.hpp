@@ -21,7 +21,7 @@
 namespace bfio {
 
 inline bool
-IsPowerOfTwo( unsigned N )
+IsPowerOfTwo( std::size_t N )
 { return N && !(N & (N-1)); }
 
 // This is a slight modification of Sean Eron Anderson's 
@@ -29,7 +29,12 @@ IsPowerOfTwo( unsigned N )
 //  with multiply and lookup'. It was found at
 //    http://graphics.stanford.edu/~seander/bithacks.html
 // and is in the public domain.
-inline unsigned
+//
+// Note: the rest of ButterflyFIO is now written in terms of std::size_t rather
+//       than unsigned in order to be more compatible with the STL. However,
+//       it _extremely_ unlikely that the problem size will be larger than the 
+//       range of an unsigned.
+inline std::size_t
 Log2( unsigned N )
 {
     static const unsigned MultiplyDeBruijnBitPosition[32] = 
@@ -43,7 +48,8 @@ Log2( unsigned N )
     N |= N >> 4;
     N |= N >> 8;
     N |= N >> 16;
-    return MultiplyDeBruijnBitPosition[(unsigned)(N*0x07C4ACDDU)>>27];
+    N = MultiplyDeBruijnBitPosition[(unsigned)(N*0x07C4ACDDU)>>27];
+    return static_cast<std::size_t>(N);
 }
 
 // This is a modification of Sean Eron Anderson's binary search algorithm
@@ -53,7 +59,12 @@ Log2( unsigned N )
 //
 // The main difference is that I switched the algorithm to count ones and 
 // ignore the case where N=2^32-1 rather than N=0
-inline unsigned
+//
+// Note: the rest of ButterflyFIO is now written in terms of std::size_t rather
+//       than unsigned in order to be more compatible with the STL. However,
+//       it _extremely_ unlikely that the problem size will be larger than the 
+//       range of an unsigned.
+inline std::size_t
 NumberOfTrailingOnes( unsigned N )
 {
     unsigned int c;
@@ -86,7 +97,7 @@ NumberOfTrailingOnes( unsigned N )
         }
         c -= !(N & 0x1);
     }
-    return c;
+    return static_cast<std::size_t>(c);
 }
 
 } // bfio

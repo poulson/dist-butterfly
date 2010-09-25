@@ -33,7 +33,9 @@ inline std::complex<float>
 ImagExp( float alpha )
 {
     // TODO: Add fast sincos support for various architectures
-    return std::complex<float>( cos(alpha), sin(alpha) );
+    const float real = cos(alpha);
+    const float imag = sin(alpha);
+    return std::complex<float>( real, imag );
 }
 
 template<>
@@ -41,40 +43,50 @@ inline std::complex<double>
 ImagExp( double alpha )
 {
     // TODO: Add fast sincos support for various architectures
-    return std::complex<double>( cos(alpha), sin(alpha) );
+    const double real = cos(alpha);
+    const double imag = sin(alpha);
+    return std::complex<double>( real, imag );
 }
 
-// For vector imaginary exponentials
+// For performing many sin(a)/cos(a) pairs
 template<typename R>
 inline void
-ImagExpBatch
-( const std::vector<R>& alpha, std::vector< std::complex<R> >& results );
+SinCosBatch
+( const std::vector<R>& a, 
+        std::vector<R>& sinResults,
+        std::vector<R>& cosResults );
 
 template<>
 inline void
-ImagExpBatch
-( const std::vector< float               >& alpha, 
-        std::vector< std::complex<float> >& results )
+SinCosBatch
+( const std::vector<float>& a, 
+        std::vector<float>& sinResults,
+        std::vector<float>& cosResults ) 
 {
-    results.resize( alpha.size() );
+    sinResults.resize( a.size() );
+    cosResults.resize( a.size() );
     // TODO: Add vectorization support here for various architectures
-    for( unsigned j=0; j<alpha.size(); ++j )
+    for( std::size_t j=0; j<a.size(); ++j )
     {
-        results[j] = std::complex<float>( cos(alpha[j]), sin(alpha[j]) );
+        sinResults[j] = sin(a[j]);
+        cosResults[j] = cos(a[j]);
     }
 }
 
 template<>
 inline void
-ImagExpBatch
-( const std::vector< double               >& alpha, 
-        std::vector< std::complex<double> >& results )
+SinCosBatch
+( const std::vector<double>& a, 
+        std::vector<double>& sinResults,
+        std::vector<double>& cosResults )
 {
-    results.resize( alpha.size() );
+    sinResults.resize( a.size() );
+    cosResults.resize( a.size() );
     // TODO: Add vectorization support here for various architectures
-    for( unsigned j=0; j<alpha.size(); ++j )
+    for( std::size_t j=0; j<a.size(); ++j )
     {
-        results[j] = std::complex<double>( cos(alpha[j]), sin(alpha[j]) );
+        sinResults[j] = sin(a[j]);
+        cosResults[j] = cos(a[j]);
     }
 }
 

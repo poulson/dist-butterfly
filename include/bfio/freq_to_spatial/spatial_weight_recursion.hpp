@@ -23,32 +23,35 @@
 namespace bfio {
 namespace freq_to_spatial {
 
-template<typename R,unsigned d,unsigned q>
+template<typename R,std::size_t d,std::size_t q>
 void
 SpatialWeightRecursion
 ( const AmplitudeFunctor<R,d>& Amp,
   const PhaseFunctor<R,d>& Phi,
-  const unsigned log2NumMergingProcesses,
-  const unsigned myTeamRank,
-  const unsigned N, 
+  const std::size_t log2NumMergingProcesses,
+  const std::size_t myTeamRank,
+  const std::size_t N, 
   const Context<R,d,q>& context,
-  const unsigned ARelativeToAp,
-  const Array<R,d>& x0A,
-  const Array<R,d>& x0Ap,
-  const Array<R,d>& p0B,
-  const Array<R,d>& wA,
-  const Array<R,d>& wB,
-  const unsigned parentOffset,
+  const std::size_t ARelativeToAp,
+  const std::tr1::array<R,d>& x0A,
+  const std::tr1::array<R,d>& x0Ap,
+  const std::tr1::array<R,d>& p0B,
+  const std::tr1::array<R,d>& wA,
+  const std::tr1::array<R,d>& wB,
+  const std::size_t parentOffset,
   const WeightGridList<R,d,q>& oldWeightGridList,
         WeightGrid<R,d,q>& weightGrid
 )
 {
     typedef std::complex<R> C;
-    const unsigned q_to_d = Pow<q,d>::val;
-    const unsigned q_to_2d = Pow<q,2*d>::val;
+    const std::size_t q_to_d = Pow<q,d>::val;
+    const std::size_t q_to_2d = Pow<q,2*d>::val;
 
-    for( unsigned t=0; t<q_to_d; ++t )
-        weightGrid[t] = 0;
+    for( std::size_t t=0; t<q_to_d; ++t )
+    {
+        weightGrid.RealWeight(t) = 0;
+        weightGrid.ImagWeight(t) = 0;
+    }
 
     // We seek performance by isolating the Lagrangian interpolation as 
     // a matrix-vector multiplication.
@@ -58,50 +61,67 @@ SpatialWeightRecursion
     //  1) scale the old weights with the appropriate exponentials
     //  2) multiply the lagrangian matrix against the scaled weights
     //  3) scale and accumulate the result of the lagrangian mat-vec
-    std::vector< Array<R,d> > pPoint( 1 );
-    std::vector< Array<R,d> > xPoints( q_to_d );
-    std::vector<R> phiResults( q_to_d );
-    std::vector<C> imagExpResults( q_to_d );
+    std::vector<R> phiResults;
+    std::vector<R> sinResults;
+    std::vector<R> cosResults;
+    std::vector< std::tr1::array<R,d> > pPoint( 1 );
+    std::vector< std::tr1::array<R,d> > xPoints( q_to_d );
     const std::vector<R>& spatialMaps = context.GetSpatialMaps();
-    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
-    for( unsigned cLocal=0; cLocal<(1u<<(d-log2NumMergingProcesses)); ++cLocal )
+    const std::vector< std::tr1::array<R,d> >& chebyshevGrid = 
+        context.GetChebyshevGrid();
+    for( std::size_t cLocal=0; 
+         cLocal<(1u<<(d-log2NumMergingProcesses)); 
+         ++cLocal )
     {
         // Step 1: scale the old weights
         WeightGrid<R,d,q> scaledWeightGrid;
-        const unsigned c = (cLocal<<log2NumMergingProcesses) + myTeamRank;
-        const unsigned key = parentOffset + cLocal;
-        for( unsigned j=0; j<d; ++j )
+        const std::size_t c = (cLocal<<log2NumMergingProcesses) + myTeamRank;
+        const std::size_t key = parentOffset + cLocal;
+        for( std::size_t j=0; j<d; ++j )
             pPoint[0][j] = p0B[j] + ( (c>>j)&1 ? wB[j]/4 : -wB[j]/4 );
-        for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
-            for( unsigned j=0; j<d; ++j )
+        for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
+            for( std::size_t j=0; j<d; ++j )
                 xPoints[tPrime][j] = 
                     x0Ap[j] + (2*wA[j])*chebyshevGrid[tPrime][j];
         Phi.BatchEvaluate( xPoints, pPoint, phiResults );
-        for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
-            phiResults[tPrime] *= TwoPi;
-        ImagExpBatch<R>( phiResults, imagExpResults );
-        for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
-            scaledWeightGrid[tPrime] = 
-                oldWeightGridList[key][tPrime]/imagExpResults[tPrime];
+        for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
+            phiResults[tPrime] *= -TwoPi;
+        SinCosBatch( phiResults, sinResults, cosResults );
+        for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
+        {
+            const R realWeight = oldWeightGridList[key].RealWeight(tPrime);
+            const R imagWeight = oldWeightGridList[key].ImagWeight(tPrime);
+            scaledWeightGrid.RealWeight(tPrime) = 
+                cosResults[tPrime]*realWeight - sinResults[tPrime]*imagWeight;
+            scaledWeightGrid.ImagWeight(tPrime) = 
+                sinResults[tPrime]*realWeight + cosResults[tPrime]*imagWeight;
+        }
 
-        // Step 2: perform the matrix-vector multiply
+        // Step 2: perform the matrix-vector multiplies
         WeightGrid<R,d,q> expandedWeightGrid;
-        RealMatrixComplexVec
-        ( q_to_d, q_to_d, 
-          (R)1, &spatialMaps[ARelativeToAp*q_to_2d], q_to_d, 
-                &scaledWeightGrid[0],
-          (R)0, &expandedWeightGrid[0] );
+        Gemm
+        ( 'N', 'N', q_to_d, 2, q_to_d,
+          (R)1, &spatialMaps[ARelativeToAp*q_to_2d], q_to_d,
+                scaledWeightGrid.Buffer(),           q_to_d,
+          (R)0, expandedWeightGrid.Buffer(),         q_to_d );
 
         // Step 3: scale the result
-        for( unsigned t=0; t<Pow<q,d>::val; ++t )
-            for( unsigned j=0; j<d; ++j )
+        for( std::size_t t=0; t<Pow<q,d>::val; ++t )
+            for( std::size_t j=0; j<d; ++j )
                 xPoints[t][j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
         Phi.BatchEvaluate( xPoints, pPoint, phiResults );
-        for( unsigned t=0; t<q_to_d; ++t )
+        for( std::size_t t=0; t<q_to_d; ++t )
             phiResults[t] *= TwoPi;
-        ImagExpBatch<R>( phiResults, imagExpResults );
-        for( unsigned t=0; t<q_to_d; ++t )
-            weightGrid[t] += imagExpResults[t]*expandedWeightGrid[t];
+        SinCosBatch( phiResults, sinResults, cosResults );
+        for( std::size_t t=0; t<q_to_d; ++t )
+        {
+            const R realWeight = expandedWeightGrid.RealWeight(t);
+            const R imagWeight = expandedWeightGrid.ImagWeight(t);
+            weightGrid.RealWeight(t) += 
+                cosResults[t]*realWeight - sinResults[t]*imagWeight;
+            weightGrid.ImagWeight(t) += 
+                sinResults[t]*realWeight + cosResults[t]*imagWeight;
+        }
     }
 }
 

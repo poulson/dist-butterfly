@@ -23,7 +23,7 @@
 namespace bfio {
 
 // You will need to derive from this class and override the operator()
-template<typename R,unsigned d>
+template<typename R,std::size_t d>
 class AmplitudeFunctor
 {
 public:
@@ -31,19 +31,19 @@ public:
 
     // Point-wise evaluation of the amplitude function
     virtual std::complex<R> operator() 
-    ( const Array<R,d>& x, const Array<R,d>& p ) const = 0;
+    ( const std::tr1::array<R,d>& x, const std::tr1::array<R,d>& p ) const = 0;
 
     // The code will call BatchEvaluate whenever possible so that, if the user
     // supplies a class that overrides the method with an efficient vectorized
     // implementation, then eventually there will be a large speedup.
     virtual void BatchEvaluate
-    ( const std::vector< Array<R,d>      >& x,
-      const std::vector< Array<R,d>      >& p,
-            std::vector< std::complex<R> >& results ) const
+    ( const std::vector< std::tr1::array<R,d> >& x,
+      const std::vector< std::tr1::array<R,d> >& p,
+            std::vector< std::complex<R>      >& results ) const
     {
         results.resize( x.size()*p.size() );
-        for( unsigned i=0; i<x.size(); ++i )
-            for( unsigned j=0; j<p.size(); ++j )
+        for( std::size_t i=0; i<x.size(); ++i )
+            for( std::size_t j=0; j<p.size(); ++j )
                 results[i*p.size()+j] = (*this)(x[i],p[j]);
     }
 };

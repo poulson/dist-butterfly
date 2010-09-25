@@ -25,19 +25,19 @@
 
 namespace bfio {
 
-template<unsigned d>
-inline unsigned
+template<std::size_t d>
+inline std::size_t
 NumLocalBoxes
-( unsigned N, MPI_Comm comm )
+( std::size_t N, MPI_Comm comm )
 {
     int numProcesses;
     MPI_Comm_size( comm, &numProcesses );
-    unsigned log2N = Log2( N );
-    unsigned log2NumProcesses = Log2( numProcesses );
+    std::size_t log2N = Log2( N );
+    std::size_t log2NumProcesses = Log2( numProcesses );
     return 1<<(d*log2N-log2NumProcesses);
 }
 
-template<typename R,unsigned d>
+template<typename R,std::size_t d>
 void    
 LocalFreqPartitionData
 ( const Box<R,d>& freqBox, Box<R,d>& myFreqBox, MPI_Comm comm )
@@ -46,18 +46,28 @@ LocalFreqPartitionData
     MPI_Comm_rank( comm, &rank );
     MPI_Comm_size( comm, &numProcesses );
     std::bitset<8*sizeof(int)> rankBits(rank);
-    const unsigned log2NumProcesses = Log2( numProcesses );
+    const std::size_t log2NumProcesses = Log2( numProcesses );
 
-    Array<unsigned,d> myFreqBoxCoords(0);
-    Array<unsigned,d> log2FreqBoxesPerDim(0);
-    unsigned nextDim = 0;
-    for( unsigned m=log2NumProcesses; m>0; --m )
+    // g++ does not yet support constructing std::tr1::array with a constant
+#ifdef GNU
+    std::tr1::array<std::size_t,d> myFreqBoxCoords;
+    std::tr1::array<std::size_t,d> log2FreqBoxesPerDim;
+    for( std::size_t i=0; i<d; ++i )
+        myFreqBoxCoords[i] = 0;
+    for( std::size_t i=0; i<d; ++i )
+        log2FreqBoxesPerDim[i] = 0;
+#else
+    std::tr1::array<std::size_t,d> myFreqBoxCoords(0);
+    std::tr1::array<std::size_t,d> log2FreqBoxesPerDim(0);
+#endif
+    std::size_t nextDim = 0;
+    for( std::size_t m=log2NumProcesses; m>0; --m )
     {
         myFreqBoxCoords[nextDim] = (myFreqBoxCoords[nextDim]<<1)+rankBits[m-1];
         ++log2FreqBoxesPerDim[nextDim];
         nextDim = (nextDim+1) % d;
     }
-    for( unsigned j=0; j<d; ++j )
+    for( std::size_t j=0; j<d; ++j )
     {
         myFreqBox.widths[j] = freqBox.widths[j] / (1<<log2FreqBoxesPerDim[j]);
         myFreqBox.offsets[j] = freqBox.offsets[j] + 
@@ -65,31 +75,31 @@ LocalFreqPartitionData
     }
 }
 
-template<typename R,unsigned d>
+template<typename R,std::size_t d>
 void
 LocalFreqPartitionData
 ( const Box<R,d>& freqBox,
         Box<R,d>& myFreqBox,
-        Array<unsigned,d>& myFreqBoxCoords,
-        Array<unsigned,d>& log2FreqBoxesPerDim,
+        std::tr1::array<std::size_t,d>& myFreqBoxCoords,
+        std::tr1::array<std::size_t,d>& log2FreqBoxesPerDim,
         MPI_Comm comm )
 {
     int rank, numProcesses;
     MPI_Comm_rank( comm, &rank );
     MPI_Comm_size( comm, &numProcesses );
     std::bitset<8*sizeof(int)> rankBits(rank);
-    const unsigned log2NumProcesses = Log2( numProcesses );
+    const std::size_t log2NumProcesses = Log2( numProcesses );
 
-    for( unsigned j=0; j<d; ++j )
+    for( std::size_t j=0; j<d; ++j )
         myFreqBoxCoords[j] = log2FreqBoxesPerDim[j] = 0;
-    unsigned nextDim = 0;
-    for( unsigned m=log2NumProcesses; m>0; --m )
+    std::size_t nextDim = 0;
+    for( std::size_t m=log2NumProcesses; m>0; --m )
     {
         myFreqBoxCoords[nextDim] = (myFreqBoxCoords[nextDim]<<1)+rankBits[m-1];
         ++log2FreqBoxesPerDim[nextDim];
         nextDim = (nextDim+1) % d;
     }
-    for( unsigned j=0; j<d; ++j )
+    for( std::size_t j=0; j<d; ++j )
     {
         myFreqBox.widths[j] = freqBox.widths[j] / (1<<log2FreqBoxesPerDim[j]);
         myFreqBox.offsets[j] = freqBox.offsets[j] + 

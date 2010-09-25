@@ -33,15 +33,15 @@ Usage()
 }
 
 // Define the dimension of the problem and the order of interpolation
-static const unsigned d = 3;
-static const unsigned q = 5;
+static const size_t d = 3;
+static const size_t q = 5;
 
 template<typename R>
 class Unity : public AmplitudeFunctor<R,d>
 {
 public:
     complex<R>
-    operator() ( const Array<R,d>& x, const Array<R,d>& p ) const
+    operator() ( const tr1::array<R,d>& x, const tr1::array<R,d>& p ) const
     { return complex<R>(1); }
 };
  
@@ -56,7 +56,7 @@ public:
     R GetTime() const { return _t; }
 
     R
-    operator() ( const Array<R,d>& x, const Array<R,d>& p ) const
+    operator() ( const tr1::array<R,d>& x, const tr1::array<R,d>& p ) const
     { 
         return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
                _t * sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
@@ -74,7 +74,7 @@ public:
     R GetTime() const { return _t; }
 
     R
-    operator() ( const Array<R,d>& x, const Array<R,d>& p ) const
+    operator() ( const tr1::array<R,d>& x, const tr1::array<R,d>& p ) const
     {
         return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] - 
                 _t * sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
@@ -107,14 +107,14 @@ main
         MPI_Finalize();
         return 0;
     }
-    const unsigned N = atoi(argv[1]);
-    const unsigned M = atoi(argv[2]);
+    const size_t N = atoi(argv[1]);
+    const size_t M = atoi(argv[2]);
     const double   T = atof(argv[3]);
-    const unsigned nT = atoi(argv[4]);
+    const size_t nT = atoi(argv[4]);
 
     // Define the spatial and frequency boxes
     Box<double,d> freqBox, spatialBox;
-    for( unsigned j=0; j<d; ++j )
+    for( size_t j=0; j<d; ++j )
     {
         freqBox.offsets[j] = -0.5*N;
         freqBox.widths[j] = N;
@@ -145,12 +145,12 @@ main
         srand( seed );
 
         // Now generate random sources in our frequency box
-        unsigned numLocalSources = ( rank<(int)(M%numProcesses) 
+        size_t numLocalSources = ( rank<(int)(M%numProcesses) 
                                      ? M/numProcesses+1 : M/numProcesses );
         vector< Source<double,d> > mySources( numLocalSources );
-        for( unsigned i=0; i<numLocalSources; ++i )
+        for( size_t i=0; i<numLocalSources; ++i )
         {
-            for( unsigned j=0; j<d; ++j )
+            for( size_t j=0; j<d; ++j )
             {
                 mySources[i].p[j] = 
                     myFreqBox.offsets[j]+Uniform<double>()*myFreqBox.widths[j];
@@ -171,7 +171,7 @@ main
         // Loop over each timestep, computing in parallel, gathering the 
         // results, and then dumping to file
         double deltaT = T/(nT-1);
-        for( unsigned i=0; i<nT; ++i )
+        for( size_t i=0; i<nT; ++i )
         {
             const double t = i*deltaT;
             upWave.SetTime( t );

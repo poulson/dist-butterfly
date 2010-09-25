@@ -24,38 +24,49 @@
 
 namespace bfio {
 
-template<unsigned d>
+template<std::size_t d>
 class HTreeWalker
 {
-    unsigned _nextZeroDim;
-    unsigned _nextZeroLevel;
-    Array<unsigned,d> _state;
+    std::size_t _nextZeroDim;
+    std::size_t _nextZeroLevel;
+    std::tr1::array<std::size_t,d> _state;
 public:
-    HTreeWalker() : _nextZeroDim(0), _nextZeroLevel(0), _state(0) {}
+    HTreeWalker() : 
+    _nextZeroDim(0), _nextZeroLevel(0) 
+    { 
+        // g++ does not yet have std::tr1::array.assign
+#ifdef GNU
+        for( std::size_t i=0; i<d; ++i )
+            _state[i] = 0;
+#else
+        _state.assign(0); 
+#endif
+    }
+
     ~HTreeWalker() {}
 
-    Array<unsigned,d> State()
+    std::tr1::array<std::size_t,d> State()
     { return _state; }
 
     void Walk()
     {
-        const unsigned zeroDim = _nextZeroDim;
-        const unsigned zeroLevel = _nextZeroLevel;
+        const std::size_t zeroDim = _nextZeroDim;
+        const std::size_t zeroLevel = _nextZeroLevel;
 
         if( zeroDim == 0 )
         {
             // Zero the first (zeroLevel-1) bits of all coordinates
             // and then increment at level zeroLevel
-            for( unsigned j=0; j<d; ++j )
+            for( std::size_t j=0; j<d; ++j )
                 _state[j] &= ~((1u<<zeroLevel)-1);
             _state[zeroDim] |= 1u<<zeroLevel;
 
             // Set up for the next walk
             // We need to find the dimension with the first zero bit.
-            unsigned minDim = d;
-            unsigned minTrailingOnes = sizeof(unsigned)*8+1;
-            Array<unsigned,d> numberOfTrailingOnes;
-            for( unsigned j=0; j<d; ++j )
+            std::size_t minDim = d;
+            std::size_t minTrailingOnes = sizeof(std::size_t)*8+1;
+            std::tr1::array<std::size_t,d> numberOfTrailingOnes;
+            for( std::size_t j=0; j<d; ++j )
             {
                 numberOfTrailingOnes[j] = NumberOfTrailingOnes( _state[j] );
                 if( numberOfTrailingOnes[j] < minTrailingOnes )
@@ -69,9 +80,9 @@ public:
         }
         else
         {
-            for( unsigned j=0; j<=zeroDim; ++j )
+            for( std::size_t j=0; j<=zeroDim; ++j )
                 _state[j] &= ~((1u<<(zeroLevel+1))-1);
-            for( unsigned j=zeroDim+1; j<d; ++j )
+            for( std::size_t j=zeroDim+1; j<d; ++j )
                 _state[j] &= ~((1u<<zeroLevel)-1);
             _state[zeroDim] |= 1u<<zeroLevel;
 
@@ -81,7 +92,7 @@ public:
         }
     }
 
-    Array<unsigned,d> NextState()
+    std::tr1::array<std::size_t,d> NextState()
     {
         Walk();
         return State();
@@ -89,20 +100,28 @@ public:
 };
 
 // Constrained HTree Walker
-template<unsigned d>
+template<std::size_t d>
 class ConstrainedHTreeWalker
 {
     bool _overflowed;
-    unsigned _firstOpenDim;
-    unsigned _nextZeroDim;
-    unsigned _nextZeroLevel;
-    Array<unsigned,d> _state;
-    Array<unsigned,d> _log2BoxesPerDim;
+    std::size_t _firstOpenDim;
+    std::size_t _nextZeroDim;
+    std::size_t _nextZeroLevel;
+    std::tr1::array<std::size_t,d> _state;
+    std::tr1::array<std::size_t,d> _log2BoxesPerDim;
 public:
-    ConstrainedHTreeWalker( const Array<unsigned,d>& log2BoxesPerDim ) 
-    : _overflowed(false), _nextZeroLevel(0), _state(0), 
+    ConstrainedHTreeWalker
+    ( const std::tr1::array<std::size_t,d>& log2BoxesPerDim ) 
+    : _overflowed(false), _nextZeroLevel(0), 
       _log2BoxesPerDim(log2BoxesPerDim) 
     {
+        // g++ does not yet have std::tr1::array.assign
+#ifdef GNU
+        for( std::size_t i=0; i<d; ++i )
+            _state[i] = 0;
+#else
+        _state.assign(0); 
+#endif
         for( _firstOpenDim=0; _firstOpenDim<d; ++_firstOpenDim )
             if( log2BoxesPerDim[_firstOpenDim] != 0 )
                 break;
@@ -111,7 +130,7 @@ public:
 
     ~ConstrainedHTreeWalker() {}
 
-    Array<unsigned,d> State()
+    std::tr1::array<std::size_t,d> State()
     { 
         if( _overflowed )
             throw std::logic_error( "Overflowed HTree" );
@@ -126,24 +145,24 @@ public:
             return;
         }
 
-        const unsigned zeroDim = _nextZeroDim;
-        const unsigned zeroLevel = _nextZeroLevel;
+        const std::size_t zeroDim = _nextZeroDim;
+        const std::size_t zeroLevel = _nextZeroLevel;
 
         if( zeroDim == _firstOpenDim )
         {
             // Zero the first (zeroLevel-1) bits of all coordinates
             // and then increment at level zeroLevel
-            for( unsigned j=0; j<d; ++j )
+            for( std::size_t j=0; j<d; ++j )
                 _state[j] &= ~((1u<<zeroLevel)-1);
             _state[zeroDim] |= 1u<<zeroLevel;
 
             // Set up for the next walk
             // We need to find the dimension with the first unconstrained
             // zero bit.
-            unsigned minDim = d;
-            unsigned minTrailingOnes = sizeof(unsigned)*8+1; 
-            Array<unsigned,d> numberOfTrailingOnes;
-            for( unsigned j=0; j<d; ++j )
+            std::size_t minDim = d;
+            std::size_t minTrailingOnes = sizeof(std::size_t)*8+1; 
+            std::tr1::array<std::size_t,d> numberOfTrailingOnes;
+            for( std::size_t j=0; j<d; ++j )
             {
                 numberOfTrailingOnes[j] = NumberOfTrailingOnes( _state[j] );
                 if( (numberOfTrailingOnes[j] < minTrailingOnes) &&
@@ -158,9 +177,9 @@ public:
         }
         else
         {
-            for( unsigned j=0; j<=zeroDim; ++j )
+            for( std::size_t j=0; j<=zeroDim; ++j )
                 _state[j] &= ~((1u<<(zeroLevel+1))-1);
-            for( unsigned j=zeroDim+1; j<d; ++j )
+            for( std::size_t j=zeroDim+1; j<d; ++j )
                 _state[j] &= ~((1u<<zeroLevel)-1);
             _state[zeroDim] |= 1u<<zeroLevel;
 

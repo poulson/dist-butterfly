@@ -23,87 +23,99 @@
 namespace bfio {
 namespace freq_to_spatial {
 
-template<typename R,unsigned d,unsigned q>
+template<typename R,std::size_t d,std::size_t q>
 void
 SwitchToSpatialInterp
 ( const AmplitudeFunctor<R,d>& Amp,
   const PhaseFunctor<R,d>& Phi,
-  const unsigned log2N, 
+  const std::size_t log2N, 
   const Box<R,d>& freqBox,
   const Box<R,d>& spatialBox,
   const Box<R,d>& myFreqBox,
   const Box<R,d>& mySpatialBox,
-  const unsigned log2LocalFreqBoxes,
-  const unsigned log2LocalSpatialBoxes,
-  const Array<unsigned,d>& log2LocalFreqBoxesPerDim,
-  const Array<unsigned,d>& log2LocalSpatialBoxesPerDim,
+  const std::size_t log2LocalFreqBoxes,
+  const std::size_t log2LocalSpatialBoxes,
+  const std::tr1::array<std::size_t,d>& log2LocalFreqBoxesPerDim,
+  const std::tr1::array<std::size_t,d>& log2LocalSpatialBoxesPerDim,
   const Context<R,d,q>& context,
         WeightGridList<R,d,q>& weightGridList
 )
 {
     typedef std::complex<R> C;
-    const unsigned q_to_d = Pow<q,d>::val;
+    const std::size_t q_to_d = Pow<q,d>::val;
 
     // Compute the width of the nodes at level log2N/2
-    const unsigned level = log2N/2;
-    Array<R,d> wA, wB;
-    for( unsigned j=0; j<d; ++j )
+    const std::size_t level = log2N/2;
+    std::tr1::array<R,d> wA, wB;
+    for( std::size_t j=0; j<d; ++j )
     {
         wA[j] = spatialBox.widths[j] / (1<<level);
         wB[j] = freqBox.widths[j] / (1<<(log2N-level));
     }
 
-    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
+    const std::vector< std::tr1::array<R,d> >& chebyshevGrid = 
+        context.GetChebyshevGrid();
     ConstrainedHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
     WeightGridList<R,d,q> oldWeightGridList( weightGridList );
-    for( unsigned i=0; i<(1u<<log2LocalSpatialBoxes); ++i, AWalker.Walk() )
+    for( std::size_t i=0; i<(1u<<log2LocalSpatialBoxes); ++i, AWalker.Walk() )
     {
-        const Array<unsigned,d> A = AWalker.State();
+        const std::tr1::array<std::size_t,d> A = AWalker.State();
 
         // Compute the coordinates and center of this spatial box
-        Array<R,d> x0A;
-        for( unsigned j=0; j<d; ++j )
+        std::tr1::array<R,d> x0A;
+        for( std::size_t j=0; j<d; ++j )
             x0A[j] = mySpatialBox.offsets[j] + (A[j]+0.5)*wA[j];
 
-        std::vector< Array<R,d> > xPoints( q_to_d );
-        for( unsigned t=0; t<q_to_d; ++t )
-            for( unsigned j=0; j<d; ++j )
+        std::vector< std::tr1::array<R,d> > xPoints( q_to_d );
+        for( std::size_t t=0; t<q_to_d; ++t )
+            for( std::size_t j=0; j<d; ++j )
                 xPoints[t][j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
 
-        std::vector<C> ampResults( q_to_d*q_to_d );
-        std::vector<R> phiResults( q_to_d*q_to_d );
-        std::vector<C> imagExpResults( q_to_d*q_to_d );
+        std::vector<C> ampResults;
+        std::vector<R> phiResults;
+        std::vector<R> sinResults;
+        std::vector<R> cosResults;
         ConstrainedHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
-        for( unsigned k=0; k<(1u<<log2LocalFreqBoxes); ++k, BWalker.Walk() )
+        for( std::size_t k=0; k<(1u<<log2LocalFreqBoxes); ++k, BWalker.Walk() )
         {
-            const Array<unsigned,d> B = BWalker.State();
+            const std::tr1::array<std::size_t,d> B = BWalker.State();
 
             // Compute the coordinates and center of this freq box
-            Array<R,d> p0B;
-            for( unsigned j=0; j<d; ++j )
+            std::tr1::array<R,d> p0B;
+            for( std::size_t j=0; j<d; ++j )
                 p0B[j] = myFreqBox.offsets[j] + (B[j]+0.5)*wB[j];
 
-            std::vector< Array<R,d> > pPoints( q_to_d );
-            for( unsigned t=0; t<q_to_d; ++t )
-                for( unsigned j=0; j<d; ++j )
+            std::vector< std::tr1::array<R,d> > pPoints( q_to_d );
+            for( std::size_t t=0; t<q_to_d; ++t )
+                for( std::size_t j=0; j<d; ++j )
                     pPoints[t][j] = p0B[j] + wB[j]*chebyshevGrid[t][j];
 
             Amp.BatchEvaluate( xPoints, pPoints, ampResults );
             Phi.BatchEvaluate( xPoints, pPoints, phiResults );
-            for( unsigned j=0; j<phiResults.size(); ++j )
+            for( std::size_t j=0; j<phiResults.size(); ++j )
                 phiResults[j] *= TwoPi;
-            ImagExpBatch<R>( phiResults, imagExpResults );
+            SinCosBatch( phiResults, sinResults, cosResults );
 
-            const unsigned key = k+(i<<log2LocalFreqBoxes);
-            for( unsigned t=0; t<q_to_d; ++t )
+            const std::size_t key = k+(i<<log2LocalFreqBoxes);
+            for( std::size_t t=0; t<q_to_d; ++t )
             {
-                weightGridList[key][t] = 0;
-                for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
+                weightGridList[key].RealWeight(t) = 0;
+                weightGridList[key].ImagWeight(t) = 0;
+                for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
                 {
-                    weightGridList[key][t] += 
-                        ampResults[t*q_to_d+tPrime]*
-                        imagExpResults[t*q_to_d+tPrime]*
-                        oldWeightGridList[key][tPrime];
+                    const WeightGrid<R,d,q>& oldGrid = oldWeightGridList[key];
+                    const R realWeight = oldGrid.RealWeight(tPrime);
+                    const R imagWeight = oldGrid.ImagWeight(tPrime);
+                    const R cosResult  = cosResults[t*q_to_d+tPrime];
+                    const R sinResult  = sinResults[t*q_to_d+tPrime];
+                    const R realAmp    = real(ampResults[t*q_to_d+tPrime]);
+                    const R imagAmp    = imag(ampResults[t*q_to_d+tPrime]);
+                    const R realBeta=cosResult*realWeight-sinResult*imagWeight;
+                    const R imagBeta=sinResult*realWeight+cosResult*imagWeight;
+                    weightGridList[key].RealWeight(t) += 
+                        realAmp*realBeta - imagAmp*imagBeta;
+                    weightGridList[key].ImagWeight(t) +=
+                        imagAmp*realBeta + realAmp*imagBeta;
                 }
             }
         }

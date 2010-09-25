@@ -35,22 +35,22 @@ Usage()
 }
 
 // Define the dimension of the problem and the order of interpolation
-static const unsigned d = 2;
-static const unsigned q = 12;
+static const size_t d = 2;
+static const size_t q = 12;
 
 // Define the number of samples to take from each box if testing accuracy
-static const unsigned numAccuracyTestsPerBox = 1;
+static const size_t numAccuracyTestsPerBox = 1;
 
 // If we visualize the results, define the number of samples per box per dim.
-static const unsigned numVizSamplesPerBoxDim = 3;
-static const unsigned numVizSamplesPerBox = Pow<numVizSamplesPerBoxDim,d>::val;
+static const size_t numVizSamplesPerBoxDim = 3;
+static const size_t numVizSamplesPerBox = Pow<numVizSamplesPerBoxDim,d>::val;
 
 template<typename R>
 class Oscillatory : public AmplitudeFunctor<R,d>
 {
 public:
     complex<R>
-    operator() ( const Array<R,d>& x, const Array<R,d>& p ) const
+    operator() ( const tr1::array<R,d>& x, const tr1::array<R,d>& p ) const
     {
         return 1. + 0.5*sin(1*Pi*x[0])*sin(4*Pi*x[1])*
                         sin(3*Pi*p[0])*cos(4*Pi*p[1]);
@@ -62,7 +62,7 @@ class UpWave : public PhaseFunctor<R,d>
 {
 public:
     R
-    operator() ( const Array<R,d>& x, const Array<R,d>& p ) const
+    operator() ( const tr1::array<R,d>& x, const tr1::array<R,d>& p ) const
     {
         return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
                0.5*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]); 
@@ -95,14 +95,14 @@ main
         MPI_Finalize();
         return 0;
     }
-    const unsigned N = atoi(argv[1]);
-    const unsigned M = atoi(argv[2]);
+    const size_t N = atoi(argv[1]);
+    const size_t M = atoi(argv[2]);
     const bool testAccuracy = atoi(argv[3]);
     const bool visualize = atoi(argv[4]);
 
     // Set the frequency and spatial boxes
     Box<double,d> freqBox, spatialBox;
-    for( unsigned j=0; j<d; ++j )
+    for( size_t j=0; j<d; ++j )
     {
         freqBox.offsets[j] = -0.5*N;
         freqBox.widths[j] = N;
@@ -141,9 +141,9 @@ main
         if( testAccuracy || visualize )
         {
             globalSources.resize( M );
-            for( unsigned i=0; i<M; ++i )
+            for( size_t i=0; i<M; ++i )
             {
-                for( unsigned j=0; j<d; ++j )
+                for( size_t j=0; j<d; ++j )
                 {
                     globalSources[i].p[j] = freqBox.offsets[j] + 
                         freqBox.widths[j]*Uniform<double>(); 
@@ -153,7 +153,7 @@ main
 
                 // Check if we should push this source onto our local list
                 bool isMine = true;
-                for( unsigned j=0; j<d; ++j )
+                for( size_t j=0; j<d; ++j )
                 {
                     double u = globalSources[i].p[j];
                     double start = myFreqBox.offsets[j];
@@ -167,13 +167,13 @@ main
         }
         else
         {
-            unsigned numLocalSources = 
+            size_t numLocalSources = 
                 ( rank<(int)(M%numProcesses) 
                   ? M/numProcesses+1 : M/numProcesses );
             mySources.resize( numLocalSources ); 
-            for( unsigned i=0; i<numLocalSources; ++i )
+            for( size_t i=0; i<numLocalSources; ++i )
             {
-                for( unsigned j=0; j<d; ++j )
+                for( size_t j=0; j<d; ++j )
                 {
                     mySources[i].p[j] = myFreqBox.offsets[j]+
                                         Uniform<double>()*myFreqBox.widths[j];
@@ -212,8 +212,8 @@ main
         if( testAccuracy )
         {
             const Box<double,d>& myBox = u->GetBox();
-            const unsigned numSubboxes = u->GetNumSubboxes();
-            const unsigned numTests = numSubboxes*numAccuracyTestsPerBox;
+            const size_t numSubboxes = u->GetNumSubboxes();
+            const size_t numTests = numSubboxes*numAccuracyTestsPerBox;
 
             // Compute error estimates using a constant number of samples within
             // each box in the resulting approximation of the transform.
@@ -222,17 +222,17 @@ main
             double myL2ErrorSquared = 0.;
             double myL2TruthSquared = 0.;
             double myLinfError = 0.;
-            for( unsigned k=0; k<numTests; ++k )
+            for( size_t k=0; k<numTests; ++k )
             {
                 // Compute a random point in our process's spatial box
-                Array<double,d> x;
-                for( unsigned j=0; j<d; ++j )
+                tr1::array<double,d> x;
+                for( size_t j=0; j<d; ++j )
                     x[j] = myBox.offsets[j] + Uniform<double>()*myBox.widths[j];
 
                 // Evaluate our potential field at x and compare against truth
                 complex<double> approx = u->Evaluate( x );
                 complex<double> truth(0.,0.);
-                for( unsigned m=0; m<globalSources.size(); ++m )
+                for( size_t m=0; m<globalSources.size(); ++m )
                 {
                     complex<double> beta = 
                         ImagExp( TwoPi*upWave(x,globalSources[m].p) );
@@ -284,9 +284,9 @@ main
                 cout << "Creating sources file..." << endl;
             ofstream file;
             file.open( (basename+"-sources.dat").c_str() );
-            for( unsigned i=0; i<globalSources.size(); ++i )
+            for( size_t i=0; i<globalSources.size(); ++i )
             {
-                for( unsigned j=0; j<d; ++j )
+                for( size_t j=0; j<d; ++j )
                     file << globalSources[i].p[j] << " ";
                 file << real(globalSources[i].magnitude) << " "
                      << imag(globalSources[i].magnitude) << endl;
@@ -302,41 +302,41 @@ main
                 cout << "Creating results file..." << endl;
             file.open( (basename+"-results.dat").c_str() );
             const Box<double,d>& myBox = u->GetBox();
-            const Array<double,d>& wA = u->GetSubboxWidths();
-            const Array<unsigned,d>& log2SubboxesPerDim =
+            const tr1::array<double,d>& wA = u->GetSubboxWidths();
+            const tr1::array<size_t,d>& log2SubboxesPerDim =
                 u->GetLog2SubboxesPerDim();
-            const unsigned numSubboxes = u->GetNumSubboxes();
-            const unsigned numVizSamples = numVizSamplesPerBox*numSubboxes;
+            const size_t numSubboxes = u->GetNumSubboxes();
+            const size_t numVizSamples = numVizSamplesPerBox*numSubboxes;
 
-            Array<unsigned,d> numSamplesUpToDim;
-            for( unsigned j=0; j<d; ++j )
+            tr1::array<size_t,d> numSamplesUpToDim;
+            for( size_t j=0; j<d; ++j )
             {
                 numSamplesUpToDim[j] = 1;
-                for( unsigned i=0; i<j; ++i )
+                for( size_t i=0; i<j; ++i )
                 {
                     numSamplesUpToDim[j] *=
                         numVizSamplesPerBoxDim << log2SubboxesPerDim[i];
                 }
             }
 
-            for( unsigned k=0; k<numVizSamples; ++k )
+            for( size_t k=0; k<numVizSamples; ++k )
             {
                 // Extract our indices in each dimension
-                Array<unsigned,d> coords;
-                for( unsigned j=0; j<d; ++j )
+                tr1::array<size_t,d> coords;
+                for( size_t j=0; j<d; ++j )
                     coords[j] = (k/numSamplesUpToDim[j]) %
                                 (numVizSamplesPerBoxDim<<log2SubboxesPerDim[j]);
 
                 // Compute the location of our sample
-                Array<double,d> x;
-                for( unsigned j=0; j<d; ++j )
+                tr1::array<double,d> x;
+                for( size_t j=0; j<d; ++j )
                 {
                     x[j] = myBox.offsets[j] +
                            coords[j]*wA[j]/numVizSamplesPerBoxDim;
                 }
 
                 complex<double> truth(0,0);
-                for( unsigned m=0; m<globalSources.size(); ++m )
+                for( size_t m=0; m<globalSources.size(); ++m )
                 {
                     complex<double> beta =
                         ImagExp(TwoPi*upWave(x,globalSources[m].p));
@@ -346,7 +346,7 @@ main
                 complex<double> error = truth - approx;
 
                 // Write out this sample
-                for( unsigned j=0; j<d; ++j )
+                for( size_t j=0; j<d; ++j )
                     file << x[j] << " ";
                 file << real(truth)  << " " << imag(truth)  << " "
                      << real(approx) << " " << imag(approx) << " "

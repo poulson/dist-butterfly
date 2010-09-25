@@ -18,23 +18,25 @@
 #ifndef BFIO_CONSTANTS_HPP
 #define BFIO_CONSTANTS_HPP 1
 
+#include <cstddef>
+
 namespace bfio {
 
 static const double Pi    = 3.141592653589793;
 static const double TwoPi = 6.283185307179586;
 
 // Pow<x,y>::val returns x to the y'th power at compile-time
-template<unsigned x,unsigned y>
+template<std::size_t x,std::size_t y>
 struct Pow
 { enum { val = x * Pow<x,y-1>::val }; };
 
-template<unsigned x>
+template<std::size_t x>
 struct Pow<x,1>
 { enum { val = x }; };
 
-template<unsigned x>
+template<std::size_t x>
 struct Pow<x,0>
-{ enum { val = 1 }; };
+{ enum { val = (size_t)1 }; };
 
 } // bfio
 

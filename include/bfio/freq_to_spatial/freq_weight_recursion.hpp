@@ -21,26 +21,26 @@
 namespace bfio {
 namespace freq_to_spatial {
 
-template<typename R,unsigned d,unsigned q>
+template<typename R,std::size_t d,std::size_t q>
 void
 FreqWeightRecursion
 ( const AmplitudeFunctor<R,d>& Amp,
   const PhaseFunctor<R,d>& Phi,
-  const unsigned log2NumMergingProcesses,
-  const unsigned myTeamRank,
-  const unsigned N, 
+  const std::size_t log2NumMergingProcesses,
+  const std::size_t myTeamRank,
+  const std::size_t N, 
   const Context<R,d,q>& context,
-  const Array<R,d>& x0A,
-  const Array<R,d>& p0B,
-  const Array<R,d>& wB,
-  const unsigned parentOffset,
+  const std::tr1::array<R,d>& x0A,
+  const std::tr1::array<R,d>& p0B,
+  const std::tr1::array<R,d>& wB,
+  const std::size_t parentOffset,
   const WeightGridList<R,d,q>& oldWeightGridList,
         WeightGrid<R,d,q>& weightGrid
 )
 {
     typedef std::complex<R> C;
-    const unsigned q_to_d = Pow<q,d>::val;
-    const unsigned q_to_2d = Pow<q,2*d>::val;
+    const std::size_t q_to_d = Pow<q,d>::val;
+    const std::size_t q_to_2d = Pow<q,2*d>::val;
 
     // We seek performance by isolating the Lagrangian interpolation as
     // a matrix-vector multiplication
@@ -53,56 +53,78 @@ FreqWeightRecursion
     // Finally:
     // 3) scale the accumulated weights
 
-    for( unsigned t=0; t<q_to_d; ++t )
-        weightGrid[t] = 0;
+    for( std::size_t t=0; t<q_to_d; ++t )
+    {
+        weightGrid.RealWeight(t) = 0;
+        weightGrid.ImagWeight(t) = 0;
+    }
 
-    std::vector< Array<R,d> > xPoint( 1, x0A );
-    std::vector< Array<R,d> > pPoints( q_to_d );
-    std::vector< R          > phiResults( q_to_d );
-    std::vector< C          > imagExpResults( q_to_d );
-    const std::vector< R          >& freqMaps = context.GetFreqMaps();
-    const std::vector< Array<R,d> >& freqChildGrids = 
+    std::vector<R> phiResults;
+    std::vector<R> sinResults;
+    std::vector<R> cosResults;
+    std::vector< std::tr1::array<R,d> > xPoint( 1, x0A );
+    std::vector< std::tr1::array<R,d> > pPoints( q_to_d );
+    const std::vector<R>& freqMaps = context.GetFreqMaps();
+    const std::vector< std::tr1::array<R,d> >& freqChildGrids = 
         context.GetFreqChildGrids();
-    for( unsigned cLocal=0; cLocal<(1u<<(d-log2NumMergingProcesses)); ++cLocal )
+    for( std::size_t cLocal=0; 
+         cLocal<(1u<<(d-log2NumMergingProcesses)); 
+         ++cLocal )
     {
         // Step 1
-        const unsigned c = (cLocal<<log2NumMergingProcesses) + myTeamRank;
-        const unsigned key = parentOffset + cLocal;
+        const std::size_t c = (cLocal<<log2NumMergingProcesses) + myTeamRank;
+        const std::size_t key = parentOffset + cLocal;
 
         // Form the set of p points to evaluate
-        for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
-            for( unsigned j=0; j<d; ++j )
+        for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
+            for( std::size_t j=0; j<d; ++j )
                 pPoints[tPrime][j] = 
                     p0B[j] + wB[j]*freqChildGrids[c*q_to_d+tPrime][j];
 
         // Form the phase factors
         Phi.BatchEvaluate( xPoint, pPoints, phiResults );
-        for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
+        for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
             phiResults[tPrime] *= TwoPi;
-        ImagExpBatch<R>( phiResults, imagExpResults );
+        SinCosBatch( phiResults, sinResults, cosResults );
 
         WeightGrid<R,d,q> scaledWeightGrid;
-        for( unsigned tPrime=0; tPrime<q_to_d; ++tPrime )
-            scaledWeightGrid[tPrime] = 
-                imagExpResults[tPrime]*oldWeightGridList[key][tPrime];
+        for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
+        {
+            const R realWeight = oldWeightGridList[key].RealWeight(tPrime);
+            const R imagWeight = oldWeightGridList[key].ImagWeight(tPrime);
+            scaledWeightGrid.RealWeight(tPrime) = 
+                cosResults[tPrime]*realWeight - sinResults[tPrime]*imagWeight;
+            scaledWeightGrid.ImagWeight(tPrime) = 
+                sinResults[tPrime]*realWeight + cosResults[tPrime]*imagWeight;
+        }
         
         // Step 2
-        RealMatrixComplexVec
-        ( q_to_d, q_to_d, (R)1, &freqMaps[c*q_to_2d], q_to_d, 
-          &scaledWeightGrid[0], (R)1, &weightGrid[0] );
+        Gemm
+        ( 'N', 'N', q_to_d, 2, q_to_d, 
+          (R)1, &freqMaps[c*q_to_2d],      q_to_d,
+                scaledWeightGrid.Buffer(), q_to_d,
+          (R)1,       weightGrid.Buffer(), q_to_d );
     }
 
     // Step 3
-    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
-    for( unsigned t=0; t<q_to_d; ++t )
-        for( unsigned j=0; j<d; ++j )
+    const std::vector< std::tr1::array<R,d> >& chebyshevGrid = 
+        context.GetChebyshevGrid();
+    for( std::size_t t=0; t<q_to_d; ++t )
+        for( std::size_t j=0; j<d; ++j )
             pPoints[t][j] = p0B[j] + wB[j]*chebyshevGrid[t][j];
     Phi.BatchEvaluate( xPoint, pPoints, phiResults );
-    for( unsigned t=0; t<q_to_d; ++t )
-        phiResults[t] *= TwoPi;
-    ImagExpBatch<R>( phiResults, imagExpResults );
-    for( unsigned t=0; t<q_to_d; ++t )
-        weightGrid[t] /= imagExpResults[t];
+    for( std::size_t t=0; t<q_to_d; ++t )
+        phiResults[t] *= -TwoPi;
+    SinCosBatch( phiResults, sinResults, cosResults );
+    for( std::size_t t=0; t<q_to_d; ++t )
+    {
+        const R realWeight = weightGrid.RealWeight(t);
+        const R imagWeight = weightGrid.ImagWeight(t);
+        weightGrid.RealWeight(t) = 
+            cosResults[t]*realWeight - sinResults[t]*imagWeight;
+        weightGrid.ImagWeight(t) = 
+            sinResults[t]*realWeight + cosResults[t]*imagWeight;
+    }
 }
 
 } // freq_to_spatial

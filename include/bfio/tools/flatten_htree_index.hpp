@@ -23,54 +23,55 @@
 
 namespace bfio {
 
-template<unsigned d>
-unsigned
+template<std::size_t d>
+std::size_t
 FlattenHTreeIndex
-( const Array<unsigned,d>& x )
+( const std::tr1::array<std::size_t,d>& x )
 {
     // We will accumulate the index into this variable
-    unsigned index = 0;
+    std::size_t index = 0;
 
     // Compute the maximum recursion height reached by searching for the
     // maximum log2 of the coordinates
-    unsigned maxLog2 = 0;
-    for( unsigned j=0; j<d; ++j )
+    std::size_t maxLog2 = 0;
+    for( std::size_t j=0; j<d; ++j )
         maxLog2 = std::max( Log2(x[j]), maxLog2 );
 
     // Now unroll the coordinates into the index
-    for( unsigned i=0; i<=maxLog2; ++i )
-        for( unsigned j=0; j<d; ++j )
+    for( std::size_t i=0; i<=maxLog2; ++i )
+        for( std::size_t j=0; j<d; ++j )
             index |= ((x[j]>>i)&1)<<(i*d+j);
 
     return index;
 }
 
-template<unsigned d>
-unsigned
+template<std::size_t d>
+std::size_t
 FlattenConstrainedHTreeIndex
-( const Array<unsigned,d>& x, const Array<unsigned,d>& log2BoxesPerDim )
+( const std::tr1::array<std::size_t,d>& x, 
+  const std::tr1::array<std::size_t,d>& log2BoxesPerDim )
 {
     // We will accumulate the index into this variable
-    unsigned index = 0;
+    std::size_t index = 0;
 
     // Compute the maximum recursion height reached by searching for the
     // maximum log2 of the coordinates
-    unsigned maxLog2 = 0;
-    for( unsigned j=0; j<d; ++j )
+    std::size_t maxLog2 = 0;
+    for( std::size_t j=0; j<d; ++j )
         maxLog2 = std::max( Log2(x[j]), maxLog2 );
 
     // Now unroll the coordinates into the index
-    for( unsigned i=0; i<=maxLog2; ++i )
+    for( std::size_t i=0; i<=maxLog2; ++i )
     {
         // Sum the total number of levels i is 'above' the maximum for 
         // each dimension
-        unsigned log2BoxesUpToLevel = 0;
-        for( unsigned j=0; j<d; ++j )
+        std::size_t log2BoxesUpToLevel = 0;
+        for( std::size_t j=0; j<d; ++j )
             log2BoxesUpToLevel += std::min( i, log2BoxesPerDim[j] );
         
         // Now unroll for each dimension
-        unsigned unfilledBefore = 0;
-        for( unsigned j=0; j<d; ++j )
+        std::size_t unfilledBefore = 0;
+        for( std::size_t j=0; j<d; ++j )
         {
             index |= ((x[j]>>i)&1)<<(log2BoxesUpToLevel+unfilledBefore);
             if( log2BoxesPerDim[j] > i )

@@ -16,6 +16,12 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+# More configuration are coming soon
+config = GNU
+ifneq ($(config),GNU)
+    $(error You must choose a valid configuration)
+endif
+
 incdir = include
 testdir = test
 bindir = bin
@@ -25,10 +31,13 @@ bindir = bin
 #
 # Defining 'FUNDERSCORE' appends an underscore to BLAS routine names
 CXX = mpicxx
-CXXFLAGS = -I$(incdir) -DFUNDERSCORE -DAVOID_COMPLEX_MPI
-CXXFLAGS_DEBUG = -g -Wall $(CXXFLAGS)
-CXXFLAGS_RELEASE = -O3 -ffast-math -Wall -DRELEASE $(CXXFLAGS)
-LDFLAGS = -L/usr/lib -lblas
+ifeq ($(config),GNU)
+  CXXFLAGS = -DGNU -I$(incdir) -DFUNDERSCORE -DAVOID_COMPLEX_MPI
+  CXXFLAGS_DEBUG = -DTRACE -g -Wall $(CXXFLAGS)
+  CXXFLAGS_RELEASE = -O3 -ffast-math -Wall -DRELEASE $(CXXFLAGS)
+  LDFLAGS = -L/usr/lib -lblas
+endif
+
 AR = ar
 ARFLAGS = rc
 
