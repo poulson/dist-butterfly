@@ -78,8 +78,9 @@ FreqToSpatial
     LocalFreqPartitionData
     ( freqBox, myFreqBox, myFreqBoxCoords, log2FreqBoxesPerDim, comm );
 
-    // g++ has not yet implemented initializing std::tr1::array with a constant
-#ifdef GNU
+    // g++ and icc have not yet implemented initializing std::tr1::array with a
+    // constant
+#if defined (GNU) || defined (INTEL)
     std::tr1::array<std::size_t,d> mySpatialBoxCoords;
     std::tr1::array<std::size_t,d> log2SpatialBoxesPerDim;
     for( std::size_t i=0; i<d; ++i )
@@ -98,8 +99,9 @@ FreqToSpatial
     std::size_t log2LocalFreqBoxes = 0;
     std::size_t log2LocalSpatialBoxes = 0;
     std::tr1::array<std::size_t,d> log2LocalFreqBoxesPerDim;
-    // g++ does not yet support initializing std::tr1:;array with a constant
-#ifdef GNU
+    // g++ and icc have not yet implemented initializing std::tr1::array with a
+    // constant
+#if defined (GNU) || defined(INTEL)
     std::tr1::array<std::size_t,d> log2LocalSpatialBoxesPerDim;
     for( std::size_t i=0; i<d; ++i )
         log2LocalSpatialBoxesPerDim[i] = 0;

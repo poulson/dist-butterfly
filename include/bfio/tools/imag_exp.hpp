@@ -33,8 +33,8 @@ inline std::complex<float>
 ImagExp( float alpha )
 {
     // TODO: Add fast sincos support for various architectures
-    const float real = cos(alpha);
-    const float imag = sin(alpha);
+    const float real = std::cos(alpha);
+    const float imag = std::sin(alpha);
     return std::complex<float>( real, imag );
 }
 
@@ -43,8 +43,8 @@ inline std::complex<double>
 ImagExp( double alpha )
 {
     // TODO: Add fast sincos support for various architectures
-    const double real = cos(alpha);
-    const double imag = sin(alpha);
+    const double real = std::cos(alpha);
+    const double imag = std::sin(alpha);
     return std::complex<double>( real, imag );
 }
 
@@ -65,12 +65,15 @@ SinCosBatch
 {
     sinResults.resize( a.size() );
     cosResults.resize( a.size() );
-    // TODO: Add vectorization support here for various architectures
+#ifdef INTEL
+    vssincos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
+#else
     for( std::size_t j=0; j<a.size(); ++j )
     {
-        sinResults[j] = sin(a[j]);
-        cosResults[j] = cos(a[j]);
+        sinResults[j] = std::sin(a[j]);
+        cosResults[j] = std::cos(a[j]);
     }
+#endif
 }
 
 template<>
@@ -82,12 +85,15 @@ SinCosBatch
 {
     sinResults.resize( a.size() );
     cosResults.resize( a.size() );
-    // TODO: Add vectorization support here for various architectures
+#ifdef INTEL
+    vdsincos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
+#else
     for( std::size_t j=0; j<a.size(); ++j )
     {
-        sinResults[j] = sin(a[j]);
-        cosResults[j] = cos(a[j]);
+        sinResults[j] = std::sin(a[j]);
+        cosResults[j] = std::cos(a[j]);
     }
+#endif
 }
 
 } // bfio

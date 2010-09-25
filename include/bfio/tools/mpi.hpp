@@ -18,7 +18,6 @@
 #ifndef BFIO_TOOLS_MPI_HPP
 #define BFIO_TOOLS_MPI_HPP 1
 
-#include <complex>
 #include <stdexcept>
 #include "mpi.h"
 
@@ -31,7 +30,7 @@ SumScatter
 
 } // bfio
 
-// Implementations for {float,double,complex<float>,complex<double>}
+// Implementations 
 namespace bfio {
 
 template<>
@@ -58,64 +57,6 @@ SumScatter<double>
     int ierror = MPI_Reduce_scatter
     ( const_cast<double*>(sendBuf), 
       recvBuf, recvCounts, MPI_DOUBLE, MPI_SUM, comm );
-    if( ierror != 0 )
-    {
-        std::ostringstream msg;
-        msg << "ierror from MPI_Reduce_scatter = " << ierror;
-        throw std::runtime_error( msg.str() );
-    }
-}
-
-template<>
-inline void
-SumScatter< std::complex<float> >
-( const std::complex<float>* sendBuf, 
-        std::complex<float>* recvBuf, 
-  int* recvCounts, MPI_Comm comm )
-{
-#ifdef AVOID_COMPLEX_MPI
-    int size;
-    MPI_Comm_size( comm, &size );
-    std::vector<int> recvCountsDoubled(size);
-    for( int i=0; i<size; ++i )
-        recvCountsDoubled[i] = 2*recvCounts[i];
-    int ierror = MPI_Reduce_scatter
-    ( const_cast<std::complex<float>*>(sendBuf), 
-      recvBuf, &recvCountsDoubled[0], MPI_FLOAT, MPI_SUM, comm );
-#else
-    int ierror = MPI_Reduce_scatter
-    ( const_cast<std::complex<float>*>(sendBuf), 
-      recvBuf, recvCounts, MPI_COMPLEX, MPI_SUM, comm );
-#endif
-    if( ierror != 0 )
-    {
-        std::ostringstream msg;
-        msg << "ierror from MPI_Reduce_scatter = " << ierror;
-        throw std::runtime_error( msg.str() );
-    }
-}
-
-template<>
-void
-inline SumScatter< std::complex<double> >
-( const std::complex<double>* sendBuf, 
-        std::complex<double>* recvBuf,
-  int* recvCounts, MPI_Comm comm )
-{
-#ifdef AVOID_COMPLEX_MPI
-    int size;
-    MPI_Comm_size( comm, &size );
-    std::vector<int> recvCountsDoubled(size);
-    for( int i=0; i<size; ++i )
-        recvCountsDoubled[i] = 2*recvCounts[i];
-    int ierror = MPI_Reduce_scatter
-    ( const_cast<std::complex<double>*>(sendBuf), 
-      recvBuf, &recvCountsDoubled[0], MPI_DOUBLE, MPI_SUM, comm );
-#else
-    int ierror = MPI_Reduce_scatter
-    ( const_cast<std::complex<double>*>(sendBuf), 
-      recvBuf, recvCounts, MPI_DOUBLE_COMPLEX, MPI_SUM, comm );
-#endif
     if( ierror != 0 )
     {
         std::ostringstream msg;

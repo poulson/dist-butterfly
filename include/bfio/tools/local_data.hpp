@@ -48,8 +48,9 @@ LocalFreqPartitionData
     std::bitset<8*sizeof(int)> rankBits(rank);
     const std::size_t log2NumProcesses = Log2( numProcesses );
 
-    // g++ does not yet support constructing std::tr1::array with a constant
-#ifdef GNU
+    // g++ and icc have not yet implemented initializing std::tr1::array with a
+    // constant
+#if defined(GNU) || defined(INTEL)
     std::tr1::array<std::size_t,d> myFreqBoxCoords;
     std::tr1::array<std::size_t,d> log2FreqBoxesPerDim;
     for( std::size_t i=0; i<d; ++i )

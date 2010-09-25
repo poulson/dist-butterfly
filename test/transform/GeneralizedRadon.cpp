@@ -59,10 +59,10 @@ template<typename R>
 class GenRadon : public PhaseFunctor<R,d>
 {
     R c1( const tr1::array<R,d>& x ) const
-    { return (2+sin(TwoPi*x[0])*sin(TwoPi*x[1]))/3.; }
+    { return (2+std::sin(TwoPi*x[0])*std::sin(TwoPi*x[1]))/3.; }
 
     R c2( const tr1::array<R,d>& x ) const
-    { return (2+cos(TwoPi*x[0])*cos(TwoPi*x[1]))/3.; }
+    { return (2+std::cos(TwoPi*x[0])*std::cos(TwoPi*x[1]))/3.; }
 public:
     R
     operator() ( const tr1::array<R,d>& x, const tr1::array<R,d>& p ) const

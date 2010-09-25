@@ -34,8 +34,8 @@ public:
     HTreeWalker() : 
     _nextZeroDim(0), _nextZeroLevel(0) 
     { 
-        // g++ does not yet have std::tr1::array.assign
-#ifdef GNU
+        // g++ and icc do not yet have std::tr1::array.assign
+#if defined(GNU) || defined(INTEL)
         for( std::size_t i=0; i<d; ++i )
             _state[i] = 0;
 #else
@@ -115,8 +115,8 @@ public:
     : _overflowed(false), _nextZeroLevel(0), 
       _log2BoxesPerDim(log2BoxesPerDim) 
     {
-        // g++ does not yet have std::tr1::array.assign
-#ifdef GNU
+        // g++ and icc do not yet have std::tr1::array.assign
+#if defined (GNU) || defined(INTEL)
         for( std::size_t i=0; i<d; ++i )
             _state[i] = 0;
 #else

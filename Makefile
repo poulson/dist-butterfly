@@ -16,26 +16,35 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# More configuration are coming soon
+# Choose between GNU and Intel. The Intel configuration is not yet working.
 config = GNU
+ifeq ($(config),Intel)
+    $(warning The Intel configuration is not yet working)
+endif
 ifneq ($(config),GNU)
+  ifneq ($(config),Intel)
     $(error You must choose a valid configuration)
+  endif
 endif
 
 incdir = include
 testdir = test
 bindir = bin
 
-# Defining 'AVOID_COMPLEX_MPI' avoids buggy complex MPI_Reduce_scatter summation
-# implementations by using the real version with doubled lengths
-#
 # Defining 'FUNDERSCORE' appends an underscore to BLAS routine names
-CXX = mpicxx
+# Defining 'TRACE' prints progress through the FreqToSpatial transformation
+CXX = mpicxx 
 ifeq ($(config),GNU)
-  CXXFLAGS = -DGNU -I$(incdir) -DFUNDERSCORE -DAVOID_COMPLEX_MPI
+  CXXFLAGS = -DGNU -I$(incdir) -DFUNDERSCORE 
   CXXFLAGS_DEBUG = -DTRACE -g -Wall $(CXXFLAGS)
   CXXFLAGS_RELEASE = -O3 -ffast-math -Wall -DRELEASE $(CXXFLAGS)
   LDFLAGS = -L/usr/lib -lblas
+endif
+ifeq ($(config),Intel)
+  CXXFLAGS = -DINTEL -I$(incdir) 
+  CXXFLAGS_DEBUG = -DTRACE -g $(CXXFLAGS)
+  CXXFLAGS_RELEASE = -DRELEASE $(CXXFLAGS)
+  LDFLAGS = -Bstatic -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lguide
 endif
 
 AR = ar
