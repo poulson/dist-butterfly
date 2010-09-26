@@ -30,9 +30,9 @@ FreqWeightRecursion
   const std::size_t myTeamRank,
   const std::size_t N, 
   const Context<R,d,q>& context,
-  const std::tr1::array<R,d>& x0A,
-  const std::tr1::array<R,d>& p0B,
-  const std::tr1::array<R,d>& wB,
+  const Array<R,d>& x0A,
+  const Array<R,d>& p0B,
+  const Array<R,d>& wB,
   const std::size_t parentOffset,
   const WeightGridList<R,d,q>& oldWeightGridList,
         WeightGrid<R,d,q>& weightGrid
@@ -62,10 +62,10 @@ FreqWeightRecursion
     std::vector<R> phiResults;
     std::vector<R> sinResults;
     std::vector<R> cosResults;
-    std::vector< std::tr1::array<R,d> > xPoint( 1, x0A );
-    std::vector< std::tr1::array<R,d> > pPoints( q_to_d );
+    std::vector< Array<R,d> > xPoint( 1, x0A );
+    std::vector< Array<R,d> > pPoints( q_to_d );
     const std::vector<R>& freqMaps = context.GetFreqMaps();
-    const std::vector< std::tr1::array<R,d> >& freqChildGrids = 
+    const std::vector< Array<R,d> >& freqChildGrids = 
         context.GetFreqChildGrids();
     for( std::size_t cLocal=0; 
          cLocal<(1u<<(d-log2NumMergingProcesses)); 
@@ -107,8 +107,7 @@ FreqWeightRecursion
     }
 
     // Step 3
-    const std::vector< std::tr1::array<R,d> >& chebyshevGrid = 
-        context.GetChebyshevGrid();
+    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
     for( std::size_t t=0; t<q_to_d; ++t )
         for( std::size_t j=0; j<d; ++j )
             pPoints[t][j] = p0B[j] + wB[j]*chebyshevGrid[t][j];

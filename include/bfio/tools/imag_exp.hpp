@@ -21,6 +21,13 @@
 #include <math.h>
 #include <vector>
 
+#if defined(IBM)
+# include "mass.h"
+# include "massv.h"
+#elif defined(INTEL)
+# include "mkl_vml.h"
+#endif
+
 namespace bfio {
 
 // For single-point imaginary exponentials
@@ -32,9 +39,8 @@ template<>
 inline std::complex<float>
 ImagExp( float alpha )
 {
-    // TODO: Add fast sincos support for various architectures
-    const float real = std::cos(alpha);
-    const float imag = std::sin(alpha);
+    const float real = cos(alpha);
+    const float imag = sin(alpha);
     return std::complex<float>( real, imag );
 }
 
@@ -42,9 +48,8 @@ template<>
 inline std::complex<double>
 ImagExp( double alpha )
 {
-    // TODO: Add fast sincos support for various architectures
-    const double real = std::cos(alpha);
-    const double imag = std::sin(alpha);
+    const double real = cos(alpha);
+    const double imag = sin(alpha);
     return std::complex<double>( real, imag );
 }
 
@@ -65,13 +70,16 @@ SinCosBatch
 {
     sinResults.resize( a.size() );
     cosResults.resize( a.size() );
-#ifdef INTEL
+#if defined(IBM)
+    int n = a.size(); 
+    vssincos( &a[0], &sinResults[0], &cosResults[0], &n );
+#elif defined(INTEL)
     vssincos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
 #else
     for( std::size_t j=0; j<a.size(); ++j )
     {
-        sinResults[j] = std::sin(a[j]);
-        cosResults[j] = std::cos(a[j]);
+        sinResults[j] = sin(a[j]);
+        cosResults[j] = cos(a[j]);
     }
 #endif
 }
@@ -85,13 +93,16 @@ SinCosBatch
 {
     sinResults.resize( a.size() );
     cosResults.resize( a.size() );
-#ifdef INTEL
+#if defined(IBM)
+    int n = a.size();
+    vsincos( &a[0], &sinResults[0], &cosResults[0], &n );
+#elif defined(INTEL)
     vdsincos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
 #else
     for( std::size_t j=0; j<a.size(); ++j )
     {
-        sinResults[j] = std::sin(a[j]);
-        cosResults[j] = std::cos(a[j]);
+        sinResults[j] = sin(a[j]);
+        cosResults[j] = cos(a[j]);
     }
 #endif
 }

@@ -72,25 +72,14 @@ FreqToSpatial
     // Determine the number of boxes in each dimension of the frequency
     // domain by applying the partitions cyclically over the d dimensions.
     // We can simultaneously compute the indices of our box.
-    std::tr1::array<std::size_t,d> myFreqBoxCoords;
-    std::tr1::array<std::size_t,d> log2FreqBoxesPerDim;
+    Array<std::size_t,d> myFreqBoxCoords;
+    Array<std::size_t,d> log2FreqBoxesPerDim;
     Box<R,d> myFreqBox;
     LocalFreqPartitionData
     ( freqBox, myFreqBox, myFreqBoxCoords, log2FreqBoxesPerDim, comm );
 
-    // g++ and icc have not yet implemented initializing std::tr1::array with a
-    // constant
-#if defined (GNU) || defined (INTEL)
-    std::tr1::array<std::size_t,d> mySpatialBoxCoords;
-    std::tr1::array<std::size_t,d> log2SpatialBoxesPerDim;
-    for( std::size_t i=0; i<d; ++i )
-        mySpatialBoxCoords[i] = 0;
-    for( std::size_t i=0; i<d; ++i )
-        log2SpatialBoxesPerDim[i] = 0;
-#else
-    std::tr1::array<std::size_t,d> mySpatialBoxCoords(0);
-    std::tr1::array<std::size_t,d> log2SpatialBoxesPerDim(0);
-#endif
+    Array<std::size_t,d> mySpatialBoxCoords(0);
+    Array<std::size_t,d> log2SpatialBoxesPerDim(0);
     Box<R,d> mySpatialBox;
     mySpatialBox = spatialBox;
 
@@ -98,16 +87,8 @@ FreqToSpatial
     // our process is responsible for initializing the weights in. 
     std::size_t log2LocalFreqBoxes = 0;
     std::size_t log2LocalSpatialBoxes = 0;
-    std::tr1::array<std::size_t,d> log2LocalFreqBoxesPerDim;
-    // g++ and icc have not yet implemented initializing std::tr1::array with a
-    // constant
-#if defined (GNU) || defined(INTEL)
-    std::tr1::array<std::size_t,d> log2LocalSpatialBoxesPerDim;
-    for( std::size_t i=0; i<d; ++i )
-        log2LocalSpatialBoxesPerDim[i] = 0;
-#else
-    std::tr1::array<std::size_t,d> log2LocalSpatialBoxesPerDim(0);
-#endif
+    Array<std::size_t,d> log2LocalFreqBoxesPerDim;
+    Array<std::size_t,d> log2LocalSpatialBoxesPerDim(0);
     for( std::size_t j=0; j<d; ++j )
     {
         log2LocalFreqBoxesPerDim[j] = log2N-log2FreqBoxesPerDim[j];
@@ -161,8 +142,8 @@ FreqToSpatial
     for( std::size_t level=1; level<=log2N; ++level )
     {
         // Compute the width of the nodes at this level
-        std::tr1::array<R,d> wA;
-        std::tr1::array<R,d> wB;
+        Array<R,d> wA;
+        Array<R,d> wB;
         for( std::size_t j=0; j<d; ++j )
         {
             wA[j] = spatialBox.widths[j] / (1<<level);
@@ -189,10 +170,10 @@ FreqToSpatial
                  i<(1u<<log2LocalSpatialBoxes); 
                  ++i, AWalker.Walk() )
             {
-                const std::tr1::array<std::size_t,d> A = AWalker.State();
+                const Array<std::size_t,d> A = AWalker.State();
 
                 // Compute coordinates and center of this spatial box
-                std::tr1::array<R,d> x0A;
+                Array<R,d> x0A;
                 for( std::size_t j=0; j<d; ++j )
                     x0A[j] = mySpatialBox.offsets[j] + (A[j]+0.5)*wA[j];
 
@@ -202,10 +183,10 @@ FreqToSpatial
                      k<(1u<<log2LocalFreqBoxes); 
                      ++k, BWalker.Walk() )
                 {
-                    const std::tr1::array<std::size_t,d> B = BWalker.State();
+                    const Array<std::size_t,d> B = BWalker.State();
 
                     // Compute coordinates and center of this freq box
-                    std::tr1::array<R,d> p0B;
+                    Array<R,d> p0B;
                     for( std::size_t j=0; j<d; ++j )
                         p0B[j] = myFreqBox.offsets[j] + (B[j]+0.5)*wB[j];
 
@@ -234,8 +215,8 @@ FreqToSpatial
                     }
                     else
                     {
-                        std::tr1::array<R,d> x0Ap;
-                        std::tr1::array<std::size_t,d> globalA;
+                        Array<R,d> x0Ap;
+                        Array<std::size_t,d> globalA;
                         std::size_t ARelativeToAp = 0;
                         for( std::size_t j=0; j<d; ++j )
                         {
@@ -340,7 +321,7 @@ FreqToSpatial
             }
 
             // Compute the coordinates and center of this freq box
-            std::tr1::array<R,d> p0B;
+            Array<R,d> p0B;
             for( std::size_t j=0; j<d; ++j )
                 p0B[j] = myFreqBox.offsets[j] + 0.5*wB[j];
 
@@ -359,10 +340,10 @@ FreqToSpatial
                  i<(1u<<log2LocalSpatialBoxes); 
                  ++i, AWalker.Walk() )
             {
-                const std::tr1::array<std::size_t,d> A = AWalker.State();
+                const Array<std::size_t,d> A = AWalker.State();
 
                 // Compute coordinates and center of this spatial box
-                std::tr1::array<R,d> x0A;
+                Array<R,d> x0A;
                 for( std::size_t j=0; j<d; ++j )
                     x0A[j] = mySpatialBox.offsets[j] + (A[j]+0.5)*wA[j];
 
@@ -388,8 +369,8 @@ FreqToSpatial
                 }
                 else
                 {
-                    std::tr1::array<R,d> x0Ap;
-                    std::tr1::array<std::size_t,d> globalA;
+                    Array<R,d> x0Ap;
+                    Array<std::size_t,d> globalA;
                     std::size_t ARelativeToAp = 0;
                     for( std::size_t j=0; j<d; ++j )
                     {

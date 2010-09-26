@@ -33,11 +33,11 @@ SpatialWeightRecursion
   const std::size_t N, 
   const Context<R,d,q>& context,
   const std::size_t ARelativeToAp,
-  const std::tr1::array<R,d>& x0A,
-  const std::tr1::array<R,d>& x0Ap,
-  const std::tr1::array<R,d>& p0B,
-  const std::tr1::array<R,d>& wA,
-  const std::tr1::array<R,d>& wB,
+  const Array<R,d>& x0A,
+  const Array<R,d>& x0Ap,
+  const Array<R,d>& p0B,
+  const Array<R,d>& wA,
+  const Array<R,d>& wB,
   const std::size_t parentOffset,
   const WeightGridList<R,d,q>& oldWeightGridList,
         WeightGrid<R,d,q>& weightGrid
@@ -64,10 +64,10 @@ SpatialWeightRecursion
     std::vector<R> phiResults;
     std::vector<R> sinResults;
     std::vector<R> cosResults;
-    std::vector< std::tr1::array<R,d> > pPoint( 1 );
-    std::vector< std::tr1::array<R,d> > xPoints( q_to_d );
+    std::vector< Array<R,d> > pPoint( 1 );
+    std::vector< Array<R,d> > xPoints( q_to_d );
     const std::vector<R>& spatialMaps = context.GetSpatialMaps();
-    const std::vector< std::tr1::array<R,d> >& chebyshevGrid = 
+    const std::vector< Array<R,d> >& chebyshevGrid = 
         context.GetChebyshevGrid();
     for( std::size_t cLocal=0; 
          cLocal<(1u<<(d-log2NumMergingProcesses)); 

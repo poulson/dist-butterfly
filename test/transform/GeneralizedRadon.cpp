@@ -56,22 +56,22 @@ class Unity : public bfio::AmplitudeFunctor<R,d>
 public:
     std::complex<R>
     operator() 
-    ( const std::tr1::array<R,d>& x, const std::tr1::array<R,d>& p ) const
+    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
     { return std::complex<R>(1); }
 };
 
 template<typename R>
 class GenRadon : public bfio::PhaseFunctor<R,d>
 {
-    R c1( const std::tr1::array<R,d>& x ) const
+    R c1( const bfio::Array<R,d>& x ) const
     { return (2+sin(bfio::TwoPi*x[0])*sin(bfio::TwoPi*x[1]))/3.; }
 
-    R c2( const std::tr1::array<R,d>& x ) const
+    R c2( const bfio::Array<R,d>& x ) const
     { return (2+cos(bfio::TwoPi*x[0])*cos(bfio::TwoPi*x[1]))/3.; }
 public:
     R
     operator() 
-    ( const std::tr1::array<R,d>& x, const std::tr1::array<R,d>& p ) const
+    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
     {
         R a = c1(x)*p[0];
         R b = c2(x)*p[1];
@@ -260,7 +260,7 @@ main
             for( std::size_t k=0; k<numTests; ++k )
             {
                 // Compute a random point in our process's spatial box
-                std::tr1::array<double,d> x;
+                bfio::Array<double,d> x;
                 for( std::size_t j=0; j<d; ++j )
                     x[j] = myBox.offsets[j] + 
                            bfio::Uniform<double>()*myBox.widths[j];
@@ -341,13 +341,13 @@ main
                 std::cout << "Creating results file..." << std::endl;
             file.open( (basename+"-results.dat").c_str() );
             const bfio::Box<double,d>& myBox = u->GetBox();
-            const std::tr1::array<double,d>& wA = u->GetSubboxWidths();
-            const std::tr1::array<std::size_t,d>& log2SubboxesPerDim = 
+            const bfio::Array<double,d>& wA = u->GetSubboxWidths();
+            const bfio::Array<std::size_t,d>& log2SubboxesPerDim = 
                 u->GetLog2SubboxesPerDim();
             const std::size_t numSubboxes = u->GetNumSubboxes();
             const std::size_t numVizSamples = numVizSamplesPerBox*numSubboxes;
 
-            std::tr1::array<std::size_t,d> numSamplesUpToDim;
+            bfio::Array<std::size_t,d> numSamplesUpToDim;
             for( std::size_t j=0; j<d; ++j )
             {
                 numSamplesUpToDim[j] = 1;
@@ -361,13 +361,13 @@ main
             for( std::size_t k=0; k<numVizSamples; ++k )
             {
                 // Extract our indices in each dimension
-                std::tr1::array<std::size_t,d> coords;
+                bfio::Array<std::size_t,d> coords;
                 for( std::size_t j=0; j<d; ++j )
                     coords[j] = (k/numSamplesUpToDim[j]) % 
                                 (numVizSamplesPerBoxDim<<log2SubboxesPerDim[j]);
 
                 // Compute the location of our sample
-                std::tr1::array<double,d> x;
+                bfio::Array<double,d> x;
                 for( std::size_t j=0; j<d; ++j )
                 {
                     x[j] = myBox.offsets[j] + 

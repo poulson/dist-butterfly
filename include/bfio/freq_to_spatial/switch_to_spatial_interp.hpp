@@ -35,8 +35,8 @@ SwitchToSpatialInterp
   const Box<R,d>& mySpatialBox,
   const std::size_t log2LocalFreqBoxes,
   const std::size_t log2LocalSpatialBoxes,
-  const std::tr1::array<std::size_t,d>& log2LocalFreqBoxesPerDim,
-  const std::tr1::array<std::size_t,d>& log2LocalSpatialBoxesPerDim,
+  const Array<std::size_t,d>& log2LocalFreqBoxesPerDim,
+  const Array<std::size_t,d>& log2LocalSpatialBoxesPerDim,
   const Context<R,d,q>& context,
         WeightGridList<R,d,q>& weightGridList
 )
@@ -46,27 +46,27 @@ SwitchToSpatialInterp
 
     // Compute the width of the nodes at level log2N/2
     const std::size_t level = log2N/2;
-    std::tr1::array<R,d> wA, wB;
+    Array<R,d> wA, wB;
     for( std::size_t j=0; j<d; ++j )
     {
         wA[j] = spatialBox.widths[j] / (1<<level);
         wB[j] = freqBox.widths[j] / (1<<(log2N-level));
     }
 
-    const std::vector< std::tr1::array<R,d> >& chebyshevGrid = 
+    const std::vector< Array<R,d> >& chebyshevGrid = 
         context.GetChebyshevGrid();
     ConstrainedHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
     WeightGridList<R,d,q> oldWeightGridList( weightGridList );
     for( std::size_t i=0; i<(1u<<log2LocalSpatialBoxes); ++i, AWalker.Walk() )
     {
-        const std::tr1::array<std::size_t,d> A = AWalker.State();
+        const Array<std::size_t,d> A = AWalker.State();
 
         // Compute the coordinates and center of this spatial box
-        std::tr1::array<R,d> x0A;
+        Array<R,d> x0A;
         for( std::size_t j=0; j<d; ++j )
             x0A[j] = mySpatialBox.offsets[j] + (A[j]+0.5)*wA[j];
 
-        std::vector< std::tr1::array<R,d> > xPoints( q_to_d );
+        std::vector< Array<R,d> > xPoints( q_to_d );
         for( std::size_t t=0; t<q_to_d; ++t )
             for( std::size_t j=0; j<d; ++j )
                 xPoints[t][j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
@@ -78,14 +78,14 @@ SwitchToSpatialInterp
         ConstrainedHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
         for( std::size_t k=0; k<(1u<<log2LocalFreqBoxes); ++k, BWalker.Walk() )
         {
-            const std::tr1::array<std::size_t,d> B = BWalker.State();
+            const Array<std::size_t,d> B = BWalker.State();
 
             // Compute the coordinates and center of this freq box
-            std::tr1::array<R,d> p0B;
+            Array<R,d> p0B;
             for( std::size_t j=0; j<d; ++j )
                 p0B[j] = myFreqBox.offsets[j] + (B[j]+0.5)*wB[j];
 
-            std::vector< std::tr1::array<R,d> > pPoints( q_to_d );
+            std::vector< Array<R,d> > pPoints( q_to_d );
             for( std::size_t t=0; t<q_to_d; ++t )
                 for( std::size_t j=0; j<d; ++j )
                     pPoints[t][j] = p0B[j] + wB[j]*chebyshevGrid[t][j];

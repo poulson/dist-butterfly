@@ -27,12 +27,12 @@ namespace bfio {
 template<typename R,std::size_t d,std::size_t q>
 class Context
 {
-    std::tr1::array<R,q> _chebyshevNodes;
-    std::vector< std::tr1::array<std::size_t,d> > _chebyshevIndices;
-    std::vector< std::tr1::array<R,d> > _chebyshevGrid;
+    Array<R,q> _chebyshevNodes;
+    std::vector< Array<std::size_t,d> > _chebyshevIndices;
+    std::vector< Array<R,d> > _chebyshevGrid;
     std::vector<R> _freqMaps;
     std::vector<R> _spatialMaps;
-    std::vector< std::tr1::array<R,d> > _freqChildGrids;
+    std::vector< Array<R,d> > _freqChildGrids;
 
     void GenerateChebyshevNodes();
     void GenerateChebyshevIndices();
@@ -44,15 +44,15 @@ public:
     Context();
 
     // Evaluate the t'th Lagrangian basis function at point p in [-1/2,+1/2]^d
-    R Lagrange( std::size_t t, const std::tr1::array<R,d>& p ) const;
+    R Lagrange( std::size_t t, const Array<R,d>& p ) const;
 
-    const std::tr1::array<R,d>&
+    const Array<R,d>&
     GetChebyshevNodes() const;
 
-    const std::vector< std::tr1::array<std::size_t,d> >&
+    const std::vector< Array<std::size_t,d> >&
     GetChebyshevIndices() const;
 
-    const std::vector< std::tr1::array<R,d> >&
+    const std::vector< Array<R,d> >&
     GetChebyshevGrid() const;
 
     const std::vector<R>&
@@ -61,7 +61,7 @@ public:
     const std::vector<R>&
     GetSpatialMaps() const;
 
-    const std::vector< std::tr1::array<R,d> >&
+    const std::vector< Array<R,d> >&
     GetFreqChildGrids() const;
 };
 
@@ -153,7 +153,7 @@ void Context<R,d,q>::GenerateSpatialMaps()
         for( std::size_t t=0; t<q_to_d; ++t )
         {
             // Map x_t(A) to the reference domain ([-1/2,+1/2]^d) of its parent.
-            std::tr1::array<R,d> xtARefAp;
+            Array<R,d> xtARefAp;
             for( std::size_t j=0; j<d; ++j )
             {
                 xtARefAp[j] = 
@@ -188,7 +188,7 @@ Context<R,d,q>::Context()
 template<typename R,std::size_t d,std::size_t q>
 R
 Context<R,d,q>::Lagrange
-( std::size_t t, const std::tr1::array<R,d>& z ) const
+( std::size_t t, const Array<R,d>& z ) const
 {
     R product = static_cast<R>(1);
     for( std::size_t j=0; j<d; ++j )
@@ -207,17 +207,17 @@ Context<R,d,q>::Lagrange
 }
 
 template<typename R,std::size_t d,std::size_t q>
-const std::tr1::array<R,d>&
+const Array<R,d>&
 Context<R,d,q>::GetChebyshevNodes() const
 { return _chebyshevNodes; }
 
 template<typename R,std::size_t d,std::size_t q>
-const std::vector< std::tr1::array<std::size_t,d> >&
+const std::vector< Array<std::size_t,d> >&
 Context<R,d,q>::GetChebyshevIndices() const
 { return _chebyshevIndices; }
 
 template<typename R,std::size_t d,std::size_t q>
-const std::vector< std::tr1::array<R,d> >&
+const std::vector< Array<R,d> >&
 Context<R,d,q>::GetChebyshevGrid() const
 { return _chebyshevGrid; }
 
@@ -232,7 +232,7 @@ Context<R,d,q>::GetSpatialMaps() const
 { return _spatialMaps; }
 
 template<typename R,std::size_t d,std::size_t q>
-const std::vector< std::tr1::array<R,d> >&
+const std::vector< Array<R,d> >&
 Context<R,d,q>::GetFreqChildGrids() const
 { return _freqChildGrids; }
 

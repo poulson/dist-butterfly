@@ -53,7 +53,7 @@ main
             bfio::HTreeWalker<d> walker;
             for( std::size_t i=0; i<N; ++i, walker.Walk() )
             {
-                const std::tr1::array<std::size_t,d> A = walker.State();
+                const bfio::Array<std::size_t,d> A = walker.State();
                 const size_t k = bfio::FlattenHTreeIndex( A );
                 std::cout << i << ": ";
                 for( std::size_t j=0; j<d; ++j )

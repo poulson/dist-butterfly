@@ -31,15 +31,15 @@ public:
 
     // Point-wise evaluation of the phase function
     virtual R operator() 
-    ( const std::tr1::array<R,d>& x, const std::tr1::array<R,d>& p ) const = 0;
+    ( const Array<R,d>& x, const Array<R,d>& p ) const = 0;
 
     // The code will call BatchEvaluate whenever possible so that, if the user
     // supplies a clas that overrides the method with an efficient vectorized
     // implementation, then eventually there will be a large speedup.
     virtual void BatchEvaluate
-    ( const std::vector< std::tr1::array<R,d> >& x,
-      const std::vector< std::tr1::array<R,d> >& p,
-            std::vector< R                    >& results ) const
+    ( const std::vector< Array<R,d> >& x,
+      const std::vector< Array<R,d> >& p,
+            std::vector< R          >& results ) const
     {
         results.resize( x.size()*p.size() );
         for( std::size_t i=0; i<x.size(); ++i )

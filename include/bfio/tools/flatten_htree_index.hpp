@@ -26,7 +26,7 @@ namespace bfio {
 template<std::size_t d>
 std::size_t
 FlattenHTreeIndex
-( const std::tr1::array<std::size_t,d>& x )
+( const Array<std::size_t,d>& x )
 {
     // We will accumulate the index into this variable
     std::size_t index = 0;
@@ -48,8 +48,8 @@ FlattenHTreeIndex
 template<std::size_t d>
 std::size_t
 FlattenConstrainedHTreeIndex
-( const std::tr1::array<std::size_t,d>& x, 
-  const std::tr1::array<std::size_t,d>& log2BoxesPerDim )
+( const Array<std::size_t,d>& x, 
+  const Array<std::size_t,d>& log2BoxesPerDim )
 {
     // We will accumulate the index into this variable
     std::size_t index = 0;

@@ -48,7 +48,7 @@ main
         return 0;
     }
     const std::size_t N = atoi(argv[1]);
-    std::tr1::array<std::size_t,d> log2BoxesPerDim;
+    bfio::Array<std::size_t,d> log2BoxesPerDim;
     for( std::size_t j=0; j<d; ++j )
         log2BoxesPerDim[j] = atoi(argv[2+j]);
 
@@ -59,7 +59,7 @@ main
             bfio::ConstrainedHTreeWalker<d> walker( log2BoxesPerDim );
             for( std::size_t i=0; i<N; ++i, walker.Walk() )
             {
-                const std::tr1::array<std::size_t,d> A = walker.State();
+                const bfio::Array<std::size_t,d> A = walker.State();
                 const size_t k = 
                     bfio::FlattenConstrainedHTreeIndex( A, log2BoxesPerDim );
                 std::cout << i << ": ";

@@ -38,18 +38,18 @@ InitializeWeights
   const Box<R,d>& spatialBox,
   const Box<R,d>& myFreqBox,
   const std::size_t log2LocalFreqBoxes,
-  const std::tr1::array<std::size_t,d>& log2LocalFreqBoxesPerDim,
+  const Array<std::size_t,d>& log2LocalFreqBoxesPerDim,
         WeightGridList<R,d,q>& weightGridList
 )
 {
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
 
-    std::tr1::array<R,d> wB;
+    Array<R,d> wB;
     for( std::size_t j=0; j<d; ++j )
         wB[j] = freqBox.widths[j] / N;
 
-    std::tr1::array<R,d> x0;
+    Array<R,d> x0;
     for( std::size_t j=0; j<d; ++j )
         x0[j] = spatialBox.offsets[j] + 0.5*spatialBox.widths[j];
 
@@ -60,17 +60,17 @@ InitializeWeights
     std::vector<R> sinResults;
     std::vector<R> cosResults;
     const std::size_t numSources = mySources.size();
-    const std::vector< std::tr1::array<R,d> > xPoint( 1, x0 );
-    std::vector< std::tr1::array<R,d> > pPoints( numSources );
-    std::vector< std::tr1::array<R,d> > pRefPoints( numSources );
+    const std::vector< Array<R,d> > xPoint( 1, x0 );
+    std::vector< Array<R,d> > pPoints( numSources );
+    std::vector< Array<R,d> > pRefPoints( numSources );
     std::vector<std::size_t> flattenedBoxIndices( numSources );
     for( std::size_t i=0; i<numSources; ++i )
     {
-        const std::tr1::array<R,d>& p = mySources[i].p;
+        const Array<R,d>& p = mySources[i].p;
         pPoints[i] = mySources[i].p;
 
         // Determine which local box we're in (if any)
-        std::tr1::array<std::size_t,d> B;
+        Array<std::size_t,d> B;
         for( std::size_t j=0; j<d; ++j )
         {
             R leftBound = myFreqBox.offsets[j];
@@ -104,7 +104,7 @@ InitializeWeights
         }
 
         // Translate the local integer coordinates into the freq. center.
-        std::tr1::array<R,d> p0;
+        Array<R,d> p0;
         for( std::size_t j=0; j<d; ++j )
             p0[j] = myFreqBox.offsets[j] + (B[j]+0.5)*wB[j];
 
@@ -125,7 +125,7 @@ InitializeWeights
     for( std::size_t i=0; i<numSources; ++i )
     {
         const std::size_t k = flattenedBoxIndices[i];
-        const std::tr1::array<R,d>& pRef = pRefPoints[i];
+        const Array<R,d>& pRef = pRefPoints[i];
         const R realMagnitude = real(mySources[i].magnitude);
         const R imagMagnitude = imag(mySources[i].magnitude);
         const R realBeta = 
@@ -143,15 +143,15 @@ InitializeWeights
     // Loop over all of the boxes to compute the {p_t^B} and prefactors
     // for each delta weight {delta_t^AB}
     pPoints.resize( q_to_d );
-    const std::vector< std::tr1::array<R,d> >& chebyshevGrid = 
+    const std::vector< Array<R,d> >& chebyshevGrid = 
         context.GetChebyshevGrid();
     ConstrainedHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
     for( std::size_t k=0; k<(1u<<log2LocalFreqBoxes); ++k, BWalker.Walk() ) 
     {
-        const std::tr1::array<std::size_t,d> B = BWalker.State();
+        const Array<std::size_t,d> B = BWalker.State();
 
         // Translate the local integer coordinates into the freq. center 
-        std::tr1::array<R,d> p0;
+        Array<R,d> p0;
         for( std::size_t j=0; j<d; ++j )
             p0[j] = myFreqBox.offsets[j] + (B[j]+0.5)*wB[j];
 

@@ -29,23 +29,15 @@ class HTreeWalker
 {
     std::size_t _nextZeroDim;
     std::size_t _nextZeroLevel;
-    std::tr1::array<std::size_t,d> _state;
+    Array<std::size_t,d> _state;
 public:
     HTreeWalker() : 
-    _nextZeroDim(0), _nextZeroLevel(0) 
-    { 
-        // g++ and icc do not yet have std::tr1::array.assign
-#if defined(GNU) || defined(INTEL)
-        for( std::size_t i=0; i<d; ++i )
-            _state[i] = 0;
-#else
-        _state.assign(0); 
-#endif
-    }
+    _nextZeroDim(0), _nextZeroLevel(0), _state(0)
+    { }
 
     ~HTreeWalker() {}
 
-    std::tr1::array<std::size_t,d> State()
+    Array<std::size_t,d> State()
     { return _state; }
 
     void Walk()
@@ -65,7 +57,7 @@ public:
             // We need to find the dimension with the first zero bit.
             std::size_t minDim = d;
             std::size_t minTrailingOnes = sizeof(std::size_t)*8+1;
-            std::tr1::array<std::size_t,d> numberOfTrailingOnes;
+            Array<std::size_t,d> numberOfTrailingOnes;
             for( std::size_t j=0; j<d; ++j )
             {
                 numberOfTrailingOnes[j] = NumberOfTrailingOnes( _state[j] );
@@ -92,7 +84,7 @@ public:
         }
     }
 
-    std::tr1::array<std::size_t,d> NextState()
+    Array<std::size_t,d> NextState()
     {
         Walk();
         return State();
@@ -107,21 +99,14 @@ class ConstrainedHTreeWalker
     std::size_t _firstOpenDim;
     std::size_t _nextZeroDim;
     std::size_t _nextZeroLevel;
-    std::tr1::array<std::size_t,d> _state;
-    std::tr1::array<std::size_t,d> _log2BoxesPerDim;
+    Array<std::size_t,d> _state;
+    Array<std::size_t,d> _log2BoxesPerDim;
 public:
     ConstrainedHTreeWalker
-    ( const std::tr1::array<std::size_t,d>& log2BoxesPerDim ) 
-    : _overflowed(false), _nextZeroLevel(0), 
+    ( const Array<std::size_t,d>& log2BoxesPerDim ) 
+    : _overflowed(false), _nextZeroLevel(0), _state(0),
       _log2BoxesPerDim(log2BoxesPerDim) 
     {
-        // g++ and icc do not yet have std::tr1::array.assign
-#if defined (GNU) || defined(INTEL)
-        for( std::size_t i=0; i<d; ++i )
-            _state[i] = 0;
-#else
-        _state.assign(0); 
-#endif
         for( _firstOpenDim=0; _firstOpenDim<d; ++_firstOpenDim )
             if( log2BoxesPerDim[_firstOpenDim] != 0 )
                 break;
@@ -130,7 +115,7 @@ public:
 
     ~ConstrainedHTreeWalker() {}
 
-    std::tr1::array<std::size_t,d> State()
+    Array<std::size_t,d> State()
     { 
         if( _overflowed )
             throw std::logic_error( "Overflowed HTree" );
@@ -161,7 +146,7 @@ public:
             // zero bit.
             std::size_t minDim = d;
             std::size_t minTrailingOnes = sizeof(std::size_t)*8+1; 
-            std::tr1::array<std::size_t,d> numberOfTrailingOnes;
+            Array<std::size_t,d> numberOfTrailingOnes;
             for( std::size_t j=0; j<d; ++j )
             {
                 numberOfTrailingOnes[j] = NumberOfTrailingOnes( _state[j] );

@@ -20,30 +20,53 @@
 
 #include <complex>
 #include <cstring>
-#include <tr1/array>
 
 #include "bfio/constants.hpp"
 
 namespace bfio {
 
+// A d-dimensional point over arbitrary datatype T.
+// Both boost::array and Array provide similar functionality, but 
+// TR1 is not yet standardized and Boost is not always available.
+template<typename T,std::size_t d>
+class Array
+{
+    T _x[d];
+public:
+    Array() { }
+    Array( T alpha ) { for( std::size_t j=0; j<d; ++j ) _x[j] = alpha; }
+    ~Array() { }
+
+    T& operator[]( std::size_t j ) { return _x[j]; }
+    const T& operator[]( std::size_t j ) const { return _x[j]; }
+
+    const Array<T,d>&
+    operator=( const Array<T,d>& array )
+    {
+        for( std::size_t j=0; j<d; ++j )
+            _x[j] = array[j];
+        return *this;
+    }
+};
+
 template<typename R,std::size_t d>
 struct Box
 {
-    std::tr1::array<R,d> widths;
-    std::tr1::array<R,d> offsets;
+    Array<R,d> widths;
+    Array<R,d> offsets;
 };
 
 template<typename R,std::size_t d>
 struct Potential
 {
-    std::tr1::array<R,d> x;
+    Array<R,d> x;
     std::complex<R> magnitude;
 };
 
 template<typename R,std::size_t d>
 struct Source 
 { 
-    std::tr1::array<R,d> p;
+    Array<R,d> p;
     std::complex<R> magnitude;
 };
 
@@ -52,17 +75,17 @@ class PointGrid
 {
     // We know the size should be q^d at compile time, but we do not want the
     // data stored on the stack
-    std::vector< std::tr1::array<R,d> > _points;
+    std::vector< Array<R,d> > _points;
 
 public:
     PointGrid() : _points(Pow<q,d>::val) {}
     ~PointGrid() {}
 
-    const std::tr1::array<R,d>&
+    const Array<R,d>&
     operator[] ( std::size_t i ) const
     { return _points[i]; }
 
-    std::tr1::array<R,d>&
+    Array<R,d>&
     operator[] ( std::size_t i )
     { return _points[i]; }
 

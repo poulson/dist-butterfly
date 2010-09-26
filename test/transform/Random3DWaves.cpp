@@ -46,7 +46,7 @@ class Unity : public bfio::AmplitudeFunctor<R,d>
 public:
     std::complex<R>
     operator() 
-    ( const std::tr1::array<R,d>& x, const std::tr1::array<R,d>& p ) const
+    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
     { return std::complex<R>(1); }
 };
  
@@ -62,7 +62,7 @@ public:
 
     R
     operator() 
-    ( const std::tr1::array<R,d>& x, const std::tr1::array<R,d>& p ) const
+    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
     { 
         return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
                _t * sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
@@ -81,7 +81,7 @@ public:
 
     R
     operator() 
-    ( const std::tr1::array<R,d>& x, const std::tr1::array<R,d>& p ) const
+    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
     {
         return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] - 
                 _t * sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);

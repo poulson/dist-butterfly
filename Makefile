@@ -16,14 +16,19 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# Choose between GNU and Intel. The Intel configuration is not yet working.
+# Currently only the GNU configuration is working. 
 config = GNU
+ifeq ($(config),IBM)
+    $(warning The IBM configuration is not yet working)
+endif
 ifeq ($(config),Intel)
     $(warning The Intel configuration is not yet working)
 endif
-ifneq ($(config),GNU)
+ifneq ($(config),IBM)
   ifneq ($(config),Intel)
-    $(error You must choose a valid configuration)
+    ifneq ($(config),GNU)
+      $(error You must choose a valid configuration)
+    endif
   endif
 endif
 
@@ -34,17 +39,28 @@ bindir = bin
 # Defining 'FUNDERSCORE' appends an underscore to BLAS routine names
 # Defining 'TRACE' prints progress through the FreqToSpatial transformation
 CXX = mpicxx 
-ifeq ($(config),GNU)
-  CXXFLAGS = -DGNU -I$(incdir) -DFUNDERSCORE 
-  CXXFLAGS_DEBUG = -DTRACE -g -Wall $(CXXFLAGS)
-  CXXFLAGS_RELEASE = -O3 -ffast-math -Wall -DRELEASE $(CXXFLAGS)
-  LDFLAGS = -L/usr/lib -lblas
+ifeq ($(config),IBM)
+  CXXFLAGS = -DIBM -I$(incdir)
+  CXXFLAGS_DEBUG = -DTRACE -g $(CXXFLAGS)
+  CXXFLAGS_RELEASE = -DRELEASE $(CXXFLAGS)
+  # This is for ANL's Blue Gene/P
+  LDFLAGS = -L/soft/apps/ESSL-4.3.1-1/include \
+            -L/soft/apps/ESSL-4.3.1-1/lib \
+            -L/soft/apps/ibmcmp-aug2010/xlf/bg/11.1/bglib \
+            -L/soft/apps/ibmcmp-aug2010/xlsmp/bg/1.7/bglib \
+            -lesslbg -lxlfmath -lxlf90_r -lxlomp_ser -lmass
 endif
 ifeq ($(config),Intel)
   CXXFLAGS = -DINTEL -I$(incdir) 
   CXXFLAGS_DEBUG = -DTRACE -g $(CXXFLAGS)
   CXXFLAGS_RELEASE = -DRELEASE $(CXXFLAGS)
   LDFLAGS = -Bstatic -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lguide
+endif
+ifeq ($(config),GNU)
+  CXXFLAGS = -DGNU -I$(incdir) -DFUNDERSCORE 
+  CXXFLAGS_DEBUG = -DTRACE -g -Wall $(CXXFLAGS)
+  CXXFLAGS_RELEASE = -O3 -ffast-math -Wall -DRELEASE $(CXXFLAGS)
+  LDFLAGS = -L/usr/lib -lblas
 endif
 
 AR = ar

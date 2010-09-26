@@ -48,19 +48,8 @@ LocalFreqPartitionData
     std::bitset<8*sizeof(int)> rankBits(rank);
     const std::size_t log2NumProcesses = Log2( numProcesses );
 
-    // g++ and icc have not yet implemented initializing std::tr1::array with a
-    // constant
-#if defined(GNU) || defined(INTEL)
-    std::tr1::array<std::size_t,d> myFreqBoxCoords;
-    std::tr1::array<std::size_t,d> log2FreqBoxesPerDim;
-    for( std::size_t i=0; i<d; ++i )
-        myFreqBoxCoords[i] = 0;
-    for( std::size_t i=0; i<d; ++i )
-        log2FreqBoxesPerDim[i] = 0;
-#else
-    std::tr1::array<std::size_t,d> myFreqBoxCoords(0);
-    std::tr1::array<std::size_t,d> log2FreqBoxesPerDim(0);
-#endif
+    Array<std::size_t,d> myFreqBoxCoords(0);
+    Array<std::size_t,d> log2FreqBoxesPerDim(0);
     std::size_t nextDim = 0;
     for( std::size_t m=log2NumProcesses; m>0; --m )
     {
@@ -81,8 +70,8 @@ void
 LocalFreqPartitionData
 ( const Box<R,d>& freqBox,
         Box<R,d>& myFreqBox,
-        std::tr1::array<std::size_t,d>& myFreqBoxCoords,
-        std::tr1::array<std::size_t,d>& log2FreqBoxesPerDim,
+        Array<std::size_t,d>& myFreqBoxCoords,
+        Array<std::size_t,d>& log2FreqBoxesPerDim,
         MPI_Comm comm )
 {
     int rank, numProcesses;

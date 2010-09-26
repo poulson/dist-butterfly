@@ -31,7 +31,7 @@ namespace bfio {
 template<typename R,std::size_t d,std::size_t q>
 struct LRP
 {
-    std::tr1::array<R,d> x0;
+    Array<R,d> x0;
     WeightGrid<R,d,q> weightGrid;
 };
 
@@ -40,34 +40,34 @@ class PotentialField
 {
     const Box<R,d> _spatialBox;
     const Box<R,d> _freqBox;
-    const std::tr1::array<std::size_t,d> _log2SpatialSubboxesPerDim;
+    const Array<std::size_t,d> _log2SpatialSubboxesPerDim;
     const AmplitudeFunctor<R,d>& _Amp;
     const PhaseFunctor<R,d>& _Phi;
     const Context<R,d,q>& _context;
 
-    std::tr1::array<R,d> _wA;
-    std::tr1::array<R,d> _p0;
-    std::tr1::array<std::size_t,d> _log2SpatialSubboxesUpToDim;
+    Array<R,d> _wA;
+    Array<R,d> _p0;
+    Array<std::size_t,d> _log2SpatialSubboxesUpToDim;
     std::vector< LRP<R,d,q> > _LRPs;
 
 public:
     PotentialField
     ( const Box<R,d>& spatialBox,
       const Box<R,d>& freqBox,
-      const std::tr1::array<std::size_t,d>& log2SpatialSubboxesPerDim,
+      const Array<std::size_t,d>& log2SpatialSubboxesPerDim,
       const AmplitudeFunctor<R,d>& Amp, 
       const PhaseFunctor<R,d>& Phi,
       const Context<R,d,q>& context,
       const WeightGridList<R,d,q>& weightGridList );
 
     // This is the point of the potential field
-    std::complex<R> Evaluate( const std::tr1::array<R,d>& x ) const;
+    std::complex<R> Evaluate( const Array<R,d>& x ) const;
 
     const Box<R,d>& GetBox() const;
     std::size_t GetNumSubboxes() const;
-    const std::tr1::array<R,d>& GetSubboxWidths() const;
-    const std::tr1::array<std::size_t,d>& GetLog2SubboxesPerDim() const;
-    const std::tr1::array<std::size_t,d>& GetLog2SubboxesUpToDim() const;
+    const Array<R,d>& GetSubboxWidths() const;
+    const Array<std::size_t,d>& GetLog2SubboxesPerDim() const;
+    const Array<std::size_t,d>& GetLog2SubboxesUpToDim() const;
 };
 
 } // bfio
@@ -79,7 +79,7 @@ template<typename R,std::size_t d,std::size_t q>
 PotentialField<R,d,q>::PotentialField
 ( const Box<R,d>& spatialBox,
   const Box<R,d>& freqBox,
-  const std::tr1::array<std::size_t,d>& log2SpatialSubboxesPerDim,
+  const Array<std::size_t,d>& log2SpatialSubboxesPerDim,
   const AmplitudeFunctor<R,d>& Amp, 
   const PhaseFunctor<R,d>& Phi,
   const Context<R,d,q>& context,
@@ -115,7 +115,7 @@ PotentialField<R,d,q>::PotentialField
     ConstrainedHTreeWalker<d> AWalker( log2SpatialSubboxesPerDim );
     for( std::size_t i=0; i<_LRPs.size(); ++i, AWalker.Walk() )
     {
-        const std::tr1::array<std::size_t,d> A = AWalker.State();
+        const Array<std::size_t,d> A = AWalker.State();
 
         // Unroll the indices of A into its lexographic integer
         std::size_t k=0; 
@@ -131,7 +131,7 @@ PotentialField<R,d,q>::PotentialField
 
 template<typename R,std::size_t d,std::size_t q>
 inline std::complex<R>
-PotentialField<R,d,q>::Evaluate( const std::tr1::array<R,d>& x ) const
+PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 {
     typedef std::complex<R> C;
 
@@ -156,12 +156,12 @@ PotentialField<R,d,q>::Evaluate( const std::tr1::array<R,d>& x ) const
 
     // Convert x to the reference domain of [-1/2,+1/2]^d for box k
     const LRP<R,d,q>& lrp = _LRPs[k];
-    std::tr1::array<R,d> xRef;
+    Array<R,d> xRef;
     for( std::size_t j=0; j<d; ++j )
         xRef[j] = (x[j]-lrp.x0[j])/_wA[j];
 
     // Grab a reference to the Chebyshev grid
-    const std::vector< std::tr1::array<R,d> > chebyshevGrid = 
+    const std::vector< Array<R,d> > chebyshevGrid = 
         _context.GetChebyshevGrid();
 
     R realValue = 0;
@@ -169,7 +169,7 @@ PotentialField<R,d,q>::Evaluate( const std::tr1::array<R,d>& x ) const
     for( std::size_t t=0; t<Pow<q,d>::val; ++t )
     {
         // Construct the t'th translated Chebyshev gridpoint
-        std::tr1::array<R,d> xt;
+        Array<R,d> xt;
         for( std::size_t j=0; j<d; ++j )
             xt[j] = lrp.x0[j] + _wA[j]*chebyshevGrid[t][j];
 
@@ -199,17 +199,17 @@ PotentialField<R,d,q>::GetNumSubboxes() const
 { return _LRPs.size(); }
 
 template<typename R,std::size_t d,std::size_t q>
-inline const std::tr1::array<R,d>&
+inline const Array<R,d>&
 PotentialField<R,d,q>::GetSubboxWidths() const
 { return _wA; }
 
 template<typename R,std::size_t d,std::size_t q>
-inline const std::tr1::array<std::size_t,d>&
+inline const Array<std::size_t,d>&
 PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
 { return _log2SpatialSubboxesPerDim; }
 
 template<typename R,std::size_t d,std::size_t q>
-inline const std::tr1::array<std::size_t,d>&
+inline const Array<std::size_t,d>&
 PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
 { return _log2SpatialSubboxesUpToDim; }
 
