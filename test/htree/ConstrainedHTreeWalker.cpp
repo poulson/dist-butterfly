@@ -21,12 +21,10 @@ namespace {
 void 
 Usage()
 {
-    std::cout << "ConstrainedHTreeWalker <N> <log2Dim[0]> ... <log2Dim[d-1]>" 
-              << std::endl
-              << "  N: number of indices of the HTree to iterate over" 
-              << std::endl
-              << "  log2Dim[j]: log2 of the number of boxes in dimension j" 
-              << std::endl << std::endl;
+    std::cout << "ConstrainedHTreeWalker <N> <log2Dim[0]> ... <log2Dim[d-1]>\n" 
+              << "  N: number of indices of the HTree to iterate over\n" 
+              << "  log2Dim[j]: log2 of the number of boxes in dimension j\n" 
+              << std::endl;
 }
 } // anonymous namespace
 
@@ -72,9 +70,9 @@ main
     catch( const std::exception& e )
     {
         std::ostringstream msg;
-        msg << "Caught exception on process " << rank << ":" << std::endl
-            << "   " << e.what() << std::endl;
-        std::cout << msg.str();
+        msg << "Caught exception on process " << rank << ":\n"
+            << "   " << e.what();
+        std::cout << msg.str() << std::endl;
     }
 
     MPI_Finalize();

@@ -21,9 +21,9 @@ namespace {
 void 
 Usage()
 {
-    std::cout << "HTreeWalker <N>" << std::endl
-              << "  N: the number of indices of the HTree to iterate over" 
-              << std::endl << std::endl;
+    std::cout << "HTreeWalker <N>\n"
+              << "  N: the number of indices of the HTree to iterate over\n" 
+              << std::endl;
 }
 } // anonymous namespace
 
@@ -65,9 +65,9 @@ main
     catch( const std::exception& e )
     {
         std::ostringstream msg;
-        msg << "Caught exception on process " << rank << ":" << std::endl
-            << "   " << e.what() << std::endl;
-        std::cout << msg.str();
+        msg << "Caught exception on process " << rank << ":\n"
+            << "   " << e.what();
+        std::cout << msg.str() << std::endl;
     }
 
     MPI_Finalize();

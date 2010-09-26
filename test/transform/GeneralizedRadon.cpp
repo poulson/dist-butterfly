@@ -25,16 +25,12 @@ namespace {
 void 
 Usage()
 {
-    std::cout << "GeneralizedRadon <N> <M> <testAccuracy?> <visualize?>" 
-              << std::endl
-              << "  N: power of 2, the frequency spread in each dimension" 
-              << std::endl
-              << "  M: number of random sources to instantiate" 
-              << std::endl
-              << "  testAccuracy?: tests accuracy iff 1" 
-              << std::endl
-              << "  visualize?: creates data files iff 1" 
-              << std::endl << std::endl;
+    std::cout << "GeneralizedRadon <N> <M> <testAccuracy?> <visualize?>\n" 
+              << "  N: power of 2, the frequency spread in each dimension\n" 
+              << "  M: number of random sources to instantiate\n" 
+              << "  testAccuracy?: tests accuracy iff 1\n" 
+              << "  visualize?: creates data files iff 1\n" 
+              << std::endl;
 }
 } // anonymous namespace
 
@@ -142,9 +138,8 @@ main
         msg << "Will distribute " << M << " random sources over the "
             << "frequency domain, which will be split into " << N 
             << " boxes in each of the " << d << " dimensions and "
-            << "distributed amongst " << numProcesses << " processes." 
-            << std::endl << std::endl;
-        std::cout << msg.str();
+            << "distributed amongst " << numProcesses << " processes.\n";
+        std::cout << msg.str() << std::endl;
     }
 
     try 
@@ -237,8 +232,8 @@ main
         double stopTime = MPI_Wtime();
         if( rank == 0 )
         {
-            std::cout << "Runtime: " << stopTime-startTime << " seconds." 
-                      << std::endl << std::endl;
+            std::cout << "Runtime: " << stopTime-startTime << " seconds.\n" 
+                      << std::endl;
         }
 
         if( testAccuracy )
@@ -295,17 +290,16 @@ main
             ( &myLinfError, &LinfError, 1, MPI_DOUBLE, MPI_MAX, 0, comm );
             if( rank == 0 )
             {   
-                std::cout << "---------------------------------------------" 
+                std::cout << "---------------------------------------------\n" 
+                          << "Estimate of relative ||e||_2:    "
+                          << sqrt(L2ErrorSquared/L2TruthSquared) << "\n"
+                          << "Estimate of ||e||_inf:           "  
+                          << LinfError << "\n"
+                          << "||f||_1:                         "
+                          << L1Sources << "\n"
+                          << "Estimate of ||e||_inf / ||f||_1: "
+                          << LinfError/L1Sources << "\n"
                           << std::endl;
-                std::cout << "Estimate of relative ||e||_2:    "
-                          << sqrt(L2ErrorSquared/L2TruthSquared) << std::endl;
-                std::cout << "Estimate of ||e||_inf:           "  
-                          << LinfError << std::endl;
-                std::cout << "||f||_1:                         "
-                          << L1Sources << std::endl;
-                std::cout << "Estimate of ||e||_inf / ||f||_1: "
-                          << LinfError/L1Sources << std::endl;
-                std::cout << std::endl;
             }
         }
 
@@ -399,9 +393,9 @@ main
     catch( const std::exception& e )
     {
         std::ostringstream msg;
-        msg << "Caught exception on process " << rank << ":" << std::endl;
-        msg << "   " << e.what() << std::endl;
-        std::cout << msg.str();
+        msg << "Caught exception on process " << rank << ":\n" 
+            << "   " << e.what();
+        std::cout << msg.str() << std::endl;
     }
 
     MPI_Finalize();

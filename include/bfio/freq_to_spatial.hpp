@@ -110,9 +110,7 @@ FreqToSpatial
       log2LocalFreqBoxes, log2LocalFreqBoxesPerDim, weightGridList );
 #ifdef TRACE
     if( rank == 0 )
-    {
         std::cout << "done." << std::endl;
-    }
 #endif
 
     // Start the main recursion loop
@@ -134,9 +132,7 @@ FreqToSpatial
           context, weightGridList );
 #ifdef TRACE
         if( rank == 0 )
-        {
             std::cout << "done." << std::endl;
-        }
 #endif
     }
     for( std::size_t level=1; level<=log2N; ++level )
@@ -208,9 +204,7 @@ FreqToSpatial
                           oldWeightGridList, weightGridList[key] );
 #ifdef TRACE
                         if( rank == 0 )
-                        {
                             std::cout << "done." << std::endl;
-                        }
 #endif
                     }
                     else
@@ -241,9 +235,7 @@ FreqToSpatial
                           weightGridList[key] );
 #ifdef TRACE
                         if( rank == 0 )
-                        {
                             std::cout << "done." << std::endl;
-                        }
 #endif
                     }
                 }
@@ -393,9 +385,7 @@ FreqToSpatial
                       parentOffset, weightGridList, partialWeightGridList[i] );
 #ifdef TRACE
                     if( rank == 0 )
-                    {
                         std::cout << "done." << std::endl;
-                    }
 #endif
                 }
             }
@@ -416,9 +406,7 @@ FreqToSpatial
               &recvCounts[0], teamComm );
 #ifdef TRACE
             if( rank == 0 )
-            {
                 std::cout << "done." << std::endl;
-            }
 #endif
 
             for( std::size_t j=0; j<log2NumMergingProcesses; ++j )
@@ -458,9 +446,7 @@ FreqToSpatial
               context, weightGridList );
 #ifdef TRACE
             if( rank == 0 )
-            {
                 std::cout << "done." << std::endl;
-            }
 #endif
         }
     }
@@ -480,9 +466,7 @@ FreqToSpatial
     );
 #ifdef TRACE
     if( rank == 0 )
-    {
         std::cout << "done." << std::endl;
-    }
 #endif
 
     return potentialField;

@@ -17,7 +17,8 @@
 #
 
 # The GNU configuration is fairly portable, but the Intel configuration has 
-# only been tested on TACC's Ranger.
+# only been tested on TACC's Ranger, and the IBM one has only been tested on 
+# a Blue Gene/P.
 config = GNU
 ifneq ($(config),IBM)
   ifneq ($(config),Intel)

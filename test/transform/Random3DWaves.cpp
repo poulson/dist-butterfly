@@ -23,16 +23,12 @@ namespace {
 void 
 Usage()
 {
-    std::cout << "Random3DWaves <N> <M> <T> <nT>" 
-              << std::endl
-              << "  N: power of 2, the frequency spread in each dimension" 
-              << std::endl
-              << "  M: number of random sources to instantiate" 
-              << std::endl
-              << "  T: time to simulate to" 
-              << std::endl
-              << "  nT: number of timesteps" 
-              << std::endl << std::endl;
+    std::cout << "Random3DWaves <N> <M> <T> <nT>\n" 
+              << "  N: power of 2, the frequency spread in each dimension\n" 
+              << "  M: number of random sources to instantiate\n" 
+              << "  T: time to simulate to\n" 
+              << "  nT: number of timesteps\n" 
+              << std::endl;
 }
 } // anonymous namespace
 
@@ -140,7 +136,7 @@ main
             << " boxes in each of the " << d << " dimensions and distributed "
             << "amongst " << numProcesses << " processes. The simulation will "
             << "be over " << T << " units of time with " << nT << " timesteps." 
-            << std::endl << std::endl;
+            << "\n" << std::endl;
         std::cout << msg.str();
     }
 
@@ -192,7 +188,7 @@ main
             std::auto_ptr< const bfio::PotentialField<double,d,q> > u;
             if( rank == 0 )
             {
-                std::cout << "t=" << t << std::endl
+                std::cout << "t=" << t << "\n"
                           << "  Starting upWave transform...";
                 std::cout.flush();
             }
@@ -202,7 +198,7 @@ main
             std::auto_ptr< const bfio::PotentialField<double,d,q> > v;
             if( rank == 0 )
             {
-                std::cout << "done" << std::endl
+                std::cout << "done" << "\n"
                           << "  Starting downWave transform...";
                 std::cout.flush();
             }
@@ -218,9 +214,9 @@ main
     catch( const std::exception& e )
     {
         std::ostringstream msg;
-        msg << "Caught exception on process " << rank << ":" << std::endl
-            << "   " << e.what() << std::endl << std::endl;
-        std::cout << msg.str();
+        msg << "Caught exception on process " << rank << ":\n"
+            << "   " << e.what();
+        std::cout << msg.str() << std::endl;
     }
 
     MPI_Finalize();
