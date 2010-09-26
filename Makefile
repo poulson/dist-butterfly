@@ -19,9 +19,6 @@
 # The GNU configuration is fairly portable, but the Intel configuration has 
 # only been tested on TACC's Ranger.
 config = GNU
-ifeq ($(config),IBM)
-    $(warning The IBM configuration is not yet working)
-endif
 ifneq ($(config),IBM)
   ifneq ($(config),Intel)
     ifneq ($(config),GNU)
@@ -36,21 +33,25 @@ bindir = bin
 
 # Defining 'FUNDERSCORE' appends an underscore to BLAS routine names
 # Defining 'TRACE' prints progress through the FreqToSpatial transformation
-CXX = mpicxx 
+
 ifeq ($(config),IBM)
   # This is for ANL's Blue Gene/P
+  CXX = mpixlcxx_r
   ESSL_INC = /soft/apps/ESSL-4.3.1-1/include
   ESSL_LIB = /soft/apps/ESSL-4.3.1-1/lib
   XLF_LIB = /soft/apps/ibmcmp-aug2010/xlf/bg/11.1/bglib
   XLSMP_LIB = /soft/apps/ibmcmp-aug2010/xlsmp/bg/1.7/bglib
-  CXXFLAGS = -DIBM -I$(incdir)
+  XLMASS_INC = /soft/apps/ibmcmp-aug2010/xlmass/bg/4.4/include
+  XLMASS_LIB = /soft/apps/ibmcmp-aug2010/xlmass/bg/4.4/bglib
+  CXXFLAGS = -DIBM -I$(incdir) -I$(XLMASS_INC)
   CXXFLAGS_DEBUG = -DTRACE -g $(CXXFLAGS)
   CXXFLAGS_RELEASE = -DRELEASE $(CXXFLAGS)
-  LDFLAGS = -L$(ESSL_INC) -L$(ESSL_LIB) -L$(XLF_LIB) -L$(XLSMP_LIB) \
-            -lesslbg -lxlfmath -lxlf90_r -lxlomp_ser -lmass
+  LDFLAGS = -L$(ESSL_LIB) -L$(XLF_LIB) -L$(XLSMP_LIB) -L$(XLMASS_LIB) \
+            -lesslbg -lxlfmath -lxlf90_r -lxlomp_ser -lmassv -lmass
 endif
 ifeq ($(config),Intel)
   # This is for TACC's Ranger
+  CXX = mpicxx 
   MKL_INC = /opt/apps/intel/mkl/10.0.1.014/include
   MKL_LIB = /opt/apps/intel/mkl/10.0.1.014/lib/em64t
   CXXFLAGS = -DINTEL -I$(incdir) -I$(MKL_INC)
@@ -61,6 +62,7 @@ ifeq ($(config),Intel)
 endif
 ifeq ($(config),GNU)
   # This is for a generic Linux machine with a BLAS library in /usr/lib
+  CXX = mpicxx 
   CXXFLAGS = -DGNU -I$(incdir) -DFUNDERSCORE 
   CXXFLAGS_DEBUG = -DTRACE -g -Wall $(CXXFLAGS)
   CXXFLAGS_RELEASE = -O3 -ffast-math -Wall -DRELEASE $(CXXFLAGS)

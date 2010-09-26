@@ -72,7 +72,7 @@ SinCosBatch
     cosResults.resize( a.size() );
 #if defined(IBM)
     int n = a.size(); 
-    vssincos( &a[0], &sinResults[0], &cosResults[0], &n );
+    vssincos( const_cast<float*>(&a[0]), &sinResults[0], &cosResults[0], &n );
 #elif defined(INTEL)
     vsSinCos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
 #else
@@ -95,7 +95,7 @@ SinCosBatch
     cosResults.resize( a.size() );
 #if defined(IBM)
     int n = a.size();
-    vsincos( &a[0], &sinResults[0], &cosResults[0], &n );
+    vsincos( const_cast<double*>(&a[0]), &sinResults[0], &cosResults[0], &n );
 #elif defined(INTEL)
     vdSinCos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
 #else
