@@ -16,13 +16,11 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# Currently only the GNU configuration is working. 
+# The GNU configuration is fairly portable, but the Intel configuration has 
+# only been tested on TACC's Ranger.
 config = GNU
 ifeq ($(config),IBM)
     $(warning The IBM configuration is not yet working)
-endif
-ifeq ($(config),Intel)
-    $(warning The Intel configuration is not yet working)
 endif
 ifneq ($(config),IBM)
   ifneq ($(config),Intel)
@@ -40,23 +38,29 @@ bindir = bin
 # Defining 'TRACE' prints progress through the FreqToSpatial transformation
 CXX = mpicxx 
 ifeq ($(config),IBM)
+  # This is for ANL's Blue Gene/P
+  ESSL_INC = /soft/apps/ESSL-4.3.1-1/include
+  ESSL_LIB = /soft/apps/ESSL-4.3.1-1/lib
+  XLF_LIB = /soft/apps/ibmcmp-aug2010/xlf/bg/11.1/bglib
+  XLSMP_LIB = /soft/apps/ibmcmp-aug2010/xlsmp/bg/1.7/bglib
   CXXFLAGS = -DIBM -I$(incdir)
   CXXFLAGS_DEBUG = -DTRACE -g $(CXXFLAGS)
   CXXFLAGS_RELEASE = -DRELEASE $(CXXFLAGS)
-  # This is for ANL's Blue Gene/P
-  LDFLAGS = -L/soft/apps/ESSL-4.3.1-1/include \
-            -L/soft/apps/ESSL-4.3.1-1/lib \
-            -L/soft/apps/ibmcmp-aug2010/xlf/bg/11.1/bglib \
-            -L/soft/apps/ibmcmp-aug2010/xlsmp/bg/1.7/bglib \
+  LDFLAGS = -L$(ESSL_INC) -L$(ESSL_LIB) -L$(XLF_LIB) -L$(XLSMP_LIB) \
             -lesslbg -lxlfmath -lxlf90_r -lxlomp_ser -lmass
 endif
 ifeq ($(config),Intel)
-  CXXFLAGS = -DINTEL -I$(incdir) 
+  # This is for TACC's Ranger
+  MKL_INC = /opt/apps/intel/mkl/10.0.1.014/include
+  MKL_LIB = /opt/apps/intel/mkl/10.0.1.014/lib/em64t
+  CXXFLAGS = -DINTEL -I$(incdir) -I$(MKL_INC)
   CXXFLAGS_DEBUG = -DTRACE -g $(CXXFLAGS)
   CXXFLAGS_RELEASE = -DRELEASE $(CXXFLAGS)
-  LDFLAGS = -Bstatic -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lguide
+  LDFLAGS = -Wl,-rpath,$(MKL_LIB) -L$(MKL_LIB) \
+            -lmkl_em64t -lmkl -lguide -lpthread
 endif
 ifeq ($(config),GNU)
+  # This is for a generic Linux machine with a BLAS library in /usr/lib
   CXXFLAGS = -DGNU -I$(incdir) -DFUNDERSCORE 
   CXXFLAGS_DEBUG = -DTRACE -g -Wall $(CXXFLAGS)
   CXXFLAGS_RELEASE = -O3 -ffast-math -Wall -DRELEASE $(CXXFLAGS)

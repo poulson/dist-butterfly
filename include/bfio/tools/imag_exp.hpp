@@ -74,7 +74,7 @@ SinCosBatch
     int n = a.size(); 
     vssincos( &a[0], &sinResults[0], &cosResults[0], &n );
 #elif defined(INTEL)
-    vssincos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
+    vsSinCos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
 #else
     for( std::size_t j=0; j<a.size(); ++j )
     {
@@ -97,7 +97,7 @@ SinCosBatch
     int n = a.size();
     vsincos( &a[0], &sinResults[0], &cosResults[0], &n );
 #elif defined(INTEL)
-    vdsincos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
+    vdSinCos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
 #else
     for( std::size_t j=0; j<a.size(); ++j )
     {
