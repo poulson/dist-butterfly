@@ -19,10 +19,10 @@
 # The GNU configuration is fairly portable, but the Intel configuration has 
 # only been tested on TACC's Ranger, and the IBM one has only been tested on 
 # a Blue Gene/P.
-config = GNU
-ifneq ($(config),IBM)
-  ifneq ($(config),Intel)
-    ifneq ($(config),GNU)
+config = gnu
+ifneq ($(config),ibm)
+  ifneq ($(config),intel)
+    ifneq ($(config),gnu)
       $(error You must choose a valid configuration)
     endif
   endif
@@ -30,12 +30,12 @@ endif
 
 incdir = include
 testdir = test
-bindir = bin
+bindir = bin/$(config)
 
 # Defining 'FUNDERSCORE' appends an underscore to BLAS routine names
 # Defining 'TRACE' prints progress through the FreqToSpatial transformation
 
-ifeq ($(config),IBM)
+ifeq ($(config),ibm)
   # This is for ANL's Blue Gene/P
   CXX = mpixlcxx_r
   ESSL_INC = /soft/apps/ESSL-4.3.1-1/include
@@ -50,7 +50,7 @@ ifeq ($(config),IBM)
   LDFLAGS = -L$(ESSL_LIB) -L$(XLF_LIB) -L$(XLSMP_LIB) -L$(XLMASS_LIB) \
             -lesslbg -lxlfmath -lxlf90_r -lxlomp_ser -lmassv -lmass
 endif
-ifeq ($(config),Intel)
+ifeq ($(config),intel)
   # This is for TACC's Ranger
   CXX = mpicxx 
   MKL_INC = /opt/apps/intel/mkl/10.0.1.014/include
@@ -61,7 +61,7 @@ ifeq ($(config),Intel)
   LDFLAGS = -Wl,-rpath,$(MKL_LIB) -L$(MKL_LIB) \
             -lmkl_em64t -lmkl -lguide -lpthread
 endif
-ifeq ($(config),GNU)
+ifeq ($(config),gnu)
   # This is for a generic Linux machine with a BLAS library in /usr/lib
   CXX = mpicxx 
   CXXFLAGS = -DGNU -I$(incdir) -DFUNDERSCORE 
@@ -150,13 +150,13 @@ $(bindir_release)/%.o: $(testdir)/%.cpp $(includes)
 ################################################################################
 .PHONY : clean
 clean: 
-	@rm -Rf bin/
+	@rm -Rf $(bindir)
 
 .PHONY : clean-debug
 clean-debug:
-	@rm -Rf bin/debug
+	@rm -Rf $(bindir_debug)
 
 .PHONY : clean-release
 clean-release:
-	@rm -Rf bin/release
+	@rm -Rf $(bindir_release)
 
