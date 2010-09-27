@@ -79,8 +79,8 @@ class GenRadon : public bfio::PhaseFunctor<R,d>
     { return (2+cos(bfio::TwoPi*x[0])*cos(bfio::TwoPi*x[1]))/3.; }
 public:
     // This is the only routine required to be implemented
-    R
-    virtual operator() 
+    virtual R
+    operator() 
     ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
     {
         R a = c1(x)*p[0];
