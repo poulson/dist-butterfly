@@ -112,8 +112,7 @@ public:
     operator() 
     ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
     {
-        return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
-               0.5*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]); 
+        return x[0]*p[0]+x[1]*p[1] + 0.5*sqrt(p[0]*p[0]+p[1]*p[1]); 
     }
 
     // We can optionally override the batched application for better efficiency
@@ -322,6 +321,7 @@ main
                 for( std::size_t m=0; m<globalSources.size(); ++m )
                 {
                     std::complex<double> beta = 
+                        oscillatory( x, globalSources[m].p ) *
                         bfio::ImagExp
                         ( bfio::TwoPi*upWave(x,globalSources[m].p) );
                     truth += beta * globalSources[m].magnitude;
@@ -426,6 +426,7 @@ main
                 for( std::size_t m=0; m<globalSources.size(); ++m )
                 {
                     std::complex<double> beta =
+                        oscillatory( x, globalSources[m].p ) *
                         bfio::ImagExp
                         ( bfio::TwoPi*upWave(x,globalSources[m].p) );
                     truth += beta * globalSources[m].magnitude;
