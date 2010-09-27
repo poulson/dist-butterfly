@@ -106,7 +106,7 @@ FreqToSpatial
 #endif
     WeightGridList<R,d,q> weightGridList( 1<<log2LocalFreqBoxes );
     freq_to_spatial::InitializeWeights<R,d,q>
-    ( Amp, Phi, N, mySources, context, freqBox, spatialBox, myFreqBox,
+    ( Phi, N, mySources, context, freqBox, spatialBox, myFreqBox,
       log2LocalFreqBoxes, log2LocalFreqBoxesPerDim, weightGridList );
 #ifdef TRACE
     if( rank == 0 )
@@ -199,8 +199,7 @@ FreqToSpatial
                         }
 #endif
                         freq_to_spatial::FreqWeightRecursion<R,d,q>
-                        ( Amp, Phi, 0, 0, N, context, 
-                          x0A, p0B, wB, parentOffset,
+                        ( Phi, 0, 0, N, context, x0A, p0B, wB, parentOffset,
                           oldWeightGridList, weightGridList[key] );
 #ifdef TRACE
                         if( rank == 0 )
@@ -229,7 +228,7 @@ FreqToSpatial
                         }
 #endif
                         freq_to_spatial::SpatialWeightRecursion<R,d,q>
-                        ( Amp, Phi, 0, 0, N, context, 
+                        ( Phi, 0, 0, N, context, 
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentOffset, oldWeightGridList, 
                           weightGridList[key] );
@@ -351,7 +350,7 @@ FreqToSpatial
                     }
 #endif
                     freq_to_spatial::FreqWeightRecursion<R,d,q>
-                    ( Amp, Phi, log2NumMergingProcesses, myTeamRank, 
+                    ( Phi, log2NumMergingProcesses, myTeamRank, 
                       N, context, x0A, p0B, wB, parentOffset,
                       weightGridList, partialWeightGridList[i] );
 #ifdef TRACE
@@ -380,7 +379,7 @@ FreqToSpatial
                     }
 #endif
                     freq_to_spatial::SpatialWeightRecursion<R,d,q>
-                    ( Amp, Phi, log2NumMergingProcesses, myTeamRank,
+                    ( Phi, log2NumMergingProcesses, myTeamRank,
                       N, context, ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                       parentOffset, weightGridList, partialWeightGridList[i] );
 #ifdef TRACE
@@ -461,7 +460,7 @@ FreqToSpatial
 #endif
     std::auto_ptr< const PotentialField<R,d,q> > potentialField( 
         new PotentialField<R,d,q>
-            ( mySpatialBox,freqBox, log2LocalSpatialBoxesPerDim, Amp, Phi,
+            ( mySpatialBox,freqBox, log2LocalSpatialBoxesPerDim, Phi,
               context, weightGridList )
     );
 #ifdef TRACE

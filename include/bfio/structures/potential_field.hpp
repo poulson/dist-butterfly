@@ -24,7 +24,7 @@
 #include "bfio/structures/htree_walker.hpp"
 #include "bfio/structures/amplitude_functor.hpp"
 #include "bfio/structures/phase_functor.hpp"
-#include "bfio/tools/imag_exp.hpp"
+#include "bfio/tools/special_functions.hpp"
 
 namespace bfio {
 
@@ -41,7 +41,6 @@ class PotentialField
     const Box<R,d> _spatialBox;
     const Box<R,d> _freqBox;
     const Array<std::size_t,d> _log2SpatialSubboxesPerDim;
-    const AmplitudeFunctor<R,d>& _Amp;
     const PhaseFunctor<R,d>& _Phi;
     const Context<R,d,q>& _context;
 
@@ -55,7 +54,6 @@ public:
     ( const Box<R,d>& spatialBox,
       const Box<R,d>& freqBox,
       const Array<std::size_t,d>& log2SpatialSubboxesPerDim,
-      const AmplitudeFunctor<R,d>& Amp, 
       const PhaseFunctor<R,d>& Phi,
       const Context<R,d,q>& context,
       const WeightGridList<R,d,q>& weightGridList );
@@ -80,13 +78,12 @@ PotentialField<R,d,q>::PotentialField
 ( const Box<R,d>& spatialBox,
   const Box<R,d>& freqBox,
   const Array<std::size_t,d>& log2SpatialSubboxesPerDim,
-  const AmplitudeFunctor<R,d>& Amp, 
   const PhaseFunctor<R,d>& Phi,
   const Context<R,d,q>& context,
   const WeightGridList<R,d,q>& weightGridList )
 : _spatialBox(spatialBox), _freqBox(freqBox), 
   _log2SpatialSubboxesPerDim(log2SpatialSubboxesPerDim), 
-  _Amp(Amp), _Phi(Phi), _context(context)
+  _Phi(Phi), _context(context)
 { 
     // Compute the widths of the spatial subboxes and the freq center
     for( std::size_t j=0; j<d; ++j )
@@ -178,7 +175,6 @@ PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
         const R lambda = _context.Lagrange(t,xRef);
         const R realWeight = lrp.weightGrid.RealWeight(t);
         const R imagWeight = lrp.weightGrid.ImagWeight(t);
-        // Perform the complex multiplication: lambda*weight*beta
         realValue += lambda*(realWeight*real(beta)-imagWeight*imag(beta));
         imagValue += lambda*(imagWeight*real(beta)+realWeight*imag(beta));
     }

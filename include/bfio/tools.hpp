@@ -20,9 +20,9 @@
 
 #include "bfio/tools/blas.hpp"
 #include "bfio/tools/flatten_htree_index.hpp"
-#include "bfio/tools/imag_exp.hpp"
 #include "bfio/tools/local_data.hpp"
 #include "bfio/tools/mpi.hpp"
+#include "bfio/tools/special_functions.hpp"
 #include "bfio/tools/twiddle.hpp"
 #include "bfio/tools/uniform.hpp"
 

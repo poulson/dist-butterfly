@@ -91,9 +91,9 @@ includefiles = bfio.hpp \
                bfio/structures/potential_field.hpp \
                bfio/tools/blas.hpp \
                bfio/tools/flatten_htree_index.hpp \
-               bfio/tools/imag_exp.hpp \
                bfio/tools/local_data.hpp \
                bfio/tools/mpi.hpp \
+               bfio/tools/special_functions.hpp \
                bfio/tools/twiddle.hpp \
                bfio/tools/uniform.hpp 
 

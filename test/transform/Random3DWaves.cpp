@@ -40,10 +40,23 @@ template<typename R>
 class Unity : public bfio::AmplitudeFunctor<R,d>
 {
 public:
-    std::complex<R>
+    // This is the only routine required to be implemented
+    virtual std::complex<R>
     operator() 
     ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
     { return std::complex<R>(1); }
+
+    // We can optionally override the batched application for better efficiency
+    virtual void
+    BatchEvaluate
+    ( const std::vector< bfio::Array<R,d> >& xPoints,
+      const std::vector< bfio::Array<R,d> >& pPoints,
+            std::vector< std::complex<R>  >& results ) const
+    {
+        results.resize( xPoints.size()*pPoints.size() );
+        for( std::size_t j=0; j<results.size(); ++j )
+            results[j] = 1;
+    }
 };
  
 template<typename R>
@@ -56,12 +69,45 @@ public:
     void SetTime( const R t ) { _t = t; }
     R GetTime() const { return _t; }
 
-    R
+    // This is the only routine required to be implemented
+    virtual R
     operator() 
     ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
     { 
         return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
                _t * sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
+    }
+
+    // We can optionally override the batched application for better efficiency
+    virtual void
+    BatchEvaluate
+    ( const std::vector< bfio::Array<R,d> >& xPoints,
+      const std::vector< bfio::Array<R,d> >& pPoints,
+            std::vector< R                >& results ) const
+    {
+        // Set up the square root arguments
+        std::vector<R> sqrtArguments( pPoints.size() );
+        for( std::size_t j=0; j<pPoints.size(); ++j )
+            sqrtArguments[j] = pPoints[j][0]*pPoints[j][0] +
+                               pPoints[j][1]*pPoints[j][1] + 
+                               pPoints[j][2]*pPoints[j][2];
+
+        // Perform the batched square roots
+        std::vector<R> sqrtResults;
+        bfio::SqrtBatch( sqrtArguments, sqrtResults );
+
+        // Scale the square roots by _t
+        for( std::size_t j=0; j<pPoints.size(); ++j )
+            sqrtResults[j] *= _t;
+
+        // Form the final results
+        results.resize( xPoints.size()*pPoints.size() );
+        for( std::size_t i=0; i<xPoints.size(); ++i )
+            for( std::size_t j=0; j<pPoints.size(); ++j )
+                results[i*pPoints.size()+j] =
+                    xPoints[i][0]*pPoints[j][0] + 
+                    xPoints[i][1]*pPoints[j][1] +
+                    xPoints[i][2]*pPoints[j][2] + sqrtResults[j];
     }
 };
 
@@ -75,12 +121,45 @@ public:
     void SetTime( const R t ) { _t = t; }
     R GetTime() const { return _t; }
 
-    R
+    // This is the only routine required to be implemented
+    virtual R
     operator() 
     ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
     {
         return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] - 
                 _t * sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
+    }
+    
+    // We can optionally override the batched application for better efficiency
+    virtual void
+    BatchEvaluate
+    ( const std::vector< bfio::Array<R,d> >& xPoints,
+      const std::vector< bfio::Array<R,d> >& pPoints,
+            std::vector< R                >& results ) const
+    {
+        // Set up the square root arguments
+        std::vector<R> sqrtArguments( pPoints.size() );
+        for( std::size_t j=0; j<pPoints.size(); ++j )
+            sqrtArguments[j] = pPoints[j][0]*pPoints[j][0] +
+                               pPoints[j][1]*pPoints[j][1] + 
+                               pPoints[j][2]*pPoints[j][2];
+
+        // Perform the batched square roots
+        std::vector<R> sqrtResults;
+        bfio::SqrtBatch( sqrtArguments, sqrtResults );
+
+        // Scale the square roots by _t
+        for( std::size_t j=0; j<pPoints.size(); ++j )
+            sqrtResults[j] *= _t;
+
+        // Form the final results
+        results.resize( xPoints.size()*pPoints.size() );
+        for( std::size_t i=0; i<xPoints.size(); ++i )
+            for( std::size_t j=0; j<pPoints.size(); ++j )
+                results[i*pPoints.size()+j] =
+                    xPoints[i][0]*pPoints[j][0] + 
+                    xPoints[i][1]*pPoints[j][1] +
+                    xPoints[i][2]*pPoints[j][2] - sqrtResults[j];
     }
 };
 

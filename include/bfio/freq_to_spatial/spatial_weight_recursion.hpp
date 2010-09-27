@@ -26,8 +26,7 @@ namespace freq_to_spatial {
 template<typename R,std::size_t d,std::size_t q>
 void
 SpatialWeightRecursion
-( const AmplitudeFunctor<R,d>& Amp,
-  const PhaseFunctor<R,d>& Phi,
+( const PhaseFunctor<R,d>& Phi,
   const std::size_t log2NumMergingProcesses,
   const std::size_t myTeamRank,
   const std::size_t N, 

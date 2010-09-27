@@ -29,8 +29,7 @@ namespace freq_to_spatial {
 template<typename R,std::size_t d,std::size_t q>
 void
 InitializeWeights
-( const AmplitudeFunctor<R,d>& Amp,
-  const PhaseFunctor<R,d>& Phi,
+( const PhaseFunctor<R,d>& Phi,
   const std::size_t N,
   const std::vector< Source<R,d> >& mySources,
   const Context<R,d,q>& context,

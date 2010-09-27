@@ -33,9 +33,9 @@ public:
     virtual R operator() 
     ( const Array<R,d>& x, const Array<R,d>& p ) const = 0;
 
-    // The code will call BatchEvaluate whenever possible so that, if the user
-    // supplies a clas that overrides the method with an efficient vectorized
-    // implementation, then eventually there will be a large speedup.
+    // ButterflyFIO calls BatchEvaluate whenever possible so that, if the user
+    // supplies a class that overrides this method with an efficient vectorized
+    // implementation, then performance should significantly increase.
     virtual void BatchEvaluate
     ( const std::vector< Array<R,d> >& x,
       const std::vector< Array<R,d> >& p,

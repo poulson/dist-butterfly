@@ -50,12 +50,56 @@ template<typename R>
 class Oscillatory : public bfio::AmplitudeFunctor<R,d>
 {
 public:
-    std::complex<R>
+    // This is the only routine required to be implemented
+    virtual std::complex<R>
     operator() 
     ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
     {
         return 1. + 0.5*sin(1*bfio::Pi*x[0])*sin(4*bfio::Pi*x[1])*
-                        sin(3*bfio::Pi*p[0])*cos(4*bfio::Pi*p[1]);
+                        cos(3*bfio::Pi*p[0])*cos(4*bfio::Pi*p[1]);
+    }
+
+    // We can optionally override the batched application for better efficiency
+    virtual void
+    BatchEvaluate
+    ( const std::vector< bfio::Array<R,d> >& xPoints,
+      const std::vector< bfio::Array<R,d> >& pPoints,
+            std::vector< std::complex<R>  >& results ) const
+    {
+        // Set up the sin and cos arguments
+        std::vector<R> sinArguments( d*xPoints.size() );
+        for( std::size_t i=0; i<xPoints.size(); ++i )
+        {
+            sinArguments[i*d] = bfio::Pi*xPoints[i][0];
+            sinArguments[i*d+1] = 4*bfio::Pi*xPoints[i][1];
+        }
+        std::vector<R> cosArguments( d*pPoints.size() );
+        for( std::size_t j=0; j<pPoints.size(); ++j )
+        {
+            cosArguments[j*d] = 3*bfio::Pi*pPoints[j][0];
+            cosArguments[j*d+1] = 4*bfio::Pi*pPoints[j][1];
+        }
+
+        // Call the vector sin and cos
+        std::vector<R> sinResults;
+        std::vector<R> cosResults;
+        bfio::SinBatch( sinArguments, sinResults );
+        bfio::CosBatch( cosArguments, cosResults );
+
+        // Form the x and p coefficients
+        std::vector<R> xCoefficients( xPoints.size() ); 
+        std::vector<R> pCoefficients( pPoints.size() );
+        for( std::size_t i=0; i<xPoints.size(); ++i )
+            xCoefficients[i] = 0.5*sinResults[i*d]*sinResults[i*d+1];
+        for( std::size_t j=0; j<pPoints.size(); ++j )
+            pCoefficients[j] = cosResults[j*d]*cosResults[j*d+1];
+
+        // Form the answer
+        results.resize( xPoints.size()*pPoints.size() );
+        for( std::size_t i=0; i<xPoints.size(); ++i )
+            for( std::size_t j=0; j<pPoints.size(); ++j )
+                results[i*pPoints.size()+j] = 
+                    1. + xCoefficients[i]*pCoefficients[j];
     }
 };
 
@@ -63,12 +107,43 @@ template<typename R>
 class UpWave : public bfio::PhaseFunctor<R,d>
 {
 public:
+    // This is the only routine required to be implemented
     R
     operator() 
     ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
     {
         return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
                0.5*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]); 
+    }
+
+    // We can optionally override the batched application for better efficiency
+    virtual void
+    BatchEvaluate
+    ( const std::vector< bfio::Array<R,d> >& xPoints,
+      const std::vector< bfio::Array<R,d> >& pPoints,
+            std::vector< R                >& results ) const
+    {
+        // Set up the square root arguments
+        std::vector<R> sqrtArguments( pPoints.size() );
+        for( std::size_t j=0; j<pPoints.size(); ++j )
+            sqrtArguments[j] = pPoints[j][0]*pPoints[j][0] + 
+                               pPoints[j][1]*pPoints[j][1];
+
+        // Perform the batched square roots
+        std::vector<R> sqrtResults;
+        bfio::SqrtBatch( sqrtArguments, sqrtResults );
+
+        // Scale the square roots by 1/2
+        for( std::size_t j=0; j<pPoints.size(); ++j )
+            sqrtResults[j] *= 0.5;
+
+        // Form the final results
+        results.resize( xPoints.size()*pPoints.size() );
+        for( std::size_t i=0; i<xPoints.size(); ++i )
+            for( std::size_t j=0; j<pPoints.size(); ++j )
+                results[i*pPoints.size()+j] = 
+                    xPoints[i][0]*pPoints[j][0] + 
+                    xPoints[i][1]*pPoints[j][1] + sqrtResults[j];
     }
 };
 
