@@ -37,29 +37,6 @@ static const std::size_t d = 3;
 static const std::size_t q = 5;
 
 template<typename R>
-class Unity : public bfio::AmplitudeFunctor<R,d>
-{
-public:
-    // This is the only routine required to be implemented
-    virtual std::complex<R>
-    operator() 
-    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
-    { return std::complex<R>(1); }
-
-    // We can optionally override the batched application for better efficiency
-    virtual void
-    BatchEvaluate
-    ( const std::vector< bfio::Array<R,d> >& xPoints,
-      const std::vector< bfio::Array<R,d> >& pPoints,
-            std::vector< std::complex<R>  >& results ) const
-    {
-        results.resize( xPoints.size()*pPoints.size() );
-        for( std::size_t j=0; j<results.size(); ++j )
-            results[j] = 1;
-    }
-};
- 
-template<typename R>
 class UpWave : public bfio::PhaseFunctor<R,d>
 {
     R _t;
@@ -245,8 +222,7 @@ main
             mySources[i].magnitude = 200*bfio::Uniform<double>()-100;
         }
 
-        // Set up our amplitude and phase functors
-        Unity<double> unity;
+        // Set up our phase functors
         UpWave<double> upWave;
         DownWave<double> downWave;
 
@@ -272,7 +248,7 @@ main
                 std::cout.flush();
             }
             u = bfio::FreqToSpatial
-            ( N, freqBox, spatialBox, unity, upWave, context, mySources, comm );
+            ( N, freqBox, spatialBox, upWave, context, mySources, comm );
 
             std::auto_ptr< const bfio::PotentialField<double,d,q> > v;
             if( rank == 0 )
@@ -282,7 +258,7 @@ main
                 std::cout.flush();
             }
             v = bfio::FreqToSpatial
-            ( N, freqBox, spatialBox, unity, downWave, context, mySources, 
+            ( N, freqBox, spatialBox, downWave, context, mySources, 
               comm );
             if( rank == 0 )
                 std::cout << "done" << std::endl;

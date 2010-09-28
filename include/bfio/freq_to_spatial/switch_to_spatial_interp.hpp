@@ -53,6 +53,7 @@ SwitchToSpatialInterp
         wB[j] = freqBox.widths[j] / (1<<(log2N-level));
     }
 
+    const bool unitAmplitude = Amp.IsUnity();
     const std::vector< Array<R,d> >& chebyshevGrid = 
         context.GetChebyshevGrid();
     ConstrainedHTreeWalker<d> AWalker( log2LocalSpatialBoxesPerDim );
@@ -90,32 +91,57 @@ SwitchToSpatialInterp
                 for( std::size_t j=0; j<d; ++j )
                     pPoints[t][j] = p0B[j] + wB[j]*chebyshevGrid[t][j];
 
-            Amp.BatchEvaluate( xPoints, pPoints, ampResults );
             Phi.BatchEvaluate( xPoints, pPoints, phiResults );
             for( std::size_t j=0; j<phiResults.size(); ++j )
                 phiResults[j] *= TwoPi;
             SinCosBatch( phiResults, sinResults, cosResults );
-
             const std::size_t key = k+(i<<log2LocalFreqBoxes);
-            for( std::size_t t=0; t<q_to_d; ++t )
+
+            if( unitAmplitude )
             {
-                weightGridList[key].RealWeight(t) = 0;
-                weightGridList[key].ImagWeight(t) = 0;
-                for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
+                for( std::size_t t=0; t<q_to_d; ++t )
                 {
-                    const WeightGrid<R,d,q>& oldGrid = oldWeightGridList[key];
-                    const R realWeight = oldGrid.RealWeight(tPrime);
-                    const R imagWeight = oldGrid.ImagWeight(tPrime);
-                    const R cosResult  = cosResults[t*q_to_d+tPrime];
-                    const R sinResult  = sinResults[t*q_to_d+tPrime];
-                    const R realAmp    = real(ampResults[t*q_to_d+tPrime]);
-                    const R imagAmp    = imag(ampResults[t*q_to_d+tPrime]);
-                    const R realBeta=cosResult*realWeight-sinResult*imagWeight;
-                    const R imagBeta=sinResult*realWeight+cosResult*imagWeight;
-                    weightGridList[key].RealWeight(t) += 
-                        realAmp*realBeta - imagAmp*imagBeta;
-                    weightGridList[key].ImagWeight(t) +=
-                        imagAmp*realBeta + realAmp*imagBeta;
+                    weightGridList[key].RealWeight(t) = 0;
+                    weightGridList[key].ImagWeight(t) = 0;
+                    for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
+                    {
+                        const WeightGrid<R,d,q>& oldGrid = 
+                            oldWeightGridList[key];
+                        R realWeight = oldGrid.RealWeight(tPrime);
+                        R imagWeight = oldGrid.ImagWeight(tPrime);
+                        R cosResult  = cosResults[t*q_to_d+tPrime];
+                        R sinResult  = sinResults[t*q_to_d+tPrime];
+                        R realBeta=cosResult*realWeight-sinResult*imagWeight;
+                        R imagBeta=sinResult*realWeight+cosResult*imagWeight;
+                        weightGridList[key].RealWeight(t) += realBeta;
+                        weightGridList[key].ImagWeight(t) += imagBeta;
+                    }
+                }
+            }
+            else
+            {
+                Amp.BatchEvaluate( xPoints, pPoints, ampResults );
+                for( std::size_t t=0; t<q_to_d; ++t )
+                {
+                    weightGridList[key].RealWeight(t) = 0;
+                    weightGridList[key].ImagWeight(t) = 0;
+                    for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
+                    {
+                        const WeightGrid<R,d,q>& oldGrid = 
+                            oldWeightGridList[key];
+                        R realWeight = oldGrid.RealWeight(tPrime);
+                        R imagWeight = oldGrid.ImagWeight(tPrime);
+                        R cosResult  = cosResults[t*q_to_d+tPrime];
+                        R sinResult  = sinResults[t*q_to_d+tPrime];
+                        R realAmp    = real(ampResults[t*q_to_d+tPrime]);
+                        R imagAmp    = imag(ampResults[t*q_to_d+tPrime]);
+                        R realBeta=cosResult*realWeight-sinResult*imagWeight;
+                        R imagBeta=sinResult*realWeight+cosResult*imagWeight;
+                        weightGridList[key].RealWeight(t) += 
+                            realAmp*realBeta - imagAmp*imagBeta;
+                        weightGridList[key].ImagWeight(t) +=
+                            imagAmp*realBeta + realAmp*imagBeta;
+                    }
                 }
             }
         }

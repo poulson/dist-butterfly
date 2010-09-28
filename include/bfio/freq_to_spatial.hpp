@@ -32,15 +32,11 @@
 
 namespace bfio {
 
-// Applies the butterfly algorithm for the Fourier integral operator 
-// defined by the mapped amplitude and phase functions, Amp and Phi. This 
-// allows one to call the function with their own functor with potentially no 
-// performance penalty. R is the datatype for representing a Real and d is the 
-// spatial and frequency dimension. q is the number of points in each dimension 
-// of the Chebyshev tensor-product grid (q^d points total).
+namespace freq_to_spatial {
+
 template<typename R,std::size_t d,std::size_t q>
 std::auto_ptr< const PotentialField<R,d,q> >
-FreqToSpatial
+transform
 ( const std::size_t N,
   const Box<R,d>& freqBox,
   const Box<R,d>& spatialBox,
@@ -469,6 +465,40 @@ FreqToSpatial
 #endif
 
     return potentialField;
+}
+
+} // namespace freq_to_spatial
+
+template<typename R,std::size_t d,std::size_t q>
+std::auto_ptr< const PotentialField<R,d,q> >
+FreqToSpatial
+( const std::size_t N,
+  const Box<R,d>& freqBox,
+  const Box<R,d>& spatialBox,
+  const AmplitudeFunctor<R,d>& Amp,
+  const PhaseFunctor<R,d>& Phi,
+  const Context<R,d,q>& context,
+  const std::vector< Source<R,d> >& mySources,
+        MPI_Comm comm )
+{
+    return freq_to_spatial::transform
+    ( N, freqBox, spatialBox, Amp, Phi, context, mySources, comm );
+}
+
+template<typename R,std::size_t d,std::size_t q>
+std::auto_ptr< const PotentialField<R,d,q> >
+FreqToSpatial
+( const std::size_t N,
+  const Box<R,d>& freqBox,
+  const Box<R,d>& spatialBox,
+  const PhaseFunctor<R,d>& Phi,
+  const Context<R,d,q>& context,
+  const std::vector< Source<R,d> >& mySources,
+        MPI_Comm comm )
+{
+    return freq_to_spatial::transform
+    ( N, freqBox, spatialBox, UnitAmplitude<R,d>(), Phi, context, mySources, 
+      comm );
 }
 
 } // bfio

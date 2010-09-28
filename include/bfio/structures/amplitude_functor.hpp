@@ -26,8 +26,17 @@ namespace bfio {
 template<typename R,std::size_t d>
 class AmplitudeFunctor
 {
+protected:
+    // If a derived class sets this variable to 'true', then evaluation of the
+    // amplitude function is circumvented.
+    bool _isUnity; 
+                   
 public:
+    AmplitudeFunctor() : _isUnity(false) {}
+    AmplitudeFunctor( bool isUnity ) : _isUnity(isUnity) {}
     virtual ~AmplitudeFunctor() {}
+
+    bool IsUnity() const { return _isUnity; }
 
     // Point-wise evaluation of the amplitude function
     virtual std::complex<R> operator() 
@@ -46,6 +55,17 @@ public:
             for( std::size_t j=0; j<p.size(); ++j )
                 results[i*p.size()+j] = (*this)(x[i],p[j]);
     }
+};
+
+template<typename R,std::size_t d>
+class UnitAmplitude : public AmplitudeFunctor<R,d>
+{
+public:
+    UnitAmplitude() : AmplitudeFunctor<R,d>(true) {}
+
+    virtual std::complex<R> operator()
+    ( const Array<R,d>& x, const Array<R,d>& p ) const
+    { return 1; }
 };
 
 } // bfio
