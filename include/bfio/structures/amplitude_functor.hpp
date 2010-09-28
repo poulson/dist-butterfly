@@ -26,7 +26,6 @@ namespace bfio {
 template<typename R,std::size_t d>
 class AmplitudeFunctor
 {
-protected:
     // If a derived class sets this variable to 'true', then evaluation of the
     // amplitude function is circumvented.
     bool _isUnity; 
