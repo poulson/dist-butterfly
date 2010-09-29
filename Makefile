@@ -46,7 +46,7 @@ ifeq ($(config),ibm)
   XLMASS_LIB = /soft/apps/ibmcmp-aug2010/xlmass/bg/4.4/bglib
   CXXFLAGS = -DIBM -I$(incdir) -I$(XLMASS_INC)
   CXXFLAGS_DEBUG = -DTRACE -g $(CXXFLAGS)
-  CXXFLAGS_RELEASE = -DRELEASE $(CXXFLAGS)
+  CXXFLAGS_RELEASE = -O4 -DRELEASE $(CXXFLAGS)
   LDFLAGS = -L$(ESSL_LIB) -L$(XLF_LIB) -L$(XLSMP_LIB) -L$(XLMASS_LIB) \
             -lesslbg -lxlfmath -lxlf90_r -lxlomp_ser -lmassv -lmass
 endif
@@ -57,7 +57,7 @@ ifeq ($(config),intel)
   MKL_LIB = /opt/apps/intel/mkl/10.0.1.014/lib/em64t
   CXXFLAGS = -DINTEL -I$(incdir) -I$(MKL_INC)
   CXXFLAGS_DEBUG = -DTRACE -g $(CXXFLAGS)
-  CXXFLAGS_RELEASE = -DRELEASE $(CXXFLAGS)
+  CXXFLAGS_RELEASE = -O3 -DRELEASE $(CXXFLAGS)
   LDFLAGS = -Wl,-rpath,$(MKL_LIB) -L$(MKL_LIB) \
             -lmkl_em64t -lmkl -lguide -lpthread
 endif
