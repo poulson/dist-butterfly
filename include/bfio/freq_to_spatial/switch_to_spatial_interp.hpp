@@ -77,9 +77,16 @@ SwitchToSpatialInterp
             x0A[j] = mySpatialBox.offsets[j] + (A[j]+0.5)*wA[j];
 
         std::vector< Array<R,d> > xPoints( q_to_d );
-        for( std::size_t t=0; t<q_to_d; ++t )
-            for( std::size_t j=0; j<d; ++j )
-                xPoints[t][j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
+        {
+            R* xPointsBuffer = &(xPoints[0][0]);
+            const R* x0ABuffer = &x0A[0];
+            const R* wABuffer = &wA[0];
+            const R* chebyshevBuffer = &(chebyshevGrid[0][0]);
+            for( std::size_t t=0; t<q_to_d; ++t )
+                for( std::size_t j=0; j<d; ++j )
+                    xPointsBuffer[t*d+j] = 
+                        x0ABuffer[j] + wABuffer[j]*chebyshevBuffer[t*d+j];
+        }
 
         std::vector<C> ampResults;
         std::vector<R> phiResults;
@@ -96,60 +103,73 @@ SwitchToSpatialInterp
                 p0B[j] = myFreqBox.offsets[j] + (B[j]+0.5)*wB[j];
 
             std::vector< Array<R,d> > pPoints( q_to_d );
-            for( std::size_t t=0; t<q_to_d; ++t )
-                for( std::size_t j=0; j<d; ++j )
-                    pPoints[t][j] = p0B[j] + wB[j]*chebyshevGrid[t][j];
+            {
+                R* pPointsBuffer = &(pPoints[0][0]);
+                const R* p0BBuffer = &p0B[0];
+                const R* wBBuffer = &wB[0];
+                const R* chebyshevBuffer = &(chebyshevGrid[0][0]);
+                for( std::size_t t=0; t<q_to_d; ++t )
+                    for( std::size_t j=0; j<d; ++j )
+                        pPointsBuffer[t*d+j] = 
+                            p0BBuffer[j] + wBBuffer[j]*chebyshevBuffer[t*d+j];
+            }
 
             Phi.BatchEvaluate( xPoints, pPoints, phiResults );
-            for( std::size_t j=0; j<phiResults.size(); ++j )
-                phiResults[j] *= TwoPi;
+            {
+                R* phiBuffer = &phiResults[0];
+                for( std::size_t j=0; j<phiResults.size(); ++j )
+                    phiBuffer[j] *= TwoPi;
+            }
             SinCosBatch( phiResults, sinResults, cosResults );
             const std::size_t key = k+(i<<log2LocalFreqBoxes);
 
+            std::memset( weightGridList[key].Buffer(), 0, 2*q_to_d*sizeof(R) );
+            R* realBuffer = weightGridList[key].RealBuffer();
+            R* imagBuffer = weightGridList[key].ImagBuffer();
+            const WeightGrid<R,d,q>& oldGrid = oldWeightGridList[key];
+            const R* oldRealBuffer = oldGrid.RealBuffer();
+            const R* oldImagBuffer = oldGrid.ImagBuffer();
+            const R* cosBuffer = &cosResults[0];
+            const R* sinBuffer = &sinResults[0];
             if( unitAmplitude )
             {
                 for( std::size_t t=0; t<q_to_d; ++t )
                 {
-                    weightGridList[key].RealWeight(t) = 0;
-                    weightGridList[key].ImagWeight(t) = 0;
                     for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
                     {
-                        const WeightGrid<R,d,q>& oldGrid = 
-                            oldWeightGridList[key];
-                        R realWeight = oldGrid.RealWeight(tPrime);
-                        R imagWeight = oldGrid.ImagWeight(tPrime);
-                        R cosResult  = cosResults[t*q_to_d+tPrime];
-                        R sinResult  = sinResults[t*q_to_d+tPrime];
-                        R realBeta=cosResult*realWeight-sinResult*imagWeight;
-                        R imagBeta=sinResult*realWeight+cosResult*imagWeight;
-                        weightGridList[key].RealWeight(t) += realBeta;
-                        weightGridList[key].ImagWeight(t) += imagBeta;
+                        const R realWeight = oldRealBuffer[tPrime];
+                        const R imagWeight = oldImagBuffer[tPrime];
+                        const R realPhase = cosBuffer[t*q_to_d+tPrime];
+                        const R imagPhase = sinBuffer[t*q_to_d+tPrime];
+                        const R realBeta = 
+                            realPhase*realWeight - imagPhase*imagWeight;
+                        const R imagBeta = 
+                            imagPhase*realWeight + realPhase*imagWeight;
+                        realBuffer[t] += realBeta;
+                        imagBuffer[t] += imagBeta;
                     }
                 }
             }
             else
             {
                 Amp.BatchEvaluate( xPoints, pPoints, ampResults );
+                const C* ampBuffer = &ampResults[0];
                 for( std::size_t t=0; t<q_to_d; ++t )
                 {
-                    weightGridList[key].RealWeight(t) = 0;
-                    weightGridList[key].ImagWeight(t) = 0;
                     for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
                     {
-                        const WeightGrid<R,d,q>& oldGrid = 
-                            oldWeightGridList[key];
-                        R realWeight = oldGrid.RealWeight(tPrime);
-                        R imagWeight = oldGrid.ImagWeight(tPrime);
-                        R cosResult  = cosResults[t*q_to_d+tPrime];
-                        R sinResult  = sinResults[t*q_to_d+tPrime];
-                        R realAmp    = real(ampResults[t*q_to_d+tPrime]);
-                        R imagAmp    = imag(ampResults[t*q_to_d+tPrime]);
-                        R realBeta=cosResult*realWeight-sinResult*imagWeight;
-                        R imagBeta=sinResult*realWeight+cosResult*imagWeight;
-                        weightGridList[key].RealWeight(t) += 
-                            realAmp*realBeta - imagAmp*imagBeta;
-                        weightGridList[key].ImagWeight(t) +=
-                            imagAmp*realBeta + realAmp*imagBeta;
+                        const R realWeight = oldRealBuffer[tPrime];
+                        const R imagWeight = oldImagBuffer[tPrime];
+                        const R realPhase = cosBuffer[t*q_to_d+tPrime];
+                        const R imagPhase = sinBuffer[t*q_to_d+tPrime];
+                        const R realBeta = 
+                            realPhase*realWeight - imagPhase*imagWeight;
+                        const R imagBeta = 
+                            imagPhase*realWeight + realPhase*imagWeight;
+                        const R realAmp = real(ampBuffer[t*q_to_d+tPrime]);
+                        const R imagAmp = imag(ampBuffer[t*q_to_d+tPrime]);
+                        realBuffer[t] += realAmp*realBeta - imagAmp*imagBeta;
+                        imagBuffer[t] += imagAmp*realBeta + realAmp*imagBeta;
                     }
                 }
             }

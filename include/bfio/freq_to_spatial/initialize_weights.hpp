@@ -129,32 +129,49 @@ InitializeWeights
             FlattenConstrainedHTreeIndex( B, log2LocalFreqBoxesPerDim );
     }
     Phi.BatchEvaluate( xPoint, pPoints, phiResults );
-    for( std::size_t i=0; i<numSources; ++i )
-        phiResults[i] *= TwoPi;
-    SinCosBatch( phiResults, sinResults, cosResults );
-    for( std::size_t i=0; i<numSources; ++i )
     {
-        const std::size_t k = flattenedBoxIndices[i];
-        const Array<R,d>& pRef = pRefPoints[i];
-        const R realMagnitude = real(mySources[i].magnitude);
-        const R imagMagnitude = imag(mySources[i].magnitude);
-        const R realBeta = 
-            cosResults[i]*realMagnitude - sinResults[i]*imagMagnitude;
-        const R imagBeta = 
-            sinResults[i]*realMagnitude + cosResults[i]*imagMagnitude;
+        R* phiBuffer = &phiResults[0];
+        for( std::size_t i=0; i<numSources; ++i )
+            phiBuffer[i] *= TwoPi;
+    }
+    SinCosBatch( phiResults, sinResults, cosResults );
+    {
+        std::vector<R> realBeta( numSources );
+        std::vector<R> imagBeta( numSources );
+        R* realBetaBuffer = &realBeta[0];
+        R* imagBetaBuffer = &imagBeta[0];
+        const R* cosBuffer = &cosResults[0];
+        const R* sinBuffer = &sinResults[0];
+        for( std::size_t i=0; i<numSources; ++i )
+        {
+            const R realPhase = cosBuffer[i];
+            const R imagPhase = sinBuffer[i];
+            const R realMagnitude = real(mySources[i].magnitude);
+            const R imagMagnitude = imag(mySources[i].magnitude);
+            realBetaBuffer[i] = realPhase*realMagnitude-imagPhase*imagMagnitude;
+            imagBetaBuffer[i] = imagPhase*realMagnitude+realPhase*imagMagnitude;
+        }
+
+        std::vector<R> lagrangeResults;
         for( std::size_t t=0; t<q_to_d; ++t )
         {
-            const R lambda = context.Lagrange(t,pRef);
-            weightGridList[k].RealWeight(t) += realBeta*lambda;
-            weightGridList[k].ImagWeight(t) += imagBeta*lambda;
+            context.LagrangeBatch( t, pRefPoints, lagrangeResults );
+            const R* lagrangeBuffer = &lagrangeResults[0];
+            for( std::size_t i=0; i<numSources; ++i )
+            {
+                const std::size_t k = flattenedBoxIndices[i];
+                weightGridList[k].RealWeight(t) += 
+                    realBetaBuffer[i]*lagrangeBuffer[i];
+                weightGridList[k].ImagWeight(t) +=
+                    imagBetaBuffer[i]*lagrangeBuffer[i];
+            }
         }
     }
 
     // Loop over all of the boxes to compute the {p_t^B} and prefactors
     // for each delta weight {delta_t^AB}
     pPoints.resize( q_to_d );
-    const std::vector< Array<R,d> >& chebyshevGrid = 
-        context.GetChebyshevGrid();
+    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
     ConstrainedHTreeWalker<d> BWalker( log2LocalFreqBoxesPerDim );
     for( std::size_t k=0; k<(1u<<log2LocalFreqBoxes); ++k, BWalker.Walk() ) 
     {
@@ -167,21 +184,37 @@ InitializeWeights
 
         // Compute the prefactors given this p0 and multiply it by 
         // the corresponding weights
-        for( std::size_t t=0; t<q_to_d; ++t )
-            for( std::size_t j=0; j<d; ++j )
-                pPoints[t][j] = p0[j] + wB[j]*chebyshevGrid[t][j];
-        Phi.BatchEvaluate( xPoint, pPoints, phiResults );
-        for( std::size_t t=0; t<q_to_d; ++t )
-            phiResults[t] *= -TwoPi;
-        SinCosBatch( phiResults, sinResults, cosResults );
-        for( std::size_t t=0; t<q_to_d; ++t )
         {
-            const R realWeight = weightGridList[k].RealWeight(t);
-            const R imagWeight = weightGridList[k].ImagWeight(t);
-            weightGridList[k].RealWeight(t) = 
-                cosResults[t]*realWeight - sinResults[t]*imagWeight;
-            weightGridList[k].ImagWeight(t) = 
-                sinResults[t]*realWeight + cosResults[t]*imagWeight;
+            R* pPointsBuffer = &(pPoints[0][0]);
+            const R* p0Buffer = &p0[0];
+            const R* wBBuffer = &wB[0];
+            const R* chebyshevBuffer = &(chebyshevGrid[0][0]);
+            for( std::size_t t=0; t<q_to_d; ++t )
+                for( std::size_t j=0; j<d; ++j )
+                    pPointsBuffer[t*d+j] = 
+                        p0Buffer[j] + wBBuffer[j]*chebyshevBuffer[t*d+j];
+        }
+        Phi.BatchEvaluate( xPoint, pPoints, phiResults );
+        {
+            R* phiBuffer = &phiResults[0];
+            for( std::size_t t=0; t<q_to_d; ++t )
+                phiBuffer[t] *= -TwoPi;
+        }
+        SinCosBatch( phiResults, sinResults, cosResults );
+        {
+            R* realBuffer = weightGridList[k].RealBuffer();
+            R* imagBuffer = weightGridList[k].ImagBuffer();
+            const R* cosBuffer = &cosResults[0];
+            const R* sinBuffer = &sinResults[0];
+            for( std::size_t t=0; t<q_to_d; ++t )
+            {
+                const R realPhase = cosBuffer[t];
+                const R imagPhase = sinBuffer[t];
+                const R realWeight = realBuffer[t];
+                const R imagWeight = imagBuffer[t];
+                realBuffer[t] = realPhase*realWeight - imagPhase*imagWeight;
+                imagBuffer[t] = imagPhase*realWeight + realPhase*imagWeight;
+            }
         }
     }
 }

@@ -65,11 +65,18 @@ public:
       const std::vector< bfio::Array<R,d> >& pPoints,
             std::vector< R                >& results ) const
     {
-        results.resize( xPoints.size()*pPoints.size() );
-        for( std::size_t i=0; i<xPoints.size(); ++i )
-            for( std::size_t j=0; j<pPoints.size(); ++j )
-                results[i*pPoints.size()+j] = 
-                    xPoints[i][0]*pPoints[j][0] + xPoints[i][1]*pPoints[j][1];
+        const std::size_t nxPoints = xPoints.size();
+        const std::size_t npPoints = pPoints.size();
+        results.resize( nxPoints*npPoints );
+
+        R* resultsBuffer = &results[0];
+        const R* xPointsBuffer = &(xPoints[0][0]);
+        const R* pPointsBuffer = &(pPoints[0][0]);
+        for( std::size_t i=0; i<nxPoints; ++i )
+            for( std::size_t j=0; j<npPoints; ++j )
+                resultsBuffer[i*npPoints+j] = 
+                    xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
+                    xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1];
     }
 };
 

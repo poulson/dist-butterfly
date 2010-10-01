@@ -66,18 +66,29 @@ public:
       const std::vector< bfio::Array<R,d> >& pPoints,
             std::vector< std::complex<R>  >& results ) const
     {
+        const std::size_t nxPoints = xPoints.size();
+        const std::size_t npPoints = pPoints.size();
+
         // Set up the sin and cos arguments
-        std::vector<R> sinArguments( d*xPoints.size() );
-        for( std::size_t i=0; i<xPoints.size(); ++i )
+        std::vector<R> sinArguments( d*nxPoints );
         {
-            sinArguments[i*d] = bfio::Pi*xPoints[i][0];
-            sinArguments[i*d+1] = 4*bfio::Pi*xPoints[i][1];
+            R* sinArgBuffer = &sinArguments[0];
+            const R* xPointsBuffer = &(xPoints[0][0]);
+            for( std::size_t i=0; i<nxPoints; ++i )
+            {
+                sinArgBuffer[i*d+0] =   bfio::Pi*xPointsBuffer[i*d+0];
+                sinArgBuffer[i*d+1] = 4*bfio::Pi*xPointsBuffer[i*d+1];
+            }
         }
         std::vector<R> cosArguments( d*pPoints.size() );
-        for( std::size_t j=0; j<pPoints.size(); ++j )
         {
-            cosArguments[j*d] = 3*bfio::Pi*pPoints[j][0];
-            cosArguments[j*d+1] = 4*bfio::Pi*pPoints[j][1];
+            R* cosArgBuffer = &cosArguments[0];
+            const R* pPointsBuffer = &(pPoints[0][0]);
+            for( std::size_t j=0; j<npPoints; ++j )
+            {
+                cosArgBuffer[j*d+0] = 3*bfio::Pi*pPointsBuffer[j*d+0];
+                cosArgBuffer[j*d+1] = 4*bfio::Pi*pPointsBuffer[j*d+1];
+            }
         }
 
         // Call the vector sin and cos
@@ -87,19 +98,32 @@ public:
         bfio::CosBatch( cosArguments, cosResults );
 
         // Form the x and p coefficients
-        std::vector<R> xCoefficients( xPoints.size() ); 
-        std::vector<R> pCoefficients( pPoints.size() );
-        for( std::size_t i=0; i<xPoints.size(); ++i )
-            xCoefficients[i] = 0.5*sinResults[i*d]*sinResults[i*d+1];
-        for( std::size_t j=0; j<pPoints.size(); ++j )
-            pCoefficients[j] = cosResults[j*d]*cosResults[j*d+1];
+        std::vector<R> xCoefficients( nxPoints ); 
+        std::vector<R> pCoefficients( npPoints );
+        {
+            R* xCoefficientsBuffer = &xCoefficients[0];
+            const R* sinBuffer = &sinResults[0];
+            for( std::size_t i=0; i<nxPoints; ++i )
+                xCoefficientsBuffer[i] = 0.5*sinBuffer[i*d]*sinBuffer[i*d+1];
+        }
+        {
+            R* pCoefficientsBuffer = &pCoefficients[0];
+            const R* cosBuffer = &cosResults[0];
+            for( std::size_t j=0; j<npPoints; ++j )
+                pCoefficientsBuffer[j] = cosBuffer[j*d]*cosBuffer[j*d+1];
+        }
 
         // Form the answer
-        results.resize( xPoints.size()*pPoints.size() );
-        for( std::size_t i=0; i<xPoints.size(); ++i )
-            for( std::size_t j=0; j<pPoints.size(); ++j )
-                results[i*pPoints.size()+j] = 
-                    1. + xCoefficients[i]*pCoefficients[j];
+        results.resize( nxPoints*npPoints );
+        {
+            std::complex<R>* resultsBuffer = &results[0];
+            const R* xCoefficientsBuffer = &xCoefficients[0];
+            const R* pCoefficientsBuffer = &pCoefficients[0];
+            for( std::size_t i=0; i<nxPoints; ++i )
+                for( std::size_t j=0; j<npPoints; ++j )
+                    resultsBuffer[i*npPoints+j] = 
+                        1. + xCoefficientsBuffer[i]*pCoefficientsBuffer[j];
+        }
     }
 };
 
@@ -122,27 +146,44 @@ public:
       const std::vector< bfio::Array<R,d> >& pPoints,
             std::vector< R                >& results ) const
     {
-        // Set up the square root arguments
-        std::vector<R> sqrtArguments( pPoints.size() );
-        for( std::size_t j=0; j<pPoints.size(); ++j )
-            sqrtArguments[j] = pPoints[j][0]*pPoints[j][0] + 
-                               pPoints[j][1]*pPoints[j][1];
+        const std::size_t nxPoints = xPoints.size();
+        const std::size_t npPoints = pPoints.size();
+
+        // Set up the square root arguments 
+        std::vector<R> sqrtArguments( npPoints );
+        {
+            R* sqrtArgBuffer = &sqrtArguments[0];
+            const R* pPointsBuffer = &(pPoints[0][0]);
+            for( std::size_t j=0; j<npPoints; ++j )
+                sqrtArgBuffer[j] = pPointsBuffer[j*d+0]*pPointsBuffer[j*d+0] +
+                                   pPointsBuffer[j*d+1]*pPointsBuffer[j*d+1];
+        }
 
         // Perform the batched square roots
         std::vector<R> sqrtResults;
         bfio::SqrtBatch( sqrtArguments, sqrtResults );
 
         // Scale the square roots by 1/2
-        for( std::size_t j=0; j<pPoints.size(); ++j )
-            sqrtResults[j] *= 0.5;
+        {
+            R* sqrtBuffer = &sqrtResults[0];
+            for( std::size_t j=0; j<npPoints; ++j )
+                sqrtBuffer[j] *= 0.5;
+        }
 
         // Form the final results
-        results.resize( xPoints.size()*pPoints.size() );
-        for( std::size_t i=0; i<xPoints.size(); ++i )
-            for( std::size_t j=0; j<pPoints.size(); ++j )
-                results[i*pPoints.size()+j] = 
-                    xPoints[i][0]*pPoints[j][0] + 
-                    xPoints[i][1]*pPoints[j][1] + sqrtResults[j];
+        results.resize( nxPoints*npPoints );
+        {
+            R* resultsBuffer = &results[0];
+            const R* sqrtBuffer = &sqrtResults[0];
+            const R* xPointsBuffer = &(xPoints[0][0]);
+            const R* pPointsBuffer = &(pPoints[0][0]);
+            for( std::size_t i=0; i<nxPoints; ++i )
+                for( std::size_t j=0; j<npPoints; ++j )
+                    resultsBuffer[i*npPoints+j] =
+                        xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] +
+                        xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] +
+                        sqrtBuffer[j];
+        }
     }
 };
 

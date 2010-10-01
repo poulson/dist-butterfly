@@ -66,29 +66,46 @@ public:
       const std::vector< bfio::Array<R,d> >& pPoints,
             std::vector< R                >& results ) const
     {
+        const std::size_t nxPoints = xPoints.size();
+        const std::size_t npPoints = pPoints.size();
+
         // Set up the square root arguments 
-        std::vector<R> sqrtArguments( pPoints.size() );
-        for( std::size_t j=0; j<pPoints.size(); ++j )
-            sqrtArguments[j] = pPoints[j][0]*pPoints[j][0] +
-                               pPoints[j][1]*pPoints[j][1] +
-                               pPoints[j][2]*pPoints[j][2];
+        std::vector<R> sqrtArguments( npPoints );
+        {
+            R* sqrtArgBuffer = &sqrtArguments[0];
+            const R* pPointsBuffer = &(pPoints[0][0]);
+            for( std::size_t j=0; j<npPoints; ++j )
+                sqrtArgBuffer[j] = pPointsBuffer[j*d+0]*pPointsBuffer[j*d+0] +
+                                   pPointsBuffer[j*d+1]*pPointsBuffer[j*d+1] +
+                                   pPointsBuffer[j*d+2]*pPointsBuffer[j*d+2];
+        }
 
         // Perform the batched square roots
         std::vector<R> sqrtResults;
         bfio::SqrtBatch( sqrtArguments, sqrtResults );
 
         // Scale the square roots by 1/2
-        for( std::size_t j=0; j<pPoints.size(); ++j )
-            sqrtResults[j] *= 0.5;
+        {
+            R* sqrtBuffer = &sqrtResults[0];
+            for( std::size_t j=0; j<npPoints; ++j )
+                sqrtBuffer[j] *= 0.5;
+        }
 
         // Form the final results
-        results.resize( xPoints.size()*pPoints.size() );
-        for( std::size_t i=0; i<xPoints.size(); ++i )
-            for( std::size_t j=0; j<pPoints.size(); ++j )
-                results[i*pPoints.size()+j] =
-                    xPoints[i][0]*pPoints[j][0] +
-                    xPoints[i][1]*pPoints[j][1] +
-                    xPoints[i][2]*pPoints[j][2] + sqrtResults[j];
+        results.resize( nxPoints*npPoints );
+        {
+            R* resultsBuffer = &results[0];
+            const R* sqrtBuffer = &sqrtResults[0];
+            const R* xPointsBuffer = &(xPoints[0][0]);
+            const R* pPointsBuffer = &(pPoints[0][0]);
+            for( std::size_t i=0; i<nxPoints; ++i )
+                for( std::size_t j=0; j<npPoints; ++j )
+                    resultsBuffer[i*npPoints+j] = 
+                        xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
+                        xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] +
+                        xPointsBuffer[i*d+2]*pPointsBuffer[j*d+2] + 
+                        sqrtBuffer[j];
+        }
     }
 };
 

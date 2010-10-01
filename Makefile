@@ -18,19 +18,23 @@
 
 # The GNU configuration is fairly portable, but the Intel configuration has 
 # only been tested on TACC's Ranger, and the IBM one has only been tested on 
-# a Blue Gene/P.
-config = gnu
+# a Blue Gene/P. The apple implementation has been tested on my laptop; its 
+# only difference from gnu is the additional '-fast' compilation flag.
+config = apple
 ifneq ($(config),ibm)
   ifneq ($(config),intel)
     ifneq ($(config),gnu)
-      $(error You must choose a valid configuration)
+      ifneq ($(config),apple)
+        $(error You must choose a valid configuration)
+      endif
     endif
   endif
 endif
 
 incdir = include
 testdir = test
-bindir = bin/$(config)
+bindir_base = bin
+bindir = $(bindir_base)/$(config)
 
 # Defining 'FUNDERSCORE' appends an underscore to BLAS routine names
 # Defining 'TRACE' prints progress through the FreqToSpatial transformation
@@ -67,6 +71,14 @@ ifeq ($(config),gnu)
   CXXFLAGS = -DGNU -I$(incdir) -DFUNDERSCORE 
   CXXFLAGS_DEBUG = -DTRACE -g -Wall $(CXXFLAGS)
   CXXFLAGS_RELEASE = -O3 -ffast-math -Wall -DRELEASE $(CXXFLAGS)
+  LDFLAGS = -L/usr/lib -lblas
+endif
+ifeq ($(config),apple)
+  # This is for a Mac with a BLAS library in /usr/lib
+  CXX = mpicxx 
+  CXXFLAGS = -DGNU -I$(incdir) -DFUNDERSCORE 
+  CXXFLAGS_DEBUG = -DTRACE -g -Wall $(CXXFLAGS)
+  CXXFLAGS_RELEASE = -fast -ffast-math -Wall -DRELEASE $(CXXFLAGS)
   LDFLAGS = -L/usr/lib -lblas
 endif
 
@@ -156,6 +168,10 @@ $(bindir_release)/%.o: $(testdir)/%.cpp $(includes)
 ################################################################################
 # make clean                                                                   #
 ################################################################################
+.PHONY : real-clean
+real-clean: 
+	@rm -Rf $(bindir_base)
+
 .PHONY : clean
 clean: 
 	@rm -Rf $(bindir)

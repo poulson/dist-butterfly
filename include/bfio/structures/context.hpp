@@ -47,6 +47,11 @@ public:
     // Evaluate the t'th Lagrangian basis function at point p in [-1/2,+1/2]^d
     R Lagrange( std::size_t t, const Array<R,d>& p ) const;
 
+    void LagrangeBatch
+    ( std::size_t t, 
+      const std::vector< Array<R,d> >& p,
+            std::vector< R          >& results ) const;
+
     const Array<R,d>&
     GetChebyshevNodes() const;
 
@@ -189,22 +194,59 @@ Context<R,d,q>::Context()
 template<typename R,std::size_t d,std::size_t q>
 R
 Context<R,d,q>::Lagrange
-( std::size_t t, const Array<R,d>& z ) const
+( std::size_t t, const Array<R,d>& p ) const
 {
     R product = static_cast<R>(1);
+    const R* pBuffer = &p[0];
+    const R* chebyshevNodeBuffer = &_chebyshevNodes[0];
+    const std::size_t* chebyshevIndicesBuffer = &(_chebyshevIndices[t][0]);
     for( std::size_t j=0; j<d; ++j )
     {
-        std::size_t i = _chebyshevIndices[t][j];
+        std::size_t i = chebyshevIndicesBuffer[j];
         for( std::size_t k=0; k<q; ++k )
         {
             if( i != k )
             {
-                product *= (z[j]-_chebyshevNodes[k]) /
-                           (_chebyshevNodes[i]-_chebyshevNodes[k]);
+                const R iNode = chebyshevNodeBuffer[i];
+                const R kNode = chebyshevNodeBuffer[k];
+                const R nodeDist = iNode - kNode;
+                product *= (pBuffer[j]-kNode) / nodeDist;
             }
         }
     }
     return product;
+}
+
+template<typename R,std::size_t d,std::size_t q>
+void
+Context<R,d,q>::LagrangeBatch
+( std::size_t t, 
+  const std::vector< Array<R,d> >& p, 
+        std::vector< R          >& results ) const
+{
+    results.resize( p.size() );
+    R* resultsBuffer = &results[0];
+    for( std::size_t i=0; i<p.size(); ++i )
+        resultsBuffer[i] = 1;
+
+    const R* pBuffer = &(p[0][0]);
+    const R* chebyshevNodeBuffer = &_chebyshevNodes[0];
+    const std::size_t* chebyshevIndicesBuffer = &(_chebyshevIndices[t][0]);
+    for( std::size_t j=0; j<d; ++j )
+    {
+        std::size_t i = chebyshevIndicesBuffer[j];
+        for( std::size_t k=0; k<q; ++k )
+        {
+            if( i != k )
+            {
+                const R iNode = chebyshevNodeBuffer[i];
+                const R kNode = chebyshevNodeBuffer[k];
+                const R nodeDist = iNode - kNode;
+                for( std::size_t r=0; r<p.size(); ++r )
+                    resultsBuffer[r] *= (pBuffer[r*d+j]-kNode) / nodeDist;
+            }
+        }
+    }
 }
 
 template<typename R,std::size_t d,std::size_t q>

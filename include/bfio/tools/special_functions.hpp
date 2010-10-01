@@ -73,8 +73,12 @@ SinBatch
 #elif defined(INTEL)
     vsSin( a.size(), &a[0], &sinResults[0] );
 #else
-    for( std::size_t j=0; j<a.size(); ++j )
-        sinResults[j] = sin(a[j]);
+    {
+        float* sinBuffer = &sinResults[0];
+        const float* aBuffer = &a[0];
+        for( std::size_t j=0; j<a.size(); ++j )
+            sinBuffer[j] = sin(aBuffer[j]);
+    }
 #endif
 }
 
@@ -91,8 +95,12 @@ SinBatch
 #elif defined(INTEL)
     vdSin( a.size(), &a[0], &sinResults[0] );
 #else
-    for( std::size_t j=0; j<a.size(); ++j )
-        sinResults[j] = sin(a[j]);
+    {
+        double* sinBuffer = &sinResults[0];
+        const double* aBuffer = &a[0];
+        for( std::size_t j=0; j<a.size(); ++j )
+            sinBuffer[j] = sin(aBuffer[j]);
+    }
 #endif
 }
 
@@ -116,8 +124,12 @@ CosBatch
 #elif defined(INTEL)
     vsCos( a.size(), &a[0], &cosResults[0] );
 #else
-    for( std::size_t j=0; j<a.size(); ++j )
-        cosResults[j] = cos(a[j]);
+    {
+        float* cosBuffer = &cosResults[0];
+        const float* aBuffer = &a[0];
+        for( std::size_t j=0; j<a.size(); ++j )
+            cosBuffer[j] = cos(aBuffer[j]);
+    }
 #endif
 }
 
@@ -134,8 +146,12 @@ CosBatch
 #elif defined(INTEL)
     vdCos( a.size(), &a[0], &cosResults[0] );
 #else
-    for( std::size_t j=0; j<a.size(); ++j )
-        cosResults[j] = cos(a[j]);
+    {
+        double* cosBuffer = &cosResults[0];
+        const double* aBuffer = &a[0];
+        for( std::size_t j=0; j<a.size(); ++j )
+            cosBuffer[j] = cos(aBuffer[j]);
+    }
 #endif
 }
 
@@ -162,10 +178,15 @@ SinCosBatch
 #elif defined(INTEL)
     vsSinCos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
 #else
-    for( std::size_t j=0; j<a.size(); ++j )
     {
-        sinResults[j] = sin(a[j]);
-        cosResults[j] = cos(a[j]);
+        float* sinBuffer = &sinResults[0];
+        float* cosBuffer = &cosResults[0];
+        const float* aBuffer = &a[0];
+        for( std::size_t j=0; j<a.size(); ++j )
+        {
+            sinBuffer[j] = sin(aBuffer[j]);
+            cosBuffer[j] = cos(aBuffer[j]);
+        }
     }
 #endif
 }
@@ -185,10 +206,15 @@ SinCosBatch
 #elif defined(INTEL)
     vdSinCos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
 #else
-    for( std::size_t j=0; j<a.size(); ++j )
     {
-        sinResults[j] = sin(a[j]);
-        cosResults[j] = cos(a[j]);
+        double* sinBuffer = &sinResults[0];
+        double* cosBuffer = &cosResults[0];
+        const double* aBuffer = &a[0];
+        for( std::size_t j=0; j<a.size(); ++j )
+        {
+            sinBuffer[j] = sin(aBuffer[j]);
+            cosBuffer[j] = cos(aBuffer[j]);
+        }
     }
 #endif
 }
@@ -213,8 +239,12 @@ SqrtBatch
 #elif defined(INTEL)
     vsSqrt( a.size(), &a[0], &sqrtResults[0] );
 #else
-    for( std::size_t j=0; j<a.size(); ++j )
-        sqrtResults[j] = sqrt(a[j]);
+    {
+        float* sqrtBuffer = &sqrtResults[0];
+        const float* aBuffer = &a[0];
+        for( std::size_t j=0; j<a.size(); ++j )
+            sqrtBuffer[j] = sqrt(aBuffer[j]);
+    }
 #endif
 }
 
@@ -231,8 +261,12 @@ SqrtBatch
 #elif defined(INTEL)
     vdSqrt( a.size(), &a[0], &sqrtResults[0] );
 #else
-    for( std::size_t j=0; j<a.size(); ++j )
-        sqrtResults[j] = sqrt(a[j]);
+    {
+        double* sqrtBuffer = &sqrtResults[0];
+        const double* aBuffer = &a[0];
+        for( std::size_t j=0; j<a.size(); ++j )
+            sqrtBuffer[j] = sqrt(aBuffer[j]);
+    }
 #endif
 }
 

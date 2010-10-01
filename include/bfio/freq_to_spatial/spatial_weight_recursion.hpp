@@ -19,6 +19,7 @@
 #define BFIO_FREQ_TO_SPATIAL_SPATIAL_WEIGHT_RECURSION_HPP 1
 
 #include <cstddef>
+#include <cstring>
 #include <vector>
 
 #include "bfio/structures/array.hpp"
@@ -56,11 +57,7 @@ SpatialWeightRecursion
     const std::size_t q_to_d = Pow<q,d>::val;
     const std::size_t q_to_2d = Pow<q,2*d>::val;
 
-    for( std::size_t t=0; t<q_to_d; ++t )
-    {
-        weightGrid.RealWeight(t) = 0;
-        weightGrid.ImagWeight(t) = 0;
-    }
+    std::memset( weightGrid.Buffer(), 0, 2*q_to_d*sizeof(R) );
 
     // We seek performance by isolating the Lagrangian interpolation as 
     // a matrix-vector multiplication.
@@ -88,22 +85,42 @@ SpatialWeightRecursion
         const std::size_t key = parentOffset + cLocal;
         for( std::size_t j=0; j<d; ++j )
             pPoint[0][j] = p0B[j] + ( (c>>j)&1 ? wB[j]/4 : -wB[j]/4 );
-        for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
-            for( std::size_t j=0; j<d; ++j )
-                xPoints[tPrime][j] = 
-                    x0Ap[j] + (2*wA[j])*chebyshevGrid[tPrime][j];
-        Phi.BatchEvaluate( xPoints, pPoint, phiResults );
-        for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
-            phiResults[tPrime] *= -TwoPi;
-        SinCosBatch( phiResults, sinResults, cosResults );
-        for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
         {
-            const R realWeight = oldWeightGridList[key].RealWeight(tPrime);
-            const R imagWeight = oldWeightGridList[key].ImagWeight(tPrime);
-            scaledWeightGrid.RealWeight(tPrime) = 
-                cosResults[tPrime]*realWeight - sinResults[tPrime]*imagWeight;
-            scaledWeightGrid.ImagWeight(tPrime) = 
-                sinResults[tPrime]*realWeight + cosResults[tPrime]*imagWeight;
+            R* xPointsBuffer = &(xPoints[0][0]);
+            const R* wABuffer = &wA[0];
+            const R* x0ApBuffer = &x0Ap[0];
+            const R* chebyshevBuffer = &(chebyshevGrid[0][0]);
+            for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
+                for( std::size_t j=0; j<d; ++j )
+                    xPointsBuffer[tPrime*d+j] = 
+                        x0ApBuffer[j] + 
+                        2*wABuffer[j]*chebyshevBuffer[tPrime*d+j];
+        }
+        Phi.BatchEvaluate( xPoints, pPoint, phiResults );
+        {
+            R* phiBuffer = &phiResults[0];
+            for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
+                phiBuffer[tPrime] *= -TwoPi;
+        }
+        SinCosBatch( phiResults, sinResults, cosResults );
+        {
+            R* scaledRealBuffer = scaledWeightGrid.RealBuffer();
+            R* scaledImagBuffer = scaledWeightGrid.ImagBuffer();
+            const R* cosBuffer = &cosResults[0];
+            const R* sinBuffer = &sinResults[0];
+            const R* oldRealBuffer = oldWeightGridList[key].RealBuffer();
+            const R* oldImagBuffer = oldWeightGridList[key].ImagBuffer();
+            for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
+            {
+                const R realPhase = cosBuffer[tPrime];
+                const R imagPhase = sinBuffer[tPrime];
+                const R realWeight = oldRealBuffer[tPrime];
+                const R imagWeight = oldImagBuffer[tPrime];
+                scaledRealBuffer[tPrime] = 
+                    realPhase*realWeight - imagPhase*imagWeight;
+                scaledImagBuffer[tPrime] = 
+                    imagPhase*realWeight + realPhase*imagWeight;
+            }
         }
 
         // Step 2: perform the matrix-vector multiplies
@@ -115,21 +132,39 @@ SpatialWeightRecursion
           (R)0, expandedWeightGrid.Buffer(),         q_to_d );
 
         // Step 3: scale the result
-        for( std::size_t t=0; t<Pow<q,d>::val; ++t )
-            for( std::size_t j=0; j<d; ++j )
-                xPoints[t][j] = x0A[j] + wA[j]*chebyshevGrid[t][j];
-        Phi.BatchEvaluate( xPoints, pPoint, phiResults );
-        for( std::size_t t=0; t<q_to_d; ++t )
-            phiResults[t] *= TwoPi;
-        SinCosBatch( phiResults, sinResults, cosResults );
-        for( std::size_t t=0; t<q_to_d; ++t )
         {
-            const R realWeight = expandedWeightGrid.RealWeight(t);
-            const R imagWeight = expandedWeightGrid.ImagWeight(t);
-            weightGrid.RealWeight(t) += 
-                cosResults[t]*realWeight - sinResults[t]*imagWeight;
-            weightGrid.ImagWeight(t) += 
-                sinResults[t]*realWeight + cosResults[t]*imagWeight;
+            R* xPointsBuffer = &(xPoints[0][0]);
+            const R* wABuffer = &wA[0];
+            const R* x0ABuffer = &x0A[0];
+            const R* chebyshevBuffer = &(chebyshevGrid[0][0]);
+            for( std::size_t t=0; t<Pow<q,d>::val; ++t )
+                for( std::size_t j=0; j<d; ++j )
+                    xPointsBuffer[t*d+j] = 
+                        x0ABuffer[j] + wABuffer[j]*chebyshevBuffer[t*d+j];
+        }
+        Phi.BatchEvaluate( xPoints, pPoint, phiResults );
+        {
+            R* phiBuffer = &phiResults[0];
+            for( std::size_t t=0; t<q_to_d; ++t )
+                phiBuffer[t] *= TwoPi;
+        }
+        SinCosBatch( phiResults, sinResults, cosResults );
+        {
+            R* realBuffer = weightGrid.RealBuffer();
+            R* imagBuffer = weightGrid.ImagBuffer();
+            const R* cosBuffer = &cosResults[0];
+            const R* sinBuffer = &sinResults[0];
+            const R* expandedRealBuffer = expandedWeightGrid.RealBuffer();
+            const R* expandedImagBuffer = expandedWeightGrid.ImagBuffer();
+            for( std::size_t t=0; t<q_to_d; ++t )
+            {
+                const R realPhase = cosBuffer[t];
+                const R imagPhase = sinBuffer[t];
+                const R realWeight = expandedRealBuffer[t];
+                const R imagWeight = expandedImagBuffer[t];
+                realBuffer[t] += realPhase*realWeight - imagPhase*imagWeight;
+                imagBuffer[t] += imagPhase*realWeight + realPhase*imagWeight;
+            }
         }
     }
 }
