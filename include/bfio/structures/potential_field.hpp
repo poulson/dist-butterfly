@@ -19,11 +19,18 @@
 #define BFIO_STRUCTURES_POTENTIAL_FIELD_HPP 1
 
 #include <stdexcept>
+#include <complex>
+#include <vector>
 
-#include "bfio/structures/data.hpp"
-#include "bfio/structures/htree_walker.hpp"
-#include "bfio/structures/amplitude_functor.hpp"
-#include "bfio/structures/phase_functor.hpp"
+#include "bfio/structures/array.hpp"
+#include "bfio/structures/box.hpp"
+#include "bfio/structures/constrained_htree_walker.hpp"
+#include "bfio/structures/context.hpp"
+#include "bfio/structures/weight_grid.hpp"
+#include "bfio/structures/weight_grid_list.hpp"
+
+#include "bfio/functors/amplitude_functor.hpp"
+#include "bfio/functors/phase_functor.hpp"
 #include "bfio/tools/special_functions.hpp"
 
 namespace bfio {

@@ -15,19 +15,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_STRUCTURES_HPP
-#define BFIO_STRUCTURES_HPP 1
+#ifndef BFIO_FUNCTORS_HPP
+#define BFIO_FUNCTORS_HPP 1
 
-#include "bfio/structures/array.hpp"
-#include "bfio/structures/box.hpp"
-#include "bfio/structures/constrained_htree_walker.hpp"
-#include "bfio/structures/context.hpp"
-#include "bfio/structures/htree_walker.hpp"
-#include "bfio/structures/point_grid.hpp"
-#include "bfio/structures/potential_field.hpp"
-#include "bfio/structures/source.hpp"
-#include "bfio/structures/weight_grid.hpp"
-#include "bfio/structures/weight_grid_list.hpp"
+#include "bfio/functors/amplitude_functor.hpp"
+#include "bfio/functors/phase_functor.hpp"
 
-#endif // BFIO_STRUCTURES_HPP
+#endif // BFIO_FUNCTORS_HPP
 

@@ -18,10 +18,22 @@
 #ifndef BFIO_FREQ_TO_SPATIAL_INITIALIZE_WEIGHTS_HPP
 #define BFIO_FREQ_TO_SPATIAL_INITIALIZE_WEIGHTS_HPP 1
 
-#include "bfio/structures/data.hpp"
-#include "bfio/structures/htree_walker.hpp"
-#include "bfio/tools/flatten_htree_index.hpp"
+#include <cstddef>
+#include <vector>
+
+#include "bfio/constants.hpp"
+
+#include "bfio/structures/array.hpp"
+#include "bfio/structures/box.hpp"
+#include "bfio/structures/constrained_htree_walker.hpp"
+#include "bfio/structures/context.hpp"
+#include "bfio/structures/weight_grid_list.hpp"
+
+#include "bfio/tools/flatten_constrained_htree_index.hpp"
 #include "bfio/tools/mpi.hpp"
+#include "bfio/tools/special_functions.hpp"
+
+#include "bfio/functors/phase_functor.hpp"
 
 namespace bfio {
 namespace freq_to_spatial {
@@ -41,7 +53,6 @@ InitializeWeights
         WeightGridList<R,d,q>& weightGridList
 )
 {
-    typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
 
     Array<R,d> wB;

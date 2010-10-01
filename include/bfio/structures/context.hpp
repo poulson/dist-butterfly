@@ -20,7 +20,8 @@
 
 #include <memory>
 #include <vector>
-#include "bfio/structures/data.hpp"
+#include "bfio/constants.hpp"
+#include "bfio/structures/array.hpp"
 
 namespace bfio {
 

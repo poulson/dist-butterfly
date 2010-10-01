@@ -18,7 +18,16 @@
 #ifndef BFIO_FREQ_TO_SPATIAL_SWITCH_TO_SPATIAL_INTERP_HPP
 #define BFIO_FREQ_TO_SPATIAL_SWITCH_TO_SPATIAL_INTERP_HPP 1
 
-#include "bfio/structures/htree_walker.hpp"
+#include <cstddef>
+#include <complex>
+#include <vector>
+
+#include "bfio/structures/array.hpp"
+#include "bfio/structures/box.hpp"
+#include "bfio/structures/constrained_htree_walker.hpp"
+#include "bfio/structures/context.hpp"
+#include "bfio/structures/weight_grid.hpp"
+#include "bfio/structures/weight_grid_list.hpp"
 
 namespace bfio {
 namespace freq_to_spatial {

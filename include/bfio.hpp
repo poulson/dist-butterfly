@@ -18,8 +18,11 @@
 #ifndef BFIO_HPP
 #define BFIO_HPP 1
 
+// One could probably speed up compile time by including everything in a 
+// dependency-aware order
 #include "bfio/constants.hpp"
 #include "bfio/freq_to_spatial.hpp"
+#include "bfio/functors.hpp"
 #include "bfio/structures.hpp"
 #include "bfio/tools.hpp"
 

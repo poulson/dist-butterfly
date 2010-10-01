@@ -18,6 +18,19 @@
 #ifndef BFIO_FREQ_TO_SPATIAL_FREQ_WEIGHT_RECURSION_HPP
 #define BFIO_FREQ_TO_SPATIAL_FREQ_WEIGHT_RECURSION_HPP 1
 
+#include <cstddef>
+#include <vector>
+
+#include "bfio/constants.hpp"
+
+#include "bfio/structures/array.hpp"
+#include "bfio/structures/weight_grid.hpp"
+#include "bfio/structures/weight_grid_list.hpp"
+
+#include "bfio/functors/phase_functor.hpp"
+
+#include "bfio/tools/special_functions.hpp"
+
 namespace bfio {
 namespace freq_to_spatial {
 
@@ -37,7 +50,6 @@ FreqWeightRecursion
         WeightGrid<R,d,q>& weightGrid
 )
 {
-    typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
     const std::size_t q_to_2d = Pow<q,2*d>::val;
 

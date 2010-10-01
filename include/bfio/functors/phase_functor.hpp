@@ -15,10 +15,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_STRUCTURES_PHASE_FUNCTOR_HPP
-#define BFIO_STRUCTURES_PHASE_FUNCTOR_HPP 1
+#ifndef BFIO_FUNCTORS_PHASE_FUNCTOR_HPP
+#define BFIO_FUNCTORS_PHASE_FUNCTOR_HPP 1
 
-#include "bfio/structures/data.hpp"
+#include <cstddef>
+#include <vector>
+
+#include "bfio/structures/array.hpp"
 
 namespace bfio {
 
@@ -50,5 +53,5 @@ public:
 
 } // bfio
 
-#endif // BFIO_STRUCTURES_PHASE_FUNCTOR_HPP
+#endif // BFIO_FUNCTORS_PHASE_FUNCTOR_HPP
 

@@ -19,6 +19,7 @@
 #define BFIO_TOOLS_HPP 1
 
 #include "bfio/tools/blas.hpp"
+#include "bfio/tools/flatten_constrained_htree_index.hpp"
 #include "bfio/tools/flatten_htree_index.hpp"
 #include "bfio/tools/local_data.hpp"
 #include "bfio/tools/mpi.hpp"

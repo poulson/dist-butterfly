@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_STRUCTURES_HTREE_WALKER_HPP
-#define BFIO_STRUCTURES_HTREE_WALKER_HPP 1
+#ifndef BFIO_STRUCTURES_CONSTRAINED_HTREE_WALKER_HPP
+#define BFIO_STRUCTURES_CONSTRAINED_HTREE_WALKER_HPP 1
 
 #include <cstddef>
 #include <stdexcept>
@@ -25,28 +25,49 @@
 
 namespace bfio {
 
+// Constrained HTree Walker
 template<std::size_t d>
-class HTreeWalker
+class ConstrainedHTreeWalker
 {
+    bool _overflowed;
+    std::size_t _firstOpenDim;
     std::size_t _nextZeroDim;
     std::size_t _nextZeroLevel;
     Array<std::size_t,d> _state;
+    Array<std::size_t,d> _log2BoxesPerDim;
 public:
-    HTreeWalker() : 
-    _nextZeroDim(0), _nextZeroLevel(0), _state(0)
-    { }
+    ConstrainedHTreeWalker
+    ( const Array<std::size_t,d>& log2BoxesPerDim ) 
+    : _overflowed(false), _nextZeroLevel(0), _state(0),
+      _log2BoxesPerDim(log2BoxesPerDim) 
+    {
+        for( _firstOpenDim=0; _firstOpenDim<d; ++_firstOpenDim )
+            if( log2BoxesPerDim[_firstOpenDim] != 0 )
+                break;
+        _nextZeroDim = _firstOpenDim;
+    }
 
-    ~HTreeWalker() {}
+    ~ConstrainedHTreeWalker() {}
 
     Array<std::size_t,d> State()
-    { return _state; }
+    { 
+        if( _overflowed )
+            throw std::logic_error( "Overflowed HTree" );
+        return _state; 
+    }
 
     void Walk()
     {
+        if( _nextZeroDim == d )
+        {
+            _overflowed = true;
+            return;
+        }
+
         const std::size_t zeroDim = _nextZeroDim;
         const std::size_t zeroLevel = _nextZeroLevel;
 
-        if( zeroDim == 0 )
+        if( zeroDim == _firstOpenDim )
         {
             // Zero the first (zeroLevel-1) bits of all coordinates
             // and then increment at level zeroLevel
@@ -55,14 +76,16 @@ public:
             _state[zeroDim] |= 1u<<zeroLevel;
 
             // Set up for the next walk
-            // We need to find the dimension with the first zero bit.
+            // We need to find the dimension with the first unconstrained
+            // zero bit.
             std::size_t minDim = d;
-            std::size_t minTrailingOnes = sizeof(std::size_t)*8+1;
+            std::size_t minTrailingOnes = sizeof(std::size_t)*8+1; 
             Array<std::size_t,d> numberOfTrailingOnes;
             for( std::size_t j=0; j<d; ++j )
             {
                 numberOfTrailingOnes[j] = NumberOfTrailingOnes( _state[j] );
-                if( numberOfTrailingOnes[j] < minTrailingOnes )
+                if( (numberOfTrailingOnes[j] < minTrailingOnes) &&
+                    (numberOfTrailingOnes[j] != _log2BoxesPerDim[j]) )
                 {
                     minDim = j;
                     minTrailingOnes = numberOfTrailingOnes[j];
@@ -80,19 +103,13 @@ public:
             _state[zeroDim] |= 1u<<zeroLevel;
 
             // Set up for the next walk
-            _nextZeroDim = 0;
+            _nextZeroDim = _firstOpenDim;
             _nextZeroLevel = 0;
         }
-    }
-
-    Array<std::size_t,d> NextState()
-    {
-        Walk();
-        return State();
     }
 };
 
 } // bfio
 
-#endif // BFIO_STRUCTURES_HTREE_WALKER_HPP
+#endif // BFIO_STRUCTURES_CONSTRAINED_HTREE_WALKER_HPP
 

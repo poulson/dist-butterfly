@@ -15,19 +15,23 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_STRUCTURES_HPP
-#define BFIO_STRUCTURES_HPP 1
+#ifndef BFIO_STRUCTURES_SOURCE_HPP
+#define BFIO_STRUCTURES_SOURCE_HPP 1
 
+#include <cstddef>
+#include <complex>
 #include "bfio/structures/array.hpp"
-#include "bfio/structures/box.hpp"
-#include "bfio/structures/constrained_htree_walker.hpp"
-#include "bfio/structures/context.hpp"
-#include "bfio/structures/htree_walker.hpp"
-#include "bfio/structures/point_grid.hpp"
-#include "bfio/structures/potential_field.hpp"
-#include "bfio/structures/source.hpp"
-#include "bfio/structures/weight_grid.hpp"
-#include "bfio/structures/weight_grid_list.hpp"
 
-#endif // BFIO_STRUCTURES_HPP
+namespace bfio {
+
+template<typename R,std::size_t d>
+struct Source 
+{ 
+    Array<R,d> p;
+    std::complex<R> magnitude;
+};
+
+} // bfio
+
+#endif // BFIO_STRUCTURES_SOURCE_HPP
 

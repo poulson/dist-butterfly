@@ -84,12 +84,20 @@ includefiles = bfio.hpp \
                bfio/freq_to_spatial/initialize_weights.hpp \
                bfio/freq_to_spatial/spatial_weight_recursion.hpp \
                bfio/freq_to_spatial/switch_to_spatial_interp.hpp  \
+               bfio/functors/amplitude_functor.hpp \
+               bfio/functors/phase_functor.hpp \
+               bfio/structures/array.hpp \
+               bfio/structures/box.hpp \
+               bfio/structures/constrained_htree_walker.hpp \
                bfio/structures/context.hpp \
-               bfio/structures/data.hpp \
                bfio/structures/htree_walker.hpp \
-               bfio/structures/phase_functor.hpp \
+               bfio/structures/point_grid.hpp \
                bfio/structures/potential_field.hpp \
+               bfio/structures/source.hpp \
+               bfio/structures/weight_grid.hpp \
+               bfio/structures/weight_grid_list.hpp \
                bfio/tools/blas.hpp \
+               bfio/tools/flatten_constrained_htree_index.hpp \
                bfio/tools/flatten_htree_index.hpp \
                bfio/tools/local_data.hpp \
                bfio/tools/mpi.hpp \

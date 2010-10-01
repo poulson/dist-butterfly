@@ -15,39 +15,43 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_TOOLS_FLATTEN_HTREE_INDEX_HPP
-#define BFIO_TOOLS_FLATTEN_HTREE_INDEX_HPP 1
+#ifndef BFIO_STRUCTURES_POINT_GRID_HPP
+#define BFIO_STRUCTURES_POINT_GRID_HPP 1
 
-#include <cstddef>
+#include "bfio/constants.hpp"
 #include "bfio/structures/array.hpp"
-
-#include "bfio/tools/twiddle.hpp"
 
 namespace bfio {
 
-template<std::size_t d>
-std::size_t
-FlattenHTreeIndex
-( const Array<std::size_t,d>& x )
+template<typename R,std::size_t d,std::size_t q>
+class PointGrid
 {
-    // We will accumulate the index into this variable
-    std::size_t index = 0;
+    // We know the size should be q^d at compile time, but we do not want the
+    // data stored on the stack
+    std::vector< Array<R,d> > _points;
 
-    // Compute the maximum recursion height reached by searching for the
-    // maximum log2 of the coordinates
-    std::size_t maxLog2 = 0;
-    for( std::size_t j=0; j<d; ++j )
-        maxLog2 = std::max( Log2(x[j]), maxLog2 );
+public:
+    PointGrid() : _points(Pow<q,d>::val) {}
+    ~PointGrid() {}
 
-    // Now unroll the coordinates into the index
-    for( std::size_t i=0; i<=maxLog2; ++i )
-        for( std::size_t j=0; j<d; ++j )
-            index |= ((x[j]>>i)&1)<<(i*d+j);
+    const Array<R,d>&
+    operator[] ( std::size_t i ) const
+    { return _points[i]; }
 
-    return index;
-}
+    Array<R,d>&
+    operator[] ( std::size_t i )
+    { return _points[i]; }
+
+    const PointGrid<R,d,q>&
+    operator= ( const PointGrid<R,d,q>& pointGrid )
+    {
+        const std::size_t q_to_d = Pow<q,d>::val;
+        std::memcpy( &(_points[0][0]), &(pointGrid[0][0]), q_to_d*sizeof(R) );
+        return *this;
+    }
+};
 
 } // bfio
 
-#endif // BFIO_TOOLS_FLATTEN_HTREE_INDEX_HPP
+#endif // BFIO_STRUCTURES_POINT_GRID_HPP
 

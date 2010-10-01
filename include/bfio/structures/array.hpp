@@ -15,39 +15,38 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_TOOLS_FLATTEN_HTREE_INDEX_HPP
-#define BFIO_TOOLS_FLATTEN_HTREE_INDEX_HPP 1
+#ifndef BFIO_STRUCTURES_ARRAY_HPP
+#define BFIO_STRUCTURES_ARRAY_HPP 1
 
 #include <cstddef>
-#include "bfio/structures/array.hpp"
-
-#include "bfio/tools/twiddle.hpp"
+#include <cstring>
 
 namespace bfio {
 
-template<std::size_t d>
-std::size_t
-FlattenHTreeIndex
-( const Array<std::size_t,d>& x )
+// A d-dimensional point over arbitrary datatype T.
+// Both boost::array and Array provide similar functionality, but 
+// TR1 is not yet standardized and Boost is not always available.
+template<typename T,std::size_t d>
+class Array
 {
-    // We will accumulate the index into this variable
-    std::size_t index = 0;
+    T _x[d];
+public:
+    Array() { }
+    Array( T alpha ) { for( std::size_t j=0; j<d; ++j ) _x[j] = alpha; }
+    ~Array() { }
 
-    // Compute the maximum recursion height reached by searching for the
-    // maximum log2 of the coordinates
-    std::size_t maxLog2 = 0;
-    for( std::size_t j=0; j<d; ++j )
-        maxLog2 = std::max( Log2(x[j]), maxLog2 );
+    T& operator[]( std::size_t j ) { return _x[j]; }
+    const T& operator[]( std::size_t j ) const { return _x[j]; }
 
-    // Now unroll the coordinates into the index
-    for( std::size_t i=0; i<=maxLog2; ++i )
-        for( std::size_t j=0; j<d; ++j )
-            index |= ((x[j]>>i)&1)<<(i*d+j);
-
-    return index;
-}
+    const Array<T,d>&
+    operator=( const Array<T,d>& array )
+    {
+        std::memcpy( _x, &array[0], d*sizeof(T) );
+        return *this;
+    }
+};
 
 } // bfio
 
-#endif // BFIO_TOOLS_FLATTEN_HTREE_INDEX_HPP
+#endif // BFIO_STRUCTURES_ARRAY_HPP
 

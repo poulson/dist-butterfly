@@ -18,9 +18,12 @@
 #ifndef BFIO_TOOLS_LOCAL_DATA_HPP
 #define BFIO_TOOLS_LOCAL_DATA_HPP 1
 
+#include <cstddef>
 #include <bitset>
 #include "mpi.h"
-#include "bfio/structures/data.hpp"
+
+#include "bfio/structures/array.hpp"
+#include "bfio/structures/box.hpp"
 #include "bfio/tools/twiddle.hpp"
 
 namespace bfio {
