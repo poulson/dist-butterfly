@@ -15,15 +15,15 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_FREQ_TO_SPATIAL_SPATIAL_WEIGHT_RECURSION_HPP
-#define BFIO_FREQ_TO_SPATIAL_SPATIAL_WEIGHT_RECURSION_HPP 1
+#ifndef BFIO_GENERAL_FIO_TARGET_WEIGHT_RECURSION_HPP
+#define BFIO_GENERAL_FIO_TARGET_WEIGHT_RECURSION_HPP 1
 
 #include <cstddef>
 #include <cstring>
 #include <vector>
 
 #include "bfio/structures/array.hpp"
-#include "bfio/structures/context.hpp"
+#include "bfio/structures/plan.hpp"
 #include "bfio/structures/weight_grid.hpp"
 #include "bfio/structures/weight_grid_list.hpp"
 
@@ -32,17 +32,19 @@
 #include "bfio/tools/blas.hpp"
 #include "bfio/tools/special_functions.hpp"
 
+#include "bfio/general_fio/context.hpp"
+
 namespace bfio {
-namespace freq_to_spatial {
+namespace general_fio {
 
 template<typename R,std::size_t d,std::size_t q>
 void
-SpatialWeightRecursion
-( const PhaseFunctor<R,d>& Phi,
+TargetWeightRecursion
+( const general_fio::Context<R,d,q>& context,
+  const Plan<d>& plan,
+  const PhaseFunctor<R,d>& Phi,
   const std::size_t log2NumMergingProcesses,
-  const std::size_t myTeamRank,
-  const std::size_t N, 
-  const Context<R,d,q>& context,
+  const std::size_t myClusterRank,
   const std::size_t ARelativeToAp,
   const Array<R,d>& x0A,
   const Array<R,d>& x0Ap,
@@ -51,8 +53,7 @@ SpatialWeightRecursion
   const Array<R,d>& wB,
   const std::size_t parentOffset,
   const WeightGridList<R,d,q>& oldWeightGridList,
-        WeightGrid<R,d,q>& weightGrid
-)
+        WeightGrid<R,d,q>& weightGrid )
 {
     const std::size_t q_to_d = Pow<q,d>::val;
     const std::size_t q_to_2d = Pow<q,2*d>::val;
@@ -62,7 +63,7 @@ SpatialWeightRecursion
     // We seek performance by isolating the Lagrangian interpolation as 
     // a matrix-vector multiplication.
     //
-    // To do so, the spatial weight recursion is broken into three updates:
+    // To do so, the target weight recursion is broken into three updates:
     // For each child c:
     //  1) scale the old weights with the appropriate exponentials
     //  2) multiply the lagrangian matrix against the scaled weights
@@ -72,16 +73,15 @@ SpatialWeightRecursion
     std::vector<R> cosResults;
     std::vector< Array<R,d> > pPoint( 1 );
     std::vector< Array<R,d> > xPoints( q_to_d );
-    const std::vector<R>& spatialMaps = context.GetSpatialMaps();
-    const std::vector< Array<R,d> >& chebyshevGrid = 
-        context.GetChebyshevGrid();
+    const std::vector<R>& targetMaps = context.GetTargetMaps();
+    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
     for( std::size_t cLocal=0; 
          cLocal<(1u<<(d-log2NumMergingProcesses)); 
          ++cLocal )
     {
         // Step 1: scale the old weights
         WeightGrid<R,d,q> scaledWeightGrid;
-        const std::size_t c = (cLocal<<log2NumMergingProcesses) + myTeamRank;
+        const std::size_t c = (cLocal<<log2NumMergingProcesses) + myClusterRank;
         const std::size_t key = parentOffset + cLocal;
         for( std::size_t j=0; j<d; ++j )
             pPoint[0][j] = p0B[j] + ( (c>>j)&1 ? wB[j]/4 : -wB[j]/4 );
@@ -127,9 +127,9 @@ SpatialWeightRecursion
         WeightGrid<R,d,q> expandedWeightGrid;
         Gemm
         ( 'N', 'N', q_to_d, 2, q_to_d,
-          (R)1, &spatialMaps[ARelativeToAp*q_to_2d], q_to_d,
-                scaledWeightGrid.Buffer(),           q_to_d,
-          (R)0, expandedWeightGrid.Buffer(),         q_to_d );
+          (R)1, &targetMaps[ARelativeToAp*q_to_2d], q_to_d,
+                scaledWeightGrid.Buffer(),          q_to_d,
+          (R)0, expandedWeightGrid.Buffer(),        q_to_d );
 
         // Step 3: scale the result
         {
@@ -169,8 +169,8 @@ SpatialWeightRecursion
     }
 }
 
-} // freq_to_spatial
+} // general_fio
 } // bfio
 
-#endif // BFIO_FREQ_TO_SPATIAL_SPATIAL_WEIGHT_RECURSION_HPP
+#endif // BFIO_GENERAL_FIO_TARGET_WEIGHT_RECURSION_HPP
 

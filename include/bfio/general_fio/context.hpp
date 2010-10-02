@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_STRUCTURES_CONTEXT_HPP
-#define BFIO_STRUCTURES_CONTEXT_HPP 1
+#ifndef BFIO_GENERAL_FIO_CONTEXT_HPP
+#define BFIO_GENERAL_FIO_CONTEXT_HPP 1
 
 #include <memory>
 #include <vector>
@@ -24,6 +24,7 @@
 #include "bfio/structures/array.hpp"
 
 namespace bfio {
+namespace general_fio {
 
 template<typename R,std::size_t d,std::size_t q>
 class Context
@@ -31,15 +32,15 @@ class Context
     Array<R,q> _chebyshevNodes;
     std::vector< Array<std::size_t,d> > _chebyshevIndices;
     std::vector< Array<R,d> > _chebyshevGrid;
-    std::vector<R> _freqMaps;
-    std::vector<R> _spatialMaps;
-    std::vector< Array<R,d> > _freqChildGrids;
+    std::vector<R> _sourceMaps;
+    std::vector<R> _targetMaps;
+    std::vector< Array<R,d> > _sourceChildGrids;
 
     void GenerateChebyshevNodes();
     void GenerateChebyshevIndices();
     void GenerateChebyshevGrid();
-    void GenerateFreqMapsAndChildGrids();
-    void GenerateSpatialMaps();
+    void GenerateSourceMapsAndChildGrids();
+    void GenerateTargetMaps();
     
 public:        
     Context();
@@ -62,13 +63,13 @@ public:
     GetChebyshevGrid() const;
 
     const std::vector<R>&
-    GetFreqMaps() const;
+    GetSourceMaps() const;
 
     const std::vector<R>&
-    GetSpatialMaps() const;
+    GetTargetMaps() const;
 
     const std::vector< Array<R,d> >&
-    GetFreqChildGrids() const;
+    GetSourceChildGrids() const;
 };
 
 // Implementations
@@ -115,7 +116,7 @@ void Context<R,d,q>::GenerateChebyshevGrid()
 }
 
 template<typename R,std::size_t d,std::size_t q>
-void Context<R,d,q>::GenerateFreqMapsAndChildGrids()
+void Context<R,d,q>::GenerateSourceMapsAndChildGrids()
 {
     const std::size_t q_to_d = _chebyshevGrid.size();
     const std::size_t q_to_2d = q_to_d * q_to_d;
@@ -128,7 +129,7 @@ void Context<R,d,q>::GenerateFreqMapsAndChildGrids()
             // Map p_t'(Bc) to the reference domain ([-1/2,+1/2]^d) of B
             for( std::size_t j=0; j<d; ++j )
             {
-                _freqChildGrids[c*q_to_d+tPrime][j] = 
+                _sourceChildGrids[c*q_to_d+tPrime][j] = 
                     ( (c>>j)&1 ? (2*_chebyshevGrid[tPrime][j]+1)/4 
                                : (2*_chebyshevGrid[tPrime][j]-1)/4 );
             }
@@ -142,15 +143,15 @@ void Context<R,d,q>::GenerateFreqMapsAndChildGrids()
         {
             for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
             {
-                _freqMaps[c*q_to_2d+tPrime*q_to_d+t] = 
-                    Lagrange( t, _freqChildGrids[c*q_to_d+tPrime] ); 
+                _sourceMaps[c*q_to_2d+tPrime*q_to_d+t] = 
+                    Lagrange( t, _sourceChildGrids[c*q_to_d+tPrime] ); 
             }
         }
     }
 }
 
 template<typename R,std::size_t d,std::size_t q>
-void Context<R,d,q>::GenerateSpatialMaps()
+void Context<R,d,q>::GenerateTargetMaps()
 {
     const std::size_t q_to_d = _chebyshevGrid.size();
     const std::size_t q_to_2d = q_to_d * q_to_d;
@@ -169,7 +170,7 @@ void Context<R,d,q>::GenerateSpatialMaps()
 
             for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
             {
-                _spatialMaps[p*q_to_2d + t+tPrime*q_to_d] = 
+                _targetMaps[p*q_to_2d + t+tPrime*q_to_d] = 
                     Lagrange( tPrime, xtARefAp );
             }
         }
@@ -180,15 +181,15 @@ template<typename R,std::size_t d,std::size_t q>
 Context<R,d,q>::Context() 
 : _chebyshevIndices(Pow<q,d>::val), 
   _chebyshevGrid(Pow<q,d>::val),
-  _freqMaps( Pow<q,2*d>::val<<d ),
-  _spatialMaps( Pow<q,2*d>::val<<d ),
-  _freqChildGrids( Pow<q,d>::val<<d )
+  _sourceMaps( Pow<q,2*d>::val<<d ),
+  _targetMaps( Pow<q,2*d>::val<<d ),
+  _sourceChildGrids( Pow<q,d>::val<<d )
 {
     GenerateChebyshevNodes();
     GenerateChebyshevIndices();
     GenerateChebyshevGrid();
-    GenerateFreqMapsAndChildGrids();
-    GenerateSpatialMaps();
+    GenerateSourceMapsAndChildGrids();
+    GenerateTargetMaps();
 }
 
 template<typename R,std::size_t d,std::size_t q>
@@ -266,20 +267,21 @@ Context<R,d,q>::GetChebyshevGrid() const
 
 template<typename R,std::size_t d,std::size_t q>
 const std::vector<R>&
-Context<R,d,q>::GetFreqMaps() const
-{ return _freqMaps; }
+Context<R,d,q>::GetSourceMaps() const
+{ return _sourceMaps; }
 
 template<typename R,std::size_t d,std::size_t q>
 const std::vector<R>&
-Context<R,d,q>::GetSpatialMaps() const
-{ return _spatialMaps; }
+Context<R,d,q>::GetTargetMaps() const
+{ return _targetMaps; }
 
 template<typename R,std::size_t d,std::size_t q>
 const std::vector< Array<R,d> >&
-Context<R,d,q>::GetFreqChildGrids() const
-{ return _freqChildGrids; }
+Context<R,d,q>::GetSourceChildGrids() const
+{ return _sourceChildGrids; }
 
+} // general_fio
 } // bfio
 
-#endif // BFIO_STRUCTURES_CONTEXT_HPP
+#endif // BFIO_GENERAL_FIO_CONTEXT_HPP
 

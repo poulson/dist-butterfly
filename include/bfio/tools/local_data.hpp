@@ -28,18 +28,6 @@
 
 namespace bfio {
 
-template<std::size_t d>
-inline std::size_t
-NumLocalBoxes
-( std::size_t N, MPI_Comm comm )
-{
-    int numProcesses;
-    MPI_Comm_size( comm, &numProcesses );
-    std::size_t log2N = Log2( N );
-    std::size_t log2NumProcesses = Log2( numProcesses );
-    return 1<<(d*log2N-log2NumProcesses);
-}
-
 template<typename R,std::size_t d>
 void    
 LocalFreqPartitionData

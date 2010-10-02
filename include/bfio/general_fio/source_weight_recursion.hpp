@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_FREQ_TO_SPATIAL_FREQ_WEIGHT_RECURSION_HPP
-#define BFIO_FREQ_TO_SPATIAL_FREQ_WEIGHT_RECURSION_HPP 1
+#ifndef BFIO_GENERAL_FIO_SOURCE_WEIGHT_RECURSION_HPP
+#define BFIO_GENERAL_FIO_SOURCE_WEIGHT_RECURSION_HPP 1
 
 #include <cstddef>
 #include <cstring>
@@ -32,17 +32,18 @@
 
 #include "bfio/tools/special_functions.hpp"
 
+#include "bfio/general_fio/context.hpp"
+
 namespace bfio {
-namespace freq_to_spatial {
+namespace general_fio {
 
 template<typename R,std::size_t d,std::size_t q>
 void
-FreqWeightRecursion
-( const PhaseFunctor<R,d>& Phi,
+SourceWeightRecursion
+( const general_fio::Context<R,d,q>& context,
+  const PhaseFunctor<R,d>& Phi,
   const std::size_t log2NumMergingProcesses,
-  const std::size_t myTeamRank,
-  const std::size_t N, 
-  const Context<R,d,q>& context,
+  const std::size_t myClusterRank,
   const Array<R,d>& x0A,
   const Array<R,d>& p0B,
   const Array<R,d>& wB,
@@ -57,7 +58,7 @@ FreqWeightRecursion
     // We seek performance by isolating the Lagrangian interpolation as
     // a matrix-vector multiplication
     //
-    // To do so, the frequency weight recursion is broken into 3 steps.
+    // To do so, the source weight recursion is broken into 3 steps.
     // 
     // For each child:
     //  1) scale the old weights with the appropriate exponentials
@@ -71,15 +72,15 @@ FreqWeightRecursion
     std::vector<R> cosResults;
     std::vector< Array<R,d> > xPoint( 1, x0A );
     std::vector< Array<R,d> > pPoints( q_to_d );
-    const std::vector<R>& freqMaps = context.GetFreqMaps();
-    const std::vector< Array<R,d> >& freqChildGrids = 
-        context.GetFreqChildGrids();
+    const std::vector<R>& sourceMaps = context.GetSourceMaps();
+    const std::vector< Array<R,d> >& sourceChildGrids = 
+        context.GetSourceChildGrids();
     for( std::size_t cLocal=0; 
          cLocal<(1u<<(d-log2NumMergingProcesses)); 
          ++cLocal )
     {
         // Step 1
-        const std::size_t c = (cLocal<<log2NumMergingProcesses) + myTeamRank;
+        const std::size_t c = (cLocal<<log2NumMergingProcesses) + myClusterRank;
         const std::size_t key = parentOffset + cLocal;
 
         // Form the set of p points to evaluate
@@ -87,11 +88,12 @@ FreqWeightRecursion
             R* pPointsBuffer = &(pPoints[0][0]);
             const R* wBBuffer = &wB[0];
             const R* p0BBuffer = &p0B[0];
-            const R* freqChildBuffer = &(freqChildGrids[c*q_to_d][0]);
+            const R* sourceChildBuffer = &(sourceChildGrids[c*q_to_d][0]);
             for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
                 for( std::size_t j=0; j<d; ++j )
                     pPointsBuffer[tPrime*d+j] = 
-                        p0BBuffer[j] + wBBuffer[j]*freqChildBuffer[tPrime*d+j];
+                        p0BBuffer[j] + 
+                        wBBuffer[j]*sourceChildBuffer[tPrime*d+j];
         }
 
         // Form the phase factors
@@ -127,7 +129,7 @@ FreqWeightRecursion
         // Step 2
         Gemm
         ( 'N', 'N', q_to_d, 2, q_to_d, 
-          (R)1, &freqMaps[c*q_to_2d],      q_to_d,
+          (R)1, &sourceMaps[c*q_to_2d],    q_to_d,
                 scaledWeightGrid.Buffer(), q_to_d,
           (R)1,       weightGrid.Buffer(), q_to_d );
     }
@@ -168,8 +170,8 @@ FreqWeightRecursion
     }
 }
 
-} // freq_to_spatial
+} // general_fio
 } // bfio
 
-#endif // BFIO_FREQ_TO_SPATIAL_FREQ_WEIGHT_RECURSION_HPP
+#endif // BFIO_GENERAL_FIO_SOURCE_WEIGHT_RECURSION_HPP
 

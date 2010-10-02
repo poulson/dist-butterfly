@@ -26,7 +26,7 @@ void
 Usage()
 {
     std::cout << "UpWave <N> <M> <testAccuracy?>\n" 
-              << "  N: power of 2, the frequency spread in each dimension\n" 
+              << "  N: power of 2, the source spread in each dimension\n" 
               << "  M: number of random sources to instantiate\n" 
               << "  testAccuracy?: test accuracy iff 1\n" 
               << "  visualize?: create data files iff 1\n" 
@@ -143,20 +143,20 @@ main
     const bool testAccuracy = atoi(argv[3]);
     const bool visualize = atoi(argv[4]);
 
-    // Set the frequency and spatial boxes
-    bfio::Box<double,d> freqBox, spatialBox;
+    // Set the source and target boxes
+    bfio::Box<double,d> sourceBox, targetBox;
     for( std::size_t j=0; j<d; ++j )
     {
-        freqBox.offsets[j] = -0.5*N;
-        freqBox.widths[j] = N;
-        spatialBox.offsets[j] = 0;
-        spatialBox.widths[j] = 1;
+        sourceBox.offsets[j] = -0.5*N;
+        sourceBox.widths[j] = N;
+        targetBox.offsets[j] = 0;
+        targetBox.widths[j] = 1;
     }
 
     if( rank == 0 )
     {
         std::ostringstream msg;
-        msg << "Will distribute " << M << " random sources over the frequency "
+        msg << "Will distribute " << M << " random sources over the source "
             << "domain, which will be split into " << N
             << " boxes in each of the " << d << " dimensions and distributed "
             << "amongst " << numProcesses << " processes.\n" 
@@ -174,8 +174,8 @@ main
         srand( seed );
 
         // Compute the box that our process owns
-        bfio::Box<double,d> myFreqBox;
-        bfio::LocalFreqPartitionData( freqBox, myFreqBox, comm );
+        bfio::Box<double,d> mySourceBox;
+        bfio::LocalFreqPartitionData( sourceBox, mySourceBox, comm );
 
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
@@ -189,8 +189,8 @@ main
             {
                 for( std::size_t j=0; j<d; ++j )
                 {
-                    globalSources[i].p[j] = freqBox.offsets[j] + 
-                        freqBox.widths[j]*bfio::Uniform<double>(); 
+                    globalSources[i].p[j] = sourceBox.offsets[j] + 
+                        sourceBox.widths[j]*bfio::Uniform<double>(); 
                 }
                 globalSources[i].magnitude = 10*(2*bfio::Uniform<double>()-1); 
                 L1Sources += std::abs(globalSources[i].magnitude);
@@ -200,8 +200,9 @@ main
                 for( std::size_t j=0; j<d; ++j )
                 {
                     double u = globalSources[i].p[j];
-                    double start = myFreqBox.offsets[j];
-                    double stop = myFreqBox.offsets[j] + myFreqBox.widths[j];
+                    double start = mySourceBox.offsets[j];
+                    double stop = 
+                        mySourceBox.offsets[j] + mySourceBox.widths[j];
                     if( u < start || u >= stop )
                         isMine = false;
                 }
@@ -220,8 +221,8 @@ main
                 for( std::size_t j=0; j<d; ++j )
                 {
                     mySources[i].p[j] = 
-                        myFreqBox.offsets[j]+
-                        bfio::Uniform<double>()*myFreqBox.widths[j];
+                        mySourceBox.offsets[j]+
+                        bfio::Uniform<double>()*mySourceBox.widths[j];
                 }
                 mySources[i].magnitude = 10*(2*bfio::Uniform<double>()-1);
                 L1Sources += std::abs(mySources[i].magnitude);
@@ -231,19 +232,20 @@ main
         // Set up our phase functor
         UpWave<double> upWave;
 
-        // Create a context, which includes all of the precomputation
+        // Create the context and plan 
         if( rank == 0 )
-            std::cout << "Creating context..." << std::endl;
-        bfio::Context<double,d,q> context;
+            std::cout << "Creating context and plan..." << std::endl;
+        bfio::general_fio::Context<double,d,q> context;
+        bfio::FreqToSpatialPlan<d> plan( comm, N );
 
         // Run the algorithm
-        std::auto_ptr< const bfio::PotentialField<double,d,q> > u;
+        std::auto_ptr< const bfio::general_fio::PotentialField<double,d,q> > u;
         if( rank == 0 )
             std::cout << "Starting transform..." << std::endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        u = bfio::FreqToSpatial
-        ( N, freqBox, spatialBox, upWave, context, mySources, comm );
+        u = bfio::GeneralFIO
+        ( context, plan, upWave, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
         if( rank == 0 )
@@ -270,7 +272,7 @@ main
             double myLinfError = 0.;
             for( std::size_t k=0; k<numTests; ++k )
             {
-                // Compute a random point in our process's spatial box
+                // Compute a random point in our process's target box
                 bfio::Array<double,d> x;
                 for( std::size_t j=0; j<d; ++j )
                     x[j] = myBox.offsets[j] + 

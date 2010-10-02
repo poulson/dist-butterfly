@@ -91,20 +91,21 @@ ARFLAGS = rc
 
 includefiles = bfio.hpp \
                bfio/constants.hpp \
-               bfio/freq_to_spatial.hpp \
-               bfio/freq_to_spatial/freq_weight_recursion.hpp \
-               bfio/freq_to_spatial/initialize_weights.hpp \
-               bfio/freq_to_spatial/spatial_weight_recursion.hpp \
-               bfio/freq_to_spatial/switch_to_spatial_interp.hpp  \
                bfio/functors/amplitude_functor.hpp \
                bfio/functors/phase_functor.hpp \
+               bfio/general_fio.hpp \
+               bfio/general_fio/context.hpp \
+               bfio/general_fio/initialize_weights.hpp \
+               bfio/general_fio/potential_field.hpp \
+               bfio/general_fio/source_weight_recursion.hpp \
+               bfio/general_fio/switch_to_target_interp.hpp \
+               bfio/general_fio/target_weight_recursion.hpp \
                bfio/structures/array.hpp \
                bfio/structures/box.hpp \
                bfio/structures/constrained_htree_walker.hpp \
-               bfio/structures/context.hpp \
                bfio/structures/htree_walker.hpp \
+               bfio/structures/plan.hpp \
                bfio/structures/point_grid.hpp \
-               bfio/structures/potential_field.hpp \
                bfio/structures/source.hpp \
                bfio/structures/weight_grid.hpp \
                bfio/structures/weight_grid_list.hpp \

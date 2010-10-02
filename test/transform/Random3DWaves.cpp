@@ -24,7 +24,7 @@ void
 Usage()
 {
     std::cout << "Random3DWaves <N> <M> <T> <nT>\n" 
-              << "  N: power of 2, the frequency spread in each dimension\n" 
+              << "  N: power of 2, the source spread in each dimension\n" 
               << "  M: number of random sources to instantiate\n" 
               << "  T: time to simulate to\n" 
               << "  nT: number of timesteps\n" 
@@ -208,20 +208,20 @@ main
     const double T = atof(argv[3]);
     const std::size_t nT = atoi(argv[4]);
 
-    // Define the spatial and frequency boxes
-    bfio::Box<double,d> freqBox, spatialBox;
+    // Define the source and target boxes
+    bfio::Box<double,d> sourceBox, targetBox; 
     for( std::size_t j=0; j<d; ++j )
     {
-        freqBox.offsets[j] = -0.5*N;
-        freqBox.widths[j] = N;
-        spatialBox.offsets[j] = 0;
-        spatialBox.widths[j] = 1;
+        sourceBox.offsets[j] = -0.5*N;
+        sourceBox.widths[j] = N;
+        targetBox.offsets[j] = 0;
+        targetBox.widths[j] = 1;
     }
 
     if( rank == 0 )
     {
         std::ostringstream msg;
-        msg << "Will distribute " << M << " random sources over the frequency "
+        msg << "Will distribute " << M << " random sources over the source "
             << "domain, which will be split into " << N
             << " boxes in each of the " << d << " dimensions and distributed "
             << "amongst " << numProcesses << " processes. The simulation will "
@@ -233,8 +233,8 @@ main
     try 
     {
         // Compute the box that our process owns
-        bfio::Box<double,d> myFreqBox;
-        bfio::LocalFreqPartitionData( freqBox, myFreqBox, comm );
+        bfio::Box<double,d> mySourceBox;
+        bfio::LocalFreqPartitionData( sourceBox, mySourceBox, comm );
 
         // Seed our process
         long seed = time(0);
@@ -250,8 +250,8 @@ main
             for( std::size_t j=0; j<d; ++j )
             {
                 mySources[i].p[j] = 
-                    myFreqBox.offsets[j] +
-                    bfio::Uniform<double>()*myFreqBox.widths[j];
+                    mySourceBox.offsets[j] +
+                    bfio::Uniform<double>()*mySourceBox.widths[j];
             }
             mySources[i].magnitude = 200*bfio::Uniform<double>()-100;
         }
@@ -260,10 +260,11 @@ main
         UpWave<double> upWave;
         DownWave<double> downWave;
 
-        // Create a context, which includes all of the precomputation
+        // Create the context and plan
         if( rank == 0 )
-            std::cout << "Creating context..." << std::endl;
-        bfio::Context<double,d,q> context;
+            std::cout << "Creating context and plan..." << std::endl;
+        bfio::general_fio::Context<double,d,q> context;
+        bfio::FreqToSpatialPlan<d> plan( comm, N );
 
         // Loop over each timestep, computing in parallel, gathering the 
         // results, and then dumping to file
@@ -274,26 +275,27 @@ main
             upWave.SetTime( t );
             downWave.SetTime( t );
 
-            std::auto_ptr< const bfio::PotentialField<double,d,q> > u;
+            std::auto_ptr
+            < const bfio::general_fio::PotentialField<double,d,q> > u;
             if( rank == 0 )
             {
                 std::cout << "t=" << t << "\n"
                           << "  Starting upWave transform...";
                 std::cout.flush();
             }
-            u = bfio::FreqToSpatial
-            ( N, freqBox, spatialBox, upWave, context, mySources, comm );
+            u = bfio::GeneralFIO
+            ( context, plan, upWave, sourceBox, targetBox, mySources );
 
-            std::auto_ptr< const bfio::PotentialField<double,d,q> > v;
+            std::auto_ptr
+            < const bfio::general_fio::PotentialField<double,d,q> > v;
             if( rank == 0 )
             {
                 std::cout << "done" << "\n"
                           << "  Starting downWave transform...";
                 std::cout.flush();
             }
-            v = bfio::FreqToSpatial
-            ( N, freqBox, spatialBox, downWave, context, mySources, 
-              comm );
+            v = bfio::GeneralFIO
+            ( context, plan, downWave, sourceBox, targetBox, mySources );
             if( rank == 0 )
                 std::cout << "done" << std::endl;
 
