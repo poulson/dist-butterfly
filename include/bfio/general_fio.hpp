@@ -41,15 +41,19 @@ inline void
 ReportWithFlush( int rank, const std::string& msg )
 {
 #ifdef TRACE
-    std::cout << msg;
-    std::cout.flush();
+    if( rank == 0 )
+    {
+        std::cout << msg;
+        std::cout.flush();
+    }
 #endif
 }
 inline void
 Report( int rank, const std::string& msg )
 {
 #ifdef TRACE
-    std::cout << msg << std::endl;
+    if( rank == 0 )
+        std::cout << msg << std::endl;
 #endif
 }
 }
