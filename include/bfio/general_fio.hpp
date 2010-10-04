@@ -36,6 +36,24 @@
 namespace bfio {
 namespace general_fio {
 
+namespace {
+inline void 
+ReportWithFlush( int rank, const std::string& msg )
+{
+#ifdef TRACE
+    std::cout << msg;
+    std::cout.flush();
+#endif
+}
+inline void
+Report( int rank, const std::string& msg )
+{
+#ifdef TRACE
+    std::cout << msg << std::endl;
+#endif
+}
+}
+
 template<typename R,std::size_t d,std::size_t q>
 std::auto_ptr< const general_fio::PotentialField<R,d,q> >
 transform
@@ -93,42 +111,24 @@ transform
 
     // Initialize the weights using Lagrangian interpolation on the 
     // smooth component of the kernel.
-#ifdef TRACE
-    if( rank == 0 )
-    {
-        std::cout << "  Initializing weights...";
-        std::cout.flush();
-    }
-#endif
+    ReportWithFlush( rank, "  Initializing weights..." );
     WeightGridList<R,d,q> weightGridList( 1<<log2LocalSourceBoxes );
     general_fio::InitializeWeights<R,d,q>
     ( context, plan, Phi, sourceBox, targetBox, mySourceBox, 
       log2LocalSourceBoxes, log2LocalSourceBoxesPerDim, mySources, 
       weightGridList );
-#ifdef TRACE
-    if( rank == 0 )
-        std::cout << "done." << std::endl;
-#endif
+    Report( rank, "done." );
 
     // Start the main recursion loop
     if( log2N == 0 || log2N == 1 )
     {
-#ifdef TRACE
-        if( rank == 0 )
-        {
-            std::cout << "  Switching to target interpolation...";
-            std::cout.flush();
-        }
-#endif
+        ReportWithFlush( rank, "  Switching to target interpolation..." );
         general_fio::SwitchToTargetInterp<R,d,q>
         ( context, plan, Amp, Phi, sourceBox, targetBox, mySourceBox, 
           myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
           log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
           weightGridList );
-#ifdef TRACE
-        if( rank == 0 )
-            std::cout << "done." << std::endl;
-#endif
+        Report( rank, "done." );
     }
     std::size_t numCommunications = 0;
     for( std::size_t level=1; level<=log2N; ++level )
@@ -192,21 +192,12 @@ transform
 
                     if( level <= log2N/2 )
                     {
-#ifdef TRACE
-                        if( rank == 0 )
-                        {
-                            std::cout << "  Source weight recursion...";
-                            std::cout.flush();
-                        }
-#endif
+                        ReportWithFlush( rank, "  Source weight recursion..." );
                         general_fio::SourceWeightRecursion<R,d,q>
                         ( context, plan, Phi, 0, 0, x0A, p0B, wB, 
                           parentInteractionOffset, oldWeightGridList,
                           weightGridList[interactionIndex] );
-#ifdef TRACE
-                        if( rank == 0 )
-                            std::cout << "done." << std::endl;
-#endif
+                        Report( rank, "done." );
                     }
                     else
                     {
@@ -222,22 +213,13 @@ transform
                                       (globalA[j]|1)*wA[j];
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
-#ifdef TRACE
-                        if( rank == 0 )
-                        {
-                            std::cout << "  Target weight recursion...";
-                            std::cout.flush();
-                        }
-#endif
+                        ReportWithFlush( rank, "  Target weight recursion..." );
                         general_fio::TargetWeightRecursion<R,d,q>
                         ( context, plan, Phi, 0, 0, 
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentInteractionOffset, oldWeightGridList, 
                           weightGridList[interactionIndex] );
-#ifdef TRACE
-                        if( rank == 0 )
-                            std::cout << "done." << std::endl;
-#endif
+                        Report( rank, "done." );
                     }
                 }
             }
@@ -306,21 +288,13 @@ transform
                     ((targetIndex>>d)<<(d-log2NumMergingProcesses));
                 if( level <= log2N/2 )
                 {
-#ifdef TRACE
-                    if( rank == 0 )
-                    {
-                        std::cout << "  Parallel source weight recursion...";
-                        std::cout.flush();
-                    }
-#endif
+                    ReportWithFlush
+                    ( rank, "  Parallel source weight recursion..." );
                     general_fio::SourceWeightRecursion<R,d,q>
                     ( context, plan, Phi, log2NumMergingProcesses, clusterRank, 
                       x0A, p0B, wB, parentInteractionOffset,
                       weightGridList, partialWeightGridList[targetIndex] );
-#ifdef TRACE
-                    if( rank == 0 )
-                        std::cout << "done." << std::endl;
-#endif
+                    Report( rank, "done." );
                 }
                 else
                 {
@@ -335,22 +309,14 @@ transform
                         x0Ap[j] = targetBox.offsets[j] + (globalA[j]|1)*wA[j];
                         ARelativeToAp |= (globalA[j]&1)<<j;
                     }
-#ifdef TRACE
-                    if( rank == 0 )
-                    {
-                        std::cout << "  Parallel target weight recursion...";
-                        std::cout.flush();
-                    }
-#endif
+                    ReportWithFlush
+                    ( rank, "Parallel target weight recursion..." );
                     general_fio::TargetWeightRecursion<R,d,q>
                     ( context, plan, Phi, log2NumMergingProcesses, clusterRank,
                       ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                       parentInteractionOffset, weightGridList, 
                       partialWeightGridList[targetIndex] );
-#ifdef TRACE
-                    if( rank == 0 )
-                        std::cout << "done." << std::endl;
-#endif
+                    Report( rank, "done." );
                 }
             }
 
@@ -358,13 +324,7 @@ transform
             std::vector<int> recvCounts( numMergingProcesses );
             for( std::size_t j=0; j<numMergingProcesses; ++j )
                 recvCounts[j] = 2*weightGridList.Length()*q_to_d;
-#ifdef TRACE
-            if( rank == 0 )
-            {
-                std::cout << "  SumScatter...";
-                std::cout.flush();
-            }
-#endif
+            ReportWithFlush( rank, "  SumScatter..." );
             // Currently two types of planned communication are supported, as 
             // they are the only required types for transforming and inverting 
             // the transform:
@@ -429,10 +389,7 @@ transform
                 ( &sendBuffer[0], weightGridList.Buffer(), 
                   &recvCounts[0], clusterComm );
             }
-#ifdef TRACE
-            if( rank == 0 )
-                std::cout << "done." << std::endl;
-#endif
+            Report( rank, "done." );
 
             const Array<bool,d>& rightSideOfCut = 
                 plan.GetRightSideOfCut( numCommunications );
@@ -456,42 +413,24 @@ transform
         }
         if( level==log2N/2 )
         {
-#ifdef TRACE
-            if( rank == 0 )
-            {
-                std::cout << "  Switching to target interpolation...";
-                std::cout.flush();
-            }
-#endif
+            ReportWithFlush( rank, "  Switching to target interpolation..." );
             general_fio::SwitchToTargetInterp<R,d,q>
             ( context, plan, Amp, Phi, sourceBox, targetBox, mySourceBox, 
               myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
               log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
               weightGridList );
-#ifdef TRACE
-            if( rank == 0 )
-                std::cout << "done." << std::endl;
-#endif
+            Report( rank, "done." );
         }
     }
 
     // Construct the general FIO PotentialField
-#ifdef TRACE
-    if( rank == 0 )
-    {
-        std::cout << "  Constructing PotentialField...";
-        std::cout.flush();
-    }
-#endif
+    ReportWithFlush( rank, "  Constructing PotentialField..." );
     std::auto_ptr< const general_fio::PotentialField<R,d,q> > potentialField( 
         new general_fio::PotentialField<R,d,q>
             ( context, Phi, sourceBox, myTargetBox, log2LocalTargetBoxesPerDim,
               weightGridList )
     );
-#ifdef TRACE
-    if( rank == 0 )
-        std::cout << "done." << std::endl;
-#endif
+    Report( rank, "done." );
 
     return potentialField;
 }
