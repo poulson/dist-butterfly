@@ -49,8 +49,7 @@ SourceWeightRecursion
   const Array<R,d>& wB,
   const std::size_t parentOffset,
   const WeightGridList<R,d,q>& oldWeightGridList,
-        WeightGrid<R,d,q>& weightGrid
-)
+        WeightGrid<R,d,q>& weightGrid )
 {
     const std::size_t q_to_d = Pow<q,d>::val;
     const std::size_t q_to_2d = Pow<q,2*d>::val;

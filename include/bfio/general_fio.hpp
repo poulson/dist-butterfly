@@ -33,6 +33,7 @@
 #include "bfio/general_fio/switch_to_target_interp.hpp"
 #include "bfio/general_fio/target_weight_recursion.hpp"
 
+
 namespace bfio {
 namespace general_fio {
 
@@ -343,9 +344,6 @@ transform
                 }
             }
 
-            // TODO: For the SpatialToFreq plan, we might have to pack for one
-            //       of the iterations.
-            //
             // Scatter the summation of the weights
             std::vector<int> recvCounts( numMergingProcesses );
             for( std::size_t j=0; j<numMergingProcesses; ++j )
@@ -357,16 +355,75 @@ transform
                 std::cout.flush();
             }
 #endif
-            SumScatter
-            ( partialWeightGridList.Buffer(), weightGridList.Buffer(),
-              &recvCounts[0], clusterComm );
+            // Currently two types of planned communication are supported, as 
+            // they are the only required types for transforming and inverting 
+            // the transform:
+            //  1) partitions of dimensions 0 -> c
+            //  2) partitions of dimensions c -> d-1
+            // Both 1 and 2 include partitioning 0 -> d-1, but, in general, 
+            // the second category never requires packing.
+            const Array<bool,d>& targetDimsToCut = 
+                plan.GetTargetDimsToCut( numCommunications );
+            bool setFirstPartDim = false;
+            bool finalizedLastPartDim = false;
+            std::size_t firstPartDim;
+            std::size_t lastPartDim = 0;
+            for( std::size_t j=0; j<d; ++j )
+            {
+                if( targetDimsToCut[j] && finalizedLastPartDim )
+                    std::runtime_error("Invalid communication in plan.");
+                if( !targetDimsToCut[j] && setFirstPartDim )
+                {
+                    lastPartDim = j-1;
+                    finalizedLastPartDim = true;
+                }
+                if( targetDimsToCut[j] && !setFirstPartDim )
+                {
+                    firstPartDim = j;
+                    setFirstPartDim = true;
+                }
+            }
+            if( !finalizedLastPartDim )
+                lastPartDim = d-1;
+            if( lastPartDim == d-1 )
+            {
+                // We must have partition dims of the form c -> d-1
+                SumScatter
+                ( partialWeightGridList.Buffer(), weightGridList.Buffer(),
+                  &recvCounts[0], clusterComm );
+            }
+            else
+            {
+                // We must have partition dims of the form 0 -> c < d-1.
+                // Thus we must copy 2^{d-log2NumMergingProcesses} chunks for 
+                // each of the 2^log2NumMergingProcesses processes.
+                const R* partialBuffer = partialWeightGridList.Buffer();
+                const std::size_t recvSize = recvCounts[0];
+                const std::size_t sendSize = recvSize*numMergingProcesses;
+                const std::size_t numChunksPerProcess = 
+                    1u<<(d-log2NumMergingProcesses);
+                const std::size_t chunkSize = recvSize / numChunksPerProcess;
+                std::vector<R> sendBuffer( sendSize );
+                for( std::size_t i=0; i<numMergingProcesses; ++i )
+                {
+                    R* sendOffset = &sendBuffer[i*recvSize];
+                    for( std::size_t j=0; j<numChunksPerProcess; ++j )
+                    {
+                        std::memcpy
+                        ( &sendOffset[j*chunkSize], 
+                          &partialBuffer[(i+j*numMergingProcesses)*chunkSize],
+                          chunkSize*sizeof(R) );
+                    }
+                }
+                SumScatter
+                ( &sendBuffer[0], weightGridList.Buffer(), 
+                  &recvCounts[0], clusterComm );
+            }
 #ifdef TRACE
             if( rank == 0 )
                 std::cout << "done." << std::endl;
 #endif
 
-            const Array<bool,d>& targetDimsToCut = 
-                plan.GetTargetDimsToCut( numCommunications );
             const Array<bool,d>& rightSideOfCut = 
                 plan.GetRightSideOfCut( numCommunications );
             for( std::size_t j=0; j<d; ++j )

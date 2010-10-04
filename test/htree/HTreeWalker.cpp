@@ -27,7 +27,7 @@ Usage()
 }
 } // anonymous namespace
 
-static const std::size_t d = 3;
+static const std::size_t d = 2;
 
 int
 main

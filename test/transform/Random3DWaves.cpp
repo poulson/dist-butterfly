@@ -233,8 +233,9 @@ main
     try 
     {
         // Compute the box that our process owns
-        bfio::Box<double,d> mySourceBox;
-        bfio::LocalFreqPartitionData( sourceBox, mySourceBox, comm );
+        bfio::FreqToSpatialPlan<d> plan( comm, N );
+        bfio::Box<double,d> mySourceBox = 
+            plan.GetMyInitialSourceBox( sourceBox );
 
         // Seed our process
         long seed = time(0);
@@ -260,11 +261,10 @@ main
         UpWave<double> upWave;
         DownWave<double> downWave;
 
-        // Create the context and plan
+        // Create the context 
         if( rank == 0 )
-            std::cout << "Creating context and plan..." << std::endl;
+            std::cout << "Creating context..." << std::endl;
         bfio::general_fio::Context<double,d,q> context;
-        bfio::FreqToSpatialPlan<d> plan( comm, N );
 
         // Loop over each timestep, computing in parallel, gathering the 
         // results, and then dumping to file

@@ -36,13 +36,13 @@ Usage()
 
 // Define the dimension of the problem and the order of interpolation
 static const std::size_t d = 2;
-static const std::size_t q = 8;
+static const std::size_t q = 5;
 
 // If we test the accuracy, define the number of tests to perform per box
 static const std::size_t numAccuracyTestsPerBox = 10;
 
 // If we visualize the results, define the number of samples per box per dim.
-static const std::size_t numVizSamplesPerBoxDim = 3;
+static const std::size_t numVizSamplesPerBoxDim = 5;
 static const std::size_t numVizSamplesPerBox = 
     bfio::Pow<numVizSamplesPerBoxDim,d>::val;
 
@@ -157,8 +157,10 @@ main
         srand( seed );
 
         // Compute the box that our process owns within the source box
-        bfio::Box<double,d> mySourceBox;
-        bfio::LocalFreqPartitionData( sourceBox, mySourceBox, comm );
+        bfio::FreqToSpatialPlan<d> plan( comm, N );
+        //bfio::SpatialToFreqPlan<d> plan( comm, N );
+        bfio::Box<double,d> mySourceBox = 
+            plan.GetMyInitialSourceBox( sourceBox );
 
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
@@ -215,11 +217,10 @@ main
         // Set up our phase functor
         Fourier<double> fourier;
 
-        // Create a context and plan
+        // Create a context 
         if( rank == 0 )
-            std::cout << "Creating context and plan..." << std::endl;
+            std::cout << "Creating context..." << std::endl;
         bfio::general_fio::Context<double,d,q> context;
-        bfio::FreqToSpatialPlan<d> plan( comm, N );
 
         // Run the algorithm
         std::auto_ptr< const bfio::general_fio::PotentialField<double,d,q> > u;

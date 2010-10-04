@@ -112,7 +112,6 @@ includefiles = bfio.hpp \
                bfio/tools/blas.hpp \
                bfio/tools/flatten_constrained_htree_index.hpp \
                bfio/tools/flatten_htree_index.hpp \
-               bfio/tools/local_data.hpp \
                bfio/tools/mpi.hpp \
                bfio/tools/special_functions.hpp \
                bfio/tools/twiddle.hpp \
