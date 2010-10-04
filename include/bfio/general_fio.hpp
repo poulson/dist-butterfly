@@ -33,7 +33,6 @@
 #include "bfio/general_fio/switch_to_target_interp.hpp"
 #include "bfio/general_fio/target_weight_recursion.hpp"
 
-
 namespace bfio {
 namespace general_fio {
 
@@ -157,9 +156,9 @@ transform
             // Loop over boxes in target domain. 
             ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
             WeightGridList<R,d,q> oldWeightGridList( weightGridList );
-            for( std::size_t i=0; 
-                 i<(1u<<log2LocalTargetBoxes); 
-                 ++i, AWalker.Walk() )
+            for( std::size_t targetIndex=0; 
+                 targetIndex<(1u<<log2LocalTargetBoxes); 
+                 ++targetIndex, AWalker.Walk() )
             {
                 const Array<std::size_t,d> A = AWalker.State();
 
@@ -170,9 +169,9 @@ transform
 
                 // Loop over the B boxes in source domain
                 ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
-                for( std::size_t k=0; 
-                     k<(1u<<log2LocalSourceBoxes); 
-                     ++k, BWalker.Walk() )
+                for( std::size_t sourceIndex=0; 
+                     sourceIndex<(1u<<log2LocalSourceBoxes); 
+                     ++sourceIndex, BWalker.Walk() )
                 {
                     const Array<std::size_t,d> B = BWalker.State();
 
@@ -181,9 +180,16 @@ transform
                     for( std::size_t j=0; j<d; ++j )
                         p0B[j] = mySourceBox.offsets[j] + (B[j]+0.5)*wB[j];
 
-                    const std::size_t key = k + (i<<log2LocalSourceBoxes);
-                    const std::size_t parentOffset = 
-                        ((i>>d)<<(log2LocalSourceBoxes+d)) + (k<<d);
+                    // We are storing the interaction pairs source-major
+                    const std::size_t interactionIndex = 
+                        sourceIndex + (targetIndex<<log2LocalSourceBoxes);
+
+                    // Grab the interaction offset for the parent of target box 
+                    // i interacting with the children of source box k
+                    const std::size_t parentInteractionOffset = 
+                        ((targetIndex>>d)<<(log2LocalSourceBoxes+d)) + 
+                        (sourceIndex<<d);
+
                     if( level <= log2N/2 )
                     {
 #ifdef TRACE
@@ -194,8 +200,9 @@ transform
                         }
 #endif
                         general_fio::SourceWeightRecursion<R,d,q>
-                        ( context, Phi, 0, 0, x0A, p0B, wB, parentOffset,
-                          oldWeightGridList, weightGridList[key] );
+                        ( context, plan, Phi, 0, 0, x0A, p0B, wB, 
+                          parentInteractionOffset, oldWeightGridList,
+                          weightGridList[interactionIndex] );
 #ifdef TRACE
                         if( rank == 0 )
                             std::cout << "done." << std::endl;
@@ -225,8 +232,8 @@ transform
                         general_fio::TargetWeightRecursion<R,d,q>
                         ( context, plan, Phi, 0, 0, 
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
-                          parentOffset, oldWeightGridList, 
-                          weightGridList[key] );
+                          parentInteractionOffset, oldWeightGridList, 
+                          weightGridList[interactionIndex] );
 #ifdef TRACE
                         if( rank == 0 )
                             std::cout << "done." << std::endl;
@@ -282,9 +289,9 @@ transform
             ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
             WeightGridList<R,d,q> partialWeightGridList
             ( 1<<log2LocalTargetBoxes );
-            for( std::size_t i=0; 
-                 i<(1u<<log2LocalTargetBoxes); 
-                 ++i, AWalker.Walk() )
+            for( std::size_t targetIndex=0; 
+                 targetIndex<(1u<<log2LocalTargetBoxes); 
+                 ++targetIndex, AWalker.Walk() )
             {
                 const Array<std::size_t,d> A = AWalker.State();
 
@@ -293,8 +300,10 @@ transform
                 for( std::size_t j=0; j<d; ++j )
                     x0A[j] = myTargetBox.offsets[j] + (A[j]+0.5)*wA[j];
 
-                const std::size_t parentOffset = 
-                    ((i>>d)<<(d-log2NumMergingProcesses));
+                // Compute the interaction offset of A's parent interacting 
+                // with the remaining local source boxes
+                const std::size_t parentInteractionOffset = 
+                    ((targetIndex>>d)<<(d-log2NumMergingProcesses));
                 if( level <= log2N/2 )
                 {
 #ifdef TRACE
@@ -305,9 +314,9 @@ transform
                     }
 #endif
                     general_fio::SourceWeightRecursion<R,d,q>
-                    ( context, Phi, log2NumMergingProcesses, clusterRank, 
-                      x0A, p0B, wB, parentOffset,
-                      weightGridList, partialWeightGridList[i] );
+                    ( context, plan, Phi, log2NumMergingProcesses, clusterRank, 
+                      x0A, p0B, wB, parentInteractionOffset,
+                      weightGridList, partialWeightGridList[targetIndex] );
 #ifdef TRACE
                     if( rank == 0 )
                         std::cout << "done." << std::endl;
@@ -336,7 +345,8 @@ transform
                     general_fio::TargetWeightRecursion<R,d,q>
                     ( context, plan, Phi, log2NumMergingProcesses, clusterRank,
                       ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
-                      parentOffset, weightGridList, partialWeightGridList[i] );
+                      parentInteractionOffset, weightGridList, 
+                      partialWeightGridList[targetIndex] );
 #ifdef TRACE
                     if( rank == 0 )
                         std::cout << "done." << std::endl;
@@ -404,14 +414,14 @@ transform
                     1u<<(d-log2NumMergingProcesses);
                 const std::size_t chunkSize = recvSize / numChunksPerProcess;
                 std::vector<R> sendBuffer( sendSize );
-                for( std::size_t i=0; i<numMergingProcesses; ++i )
+                for( std::size_t p=0; p<numMergingProcesses; ++p )
                 {
-                    R* sendOffset = &sendBuffer[i*recvSize];
+                    R* sendOffset = &sendBuffer[p*recvSize];
                     for( std::size_t j=0; j<numChunksPerProcess; ++j )
                     {
                         std::memcpy
                         ( &sendOffset[j*chunkSize], 
-                          &partialBuffer[(i+j*numMergingProcesses)*chunkSize],
+                          &partialBuffer[(p+j*numMergingProcesses)*chunkSize],
                           chunkSize*sizeof(R) );
                     }
                 }

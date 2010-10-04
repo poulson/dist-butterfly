@@ -114,7 +114,9 @@ PotentialField<R,d,q>::PotentialField
     // HTree described by log2TargetSubboxesPerDim. We will unroll it 
     // lexographically into the _LRPs vector.
     ConstrainedHTreeWalker<d> AWalker( log2TargetSubboxesPerDim );
-    for( std::size_t i=0; i<_LRPs.size(); ++i, AWalker.Walk() )
+    for( std::size_t targetIndex=0; 
+         targetIndex<_LRPs.size(); 
+         ++targetIndex, AWalker.Walk() )
     {
         const Array<std::size_t,d> A = AWalker.State();
 
@@ -126,7 +128,7 @@ PotentialField<R,d,q>::PotentialField
         // Now fill the k'th LRP index
         for( std::size_t j=0; j<d; ++j )
             _LRPs[k].x0[j] = targetBox.offsets[j] + (A[j]+0.5)*_wA[j];
-        _LRPs[k].weightGrid = weightGridList[i];
+        _LRPs[k].weightGrid = weightGridList[targetIndex];
     }
 }
 

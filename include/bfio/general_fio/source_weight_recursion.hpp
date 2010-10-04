@@ -41,13 +41,14 @@ template<typename R,std::size_t d,std::size_t q>
 void
 SourceWeightRecursion
 ( const general_fio::Context<R,d,q>& context,
+  const Plan<d>& plan,
   const PhaseFunctor<R,d>& Phi,
   const std::size_t log2NumMergingProcesses,
   const std::size_t myClusterRank,
   const Array<R,d>& x0A,
   const Array<R,d>& p0B,
   const Array<R,d>& wB,
-  const std::size_t parentOffset,
+  const std::size_t parentInteractionOffset,
   const WeightGridList<R,d,q>& oldWeightGridList,
         WeightGrid<R,d,q>& weightGrid )
 {
@@ -79,8 +80,11 @@ SourceWeightRecursion
          ++cLocal )
     {
         // Step 1
-        const std::size_t c = (cLocal<<log2NumMergingProcesses) + myClusterRank;
-        const std::size_t key = parentOffset + cLocal;
+        const std::size_t c = 
+            ( plan.BackwardSourcePartitioning() ? 
+              cLocal + (myClusterRank<<(d-log2NumMergingProcesses)) :
+              (cLocal<<log2NumMergingProcesses) + myClusterRank );
+        const std::size_t interactionIndex = parentInteractionOffset + cLocal;
 
         // Form the set of p points to evaluate
         {
@@ -110,8 +114,10 @@ SourceWeightRecursion
             R* scaledImagBuffer = scaledWeightGrid.ImagBuffer();
             const R* cosBuffer = &cosResults[0];
             const R* sinBuffer = &sinResults[0];
-            const R* oldRealBuffer = oldWeightGridList[key].RealBuffer();
-            const R* oldImagBuffer = oldWeightGridList[key].ImagBuffer();
+            const R* oldRealBuffer = 
+                oldWeightGridList[interactionIndex].RealBuffer();
+            const R* oldImagBuffer = 
+                oldWeightGridList[interactionIndex].ImagBuffer();
             for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
             {
                 const R realWeight = oldRealBuffer[tPrime];

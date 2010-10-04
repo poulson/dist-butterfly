@@ -153,33 +153,33 @@ public:
 };
 
 template<std::size_t d>
-class FreqToSpatialPlan : public Plan<d>
+class ForwardPlan : public Plan<d>
 {
     virtual void GeneratePlan();
 public:
-    FreqToSpatialPlan
+    ForwardPlan
     ( MPI_Comm comm, std::size_t N );
 };
 
 template<std::size_t d>
-class SpatialToFreqPlan : public Plan<d>
+class InversePlan : public Plan<d>
 {
     virtual void GeneratePlan();
 public:
-    SpatialToFreqPlan
+    InversePlan
     ( MPI_Comm comm, std::size_t N );
 };
 
 // Implementations
 template<std::size_t d>
-FreqToSpatialPlan<d>::FreqToSpatialPlan
+ForwardPlan<d>::ForwardPlan
 ( MPI_Comm comm, std::size_t N )
 : Plan<d>( comm, N )
 { GeneratePlan(); }
 
 template<std::size_t d>
 void
-FreqToSpatialPlan<d>::GeneratePlan()
+ForwardPlan<d>::GeneratePlan()
 {
     this->_backwardSourcePartitioning = false;
     this->_backwardTargetPartitioning = true;
@@ -226,7 +226,6 @@ FreqToSpatialPlan<d>::GeneratePlan()
             log2LocalSourceBoxes = 0;
 
             // Construct the group and communicator for our current cluster
-            int myClusterRank = 0;
             const std::size_t log2Stride = numTargetCuts;
             const int startRank = 
                 this->_rank & ~((numMergingProcesses-1)<<log2Stride);
@@ -240,8 +239,6 @@ FreqToSpatialPlan<d>::GeneratePlan()
                 for( std::size_t k=0; k<log2NumMergingProcesses; ++k )
                     jReversed |= ((j>>k)&1)<<(log2NumMergingProcesses-1-k);
                 ranks[j] = startRank+(jReversed<<log2Stride);
-                if( ranks[j] == this->_rank )
-                    myClusterRank = j;
             }
             MPI_Group clusterGroup;
             MPI_Group_incl
@@ -276,14 +273,14 @@ FreqToSpatialPlan<d>::GeneratePlan()
 }
 
 template<std::size_t d>
-SpatialToFreqPlan<d>::SpatialToFreqPlan
+InversePlan<d>::InversePlan
 ( MPI_Comm comm, std::size_t N )
 : Plan<d>( comm, N )
 { GeneratePlan(); }
 
 template<std::size_t d>
 void
-SpatialToFreqPlan<d>::GeneratePlan()
+InversePlan<d>::GeneratePlan()
 {
     this->_backwardSourcePartitioning = true;
     this->_backwardTargetPartitioning = false;
@@ -291,7 +288,7 @@ SpatialToFreqPlan<d>::GeneratePlan()
 
     if( this->_log2NumProcesses%d != 0 )
         throw std::runtime_error
-              ("SpatialToFreqPlan currently requires 2^{nd} processes.");
+        ("InversePlan currently only supports 2^{nd} processes, for integer n");
 
     // Compute the number of source boxes per dimension and our coordinates
     for( std::size_t j=0; j<d; ++j )
@@ -337,7 +334,6 @@ SpatialToFreqPlan<d>::GeneratePlan()
             log2LocalSourceBoxes = 0;
 
             // Construct the group and communicator for our current cluster
-            int myClusterRank = 0;
             const std::size_t log2Stride = 
                 this->_log2NumProcesses-numTargetCuts-log2NumMergingProcesses;
             const int startRank = 
@@ -366,8 +362,6 @@ SpatialToFreqPlan<d>::GeneratePlan()
                         (lastBitsetSize-1-k+firstBitsetSize);
                 }
                 ranks[j] = startRank + (jWrapped<<log2Stride);
-                if( ranks[j] == this->_rank )
-                    myClusterRank = j;
             }
             MPI_Group clusterGroup;
             MPI_Group_incl
@@ -385,7 +379,6 @@ SpatialToFreqPlan<d>::GeneratePlan()
                 sourceDimsToMerge[j] = true;
                 targetDimsToCut[nextTargetDimToCut] = true;
                 this->_myFinalTargetBoxCoords[nextTargetDimToCut] <<= 1;
-                //if( rankBits[numTargetCuts] )
                 if( rankBits[this->_log2NumProcesses-1-numTargetCuts] )
                 {
                     rightSideOfCut[nextTargetDimToCut] = true;

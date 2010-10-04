@@ -233,7 +233,7 @@ main
     try 
     {
         // Compute the box that our process owns
-        bfio::FreqToSpatialPlan<d> plan( comm, N );
+        bfio::ForwardPlan<d> plan( comm, N );
         bfio::Box<double,d> mySourceBox = 
             plan.GetMyInitialSourceBox( sourceBox );
 

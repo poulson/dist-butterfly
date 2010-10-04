@@ -36,7 +36,7 @@ Usage()
 
 // Define the dimension of the problem and the order of interpolation
 static const std::size_t d = 2;
-static const std::size_t q = 5;
+static const std::size_t q = 8;
 
 // If we test the accuracy, define the number of tests to perform per box
 static const std::size_t numAccuracyTestsPerBox = 10;
@@ -157,8 +157,8 @@ main
         srand( seed );
 
         // Compute the box that our process owns within the source box
-        bfio::FreqToSpatialPlan<d> plan( comm, N );
-        //bfio::SpatialToFreqPlan<d> plan( comm, N );
+        bfio::ForwardPlan<d> plan( comm, N );
+        //bfio::InversePlan<d> plan( comm, N );
         bfio::Box<double,d> mySourceBox = 
             plan.GetMyInitialSourceBox( sourceBox );
 

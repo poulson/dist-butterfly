@@ -75,11 +75,11 @@ InitializeWeights
     const std::vector< Array<R,d> > xPoint( 1, x0 );
     std::vector< Array<R,d> > pPoints( numSources );
     std::vector< Array<R,d> > pRefPoints( numSources );
-    std::vector<std::size_t> flattenedBoxIndices( numSources );
-    for( std::size_t i=0; i<numSources; ++i )
+    std::vector<std::size_t> flattenedSourceBoxIndices( numSources );
+    for( std::size_t s=0; s<numSources; ++s )
     {
-        const Array<R,d>& p = mySources[i].p;
-        pPoints[i] = mySources[i].p;
+        const Array<R,d>& p = mySources[s].p;
+        pPoints[s] = mySources[s].p;
 
         // Determine which local box we're in (if any)
         Array<std::size_t,d> B;
@@ -90,7 +90,7 @@ InitializeWeights
             if( p[j] < leftBound || p[j] >= rightBound )
             {
                 std::ostringstream msg;
-                msg << "Source " << i << " was at " << p[j]
+                msg << "Source " << s << " was at " << p[j]
                     << " in dimension " << j << ", but our source box in this "
                     << "dim. is [" << leftBound << "," << rightBound << ").";
                 throw std::runtime_error( msg.str() );
@@ -123,17 +123,17 @@ InitializeWeights
         // B we will evaluate the Lagrangian polynomial on the reference grid,
         // so we need to map p to it first.
         for( std::size_t j=0; j<d; ++j )
-            pRefPoints[i][j] = (p[j]-p0[j])/wB[j];
+            pRefPoints[s][j] = (p[j]-p0[j])/wB[j];
         
         // Flatten the integer coordinates of B
-        flattenedBoxIndices[i] = 
+        flattenedSourceBoxIndices[s] = 
             FlattenConstrainedHTreeIndex( B, log2LocalSourceBoxesPerDim );
     }
     Phi.BatchEvaluate( xPoint, pPoints, phiResults );
     {
         R* phiBuffer = &phiResults[0];
-        for( std::size_t i=0; i<numSources; ++i )
-            phiBuffer[i] *= TwoPi;
+        for( std::size_t s=0; s<numSources; ++s )
+            phiBuffer[s] *= TwoPi;
     }
     SinCosBatch( phiResults, sinResults, cosResults );
     {
@@ -143,14 +143,14 @@ InitializeWeights
         R* imagBetaBuffer = &imagBeta[0];
         const R* cosBuffer = &cosResults[0];
         const R* sinBuffer = &sinResults[0];
-        for( std::size_t i=0; i<numSources; ++i )
+        for( std::size_t s=0; s<numSources; ++s )
         {
-            const R realPhase = cosBuffer[i];
-            const R imagPhase = sinBuffer[i];
-            const R realMagnitude = real(mySources[i].magnitude);
-            const R imagMagnitude = imag(mySources[i].magnitude);
-            realBetaBuffer[i] = realPhase*realMagnitude-imagPhase*imagMagnitude;
-            imagBetaBuffer[i] = imagPhase*realMagnitude+realPhase*imagMagnitude;
+            const R realPhase = cosBuffer[s];
+            const R imagPhase = sinBuffer[s];
+            const R realMagnitude = real(mySources[s].magnitude);
+            const R imagMagnitude = imag(mySources[s].magnitude);
+            realBetaBuffer[s] = realPhase*realMagnitude-imagPhase*imagMagnitude;
+            imagBetaBuffer[s] = imagPhase*realMagnitude+realPhase*imagMagnitude;
         }
 
         std::vector<R> lagrangeResults;
@@ -158,13 +158,13 @@ InitializeWeights
         {
             context.LagrangeBatch( t, pRefPoints, lagrangeResults );
             const R* lagrangeBuffer = &lagrangeResults[0];
-            for( std::size_t i=0; i<numSources; ++i )
+            for( std::size_t s=0; s<numSources; ++s )
             {
-                const std::size_t k = flattenedBoxIndices[i];
-                weightGridList[k].RealWeight(t) += 
-                    realBetaBuffer[i]*lagrangeBuffer[i];
-                weightGridList[k].ImagWeight(t) +=
-                    imagBetaBuffer[i]*lagrangeBuffer[i];
+                const std::size_t sourceIndex = flattenedSourceBoxIndices[s];
+                weightGridList[sourceIndex].RealWeight(t) += 
+                    realBetaBuffer[s]*lagrangeBuffer[s];
+                weightGridList[sourceIndex].ImagWeight(t) +=
+                    imagBetaBuffer[s]*lagrangeBuffer[s];
             }
         }
     }
@@ -174,7 +174,9 @@ InitializeWeights
     pPoints.resize( q_to_d );
     const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
     ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
-    for( std::size_t k=0; k<(1u<<log2LocalSourceBoxes); ++k, BWalker.Walk() ) 
+    for( std::size_t sourceIndex=0; 
+         sourceIndex<(1u<<log2LocalSourceBoxes); 
+         ++sourceIndex, BWalker.Walk() ) 
     {
         const Array<std::size_t,d> B = BWalker.State();
 
@@ -203,8 +205,8 @@ InitializeWeights
         }
         SinCosBatch( phiResults, sinResults, cosResults );
         {
-            R* realBuffer = weightGridList[k].RealBuffer();
-            R* imagBuffer = weightGridList[k].ImagBuffer();
+            R* realBuffer = weightGridList[sourceIndex].RealBuffer();
+            R* imagBuffer = weightGridList[sourceIndex].ImagBuffer();
             const R* cosBuffer = &cosResults[0];
             const R* sinBuffer = &sinResults[0];
             for( std::size_t t=0; t<q_to_d; ++t )
