@@ -37,8 +37,7 @@ bindir_base = bin
 bindir = $(bindir_base)/$(config)
 
 # Defining 'FUNDERSCORE' appends an underscore to BLAS routine names
-# Defining 'TRACE' prints progress through the FreqToSpatial transformation
-
+# Defining 'RELEASE' removes all unnecessary output and checks
 ifeq ($(config),ibm)
   # This is for ANL's Blue Gene/P
   CXX = mpixlcxx_r
@@ -49,7 +48,7 @@ ifeq ($(config),ibm)
   XLMASS_INC = /soft/apps/ibmcmp-aug2010/xlmass/bg/4.4/include
   XLMASS_LIB = /soft/apps/ibmcmp-aug2010/xlmass/bg/4.4/bglib
   CXXFLAGS = -DIBM -I$(incdir) -I$(XLMASS_INC)
-  CXXFLAGS_DEBUG = -DTRACE -g $(CXXFLAGS)
+  CXXFLAGS_DEBUG = -g $(CXXFLAGS)
   CXXFLAGS_RELEASE = -O4 -DRELEASE $(CXXFLAGS)
   LDFLAGS = -L$(ESSL_LIB) -L$(XLF_LIB) -L$(XLSMP_LIB) -L$(XLMASS_LIB) \
             -lesslbg -lxlfmath -lxlf90_r -lxlomp_ser -lmassv -lmass
@@ -60,7 +59,7 @@ ifeq ($(config),intel)
   MKL_INC = /opt/apps/intel/mkl/10.0.1.014/include
   MKL_LIB = /opt/apps/intel/mkl/10.0.1.014/lib/em64t
   CXXFLAGS = -DINTEL -I$(incdir) -I$(MKL_INC)
-  CXXFLAGS_DEBUG = -DTRACE -g $(CXXFLAGS)
+  CXXFLAGS_DEBUG = -g $(CXXFLAGS)
   CXXFLAGS_RELEASE = -O3 -DRELEASE $(CXXFLAGS)
   LDFLAGS = -Wl,-rpath,$(MKL_LIB) -L$(MKL_LIB) \
             -lmkl_em64t -lmkl -lguide -lpthread
@@ -69,7 +68,7 @@ ifeq ($(config),gnu)
   # This is for a generic Linux machine with a BLAS library in /usr/lib
   CXX = mpicxx 
   CXXFLAGS = -DGNU -I$(incdir) -DFUNDERSCORE 
-  CXXFLAGS_DEBUG = -DTRACE -g -Wall $(CXXFLAGS)
+  CXXFLAGS_DEBUG = -g -Wall $(CXXFLAGS)
   CXXFLAGS_RELEASE = -O3 -ffast-math -Wall -DRELEASE $(CXXFLAGS)
   LDFLAGS = -L/usr/lib -lblas
 endif
@@ -77,7 +76,7 @@ ifeq ($(config),apple)
   # This is for a Mac with a BLAS library in /usr/lib
   CXX = mpicxx 
   CXXFLAGS = -DGNU -I$(incdir) -DFUNDERSCORE 
-  CXXFLAGS_DEBUG = -DTRACE -g -Wall $(CXXFLAGS)
+  CXXFLAGS_DEBUG = -g -Wall $(CXXFLAGS)
   CXXFLAGS_RELEASE = -fast -ffast-math -Wall -DRELEASE $(CXXFLAGS)
   LDFLAGS = -L/usr/lib -lblas
 endif

@@ -40,7 +40,7 @@ namespace {
 inline void 
 ReportWithFlush( int rank, const std::string& msg )
 {
-#ifdef TRACE
+#ifndef RELEASE
     if( rank == 0 )
     {
         std::cout << msg;
@@ -51,7 +51,7 @@ ReportWithFlush( int rank, const std::string& msg )
 inline void
 Report( int rank, const std::string& msg )
 {
-#ifdef TRACE
+#ifndef RELEASE
     if( rank == 0 )
         std::cout << msg << std::endl;
 #endif
@@ -134,7 +134,6 @@ transform
           weightGridList );
         Report( rank, "done." );
     }
-    std::size_t numCommunications = 0;
     for( std::size_t level=1; level<=log2N; ++level )
     {
         // Compute the width of the nodes at this level
@@ -198,7 +197,7 @@ transform
                     {
                         ReportWithFlush( rank, "  Source weight recursion..." );
                         general_fio::SourceWeightRecursion<R,d,q>
-                        ( context, plan, Phi, 0, 0, x0A, p0B, wB, 
+                        ( context, plan, Phi, level, x0A, p0B, wB, 
                           parentInteractionOffset, oldWeightGridList,
                           weightGridList[interactionIndex] );
                         Report( rank, "done." );
@@ -219,7 +218,7 @@ transform
                         }
                         ReportWithFlush( rank, "  Target weight recursion..." );
                         general_fio::TargetWeightRecursion<R,d,q>
-                        ( context, plan, Phi, 0, 0, 
+                        ( context, plan, Phi, level,
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentInteractionOffset, oldWeightGridList, 
                           weightGridList[interactionIndex] );
@@ -239,36 +238,26 @@ transform
 
             // Fully refine target domain and coarsen source domain.
             // We partition the target domain after the SumScatter.
-            const Array<bool,d>& sourceDimsToMerge = 
-                plan.GetSourceDimsToMerge( numCommunications );
+            const std::vector<std::size_t>& sourceDimsToMerge = 
+                plan.GetSourceDimsToMerge( level );
+            for( std::size_t i=0; i<log2NumMergingProcesses; ++i )
+            {
+                const std::size_t j = sourceDimsToMerge[i];
+                if( mySourceBoxCoords[j] & 1 )
+                    mySourceBox.offsets[j] -= mySourceBox.widths[j];
+                mySourceBoxCoords[j] >>= 1;
+                mySourceBox.widths[j] *= 2;
+            }
             for( std::size_t j=0; j<d; ++j )
             {
                 ++log2LocalTargetBoxesPerDim[j];
                 ++log2LocalTargetBoxes;
-                if( sourceDimsToMerge[j] )
-                {
-                    if( mySourceBoxCoords[j] & 1 )
-                    {
-                        mySourceBox.offsets[j] -= sourceBox.offsets[j];
-                        mySourceBox.offsets[j] *=
-                            static_cast<R>(mySourceBoxCoords[j]-1) / 
-                            mySourceBoxCoords[j];
-                        mySourceBox.offsets[j] += sourceBox.offsets[j];
-                    }
-                    mySourceBoxCoords[j] >>= 1;
-                    mySourceBox.widths[j] *= 2;
-                }
             }
 
             // Compute the coordinates and center of this source box
             Array<R,d> p0B;
             for( std::size_t j=0; j<d; ++j )
                 p0B[j] = mySourceBox.offsets[j] + 0.5*wB[j];
-
-            // Grab the communicator for this step as well as our rank in it
-            MPI_Comm clusterComm = plan.GetSubcommunicator( numCommunications );
-            int clusterRank;
-            MPI_Comm_rank( clusterComm, &clusterRank );
 
             // Form the partial weights by looping over the boxes in the  
             // target domain.
@@ -295,9 +284,9 @@ transform
                     ReportWithFlush
                     ( rank, "  Parallel source weight recursion..." );
                     general_fio::SourceWeightRecursion<R,d,q>
-                    ( context, plan, Phi, log2NumMergingProcesses, clusterRank, 
-                      x0A, p0B, wB, parentInteractionOffset,
-                      weightGridList, partialWeightGridList[targetIndex] );
+                    ( context, plan, Phi, level, x0A, p0B, wB,
+                      parentInteractionOffset, weightGridList,
+                      partialWeightGridList[targetIndex] );
                     Report( rank, "done." );
                 }
                 else
@@ -314,9 +303,9 @@ transform
                         ARelativeToAp |= (globalA[j]&1)<<j;
                     }
                     ReportWithFlush
-                    ( rank, "Parallel target weight recursion..." );
+                    ( rank, "  Parallel target weight recursion..." );
                     general_fio::TargetWeightRecursion<R,d,q>
-                    ( context, plan, Phi, log2NumMergingProcesses, clusterRank,
+                    ( context, plan, Phi, level,
                       ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                       parentInteractionOffset, weightGridList, 
                       partialWeightGridList[targetIndex] );
@@ -336,84 +325,71 @@ transform
             //  2) partitions of dimensions c -> d-1
             // Both 1 and 2 include partitioning 0 -> d-1, but, in general, 
             // the second category never requires packing.
-            const Array<bool,d>& targetDimsToCut = 
-                plan.GetTargetDimsToCut( numCommunications );
-            bool setFirstPartDim = false;
-            bool finalizedLastPartDim = false;
-            std::size_t firstPartDim;
-            std::size_t lastPartDim = 0;
-            for( std::size_t j=0; j<d; ++j )
+            const std::size_t log2SubclusterSize = 
+                plan.GetLog2SubclusterSize( level );
+            if( log2SubclusterSize == 0 )
             {
-                if( targetDimsToCut[j] && finalizedLastPartDim )
-                    std::runtime_error("Invalid communication in plan.");
-                if( !targetDimsToCut[j] && setFirstPartDim )
-                {
-                    lastPartDim = j-1;
-                    finalizedLastPartDim = true;
-                }
-                if( targetDimsToCut[j] && !setFirstPartDim )
-                {
-                    firstPartDim = j;
-                    setFirstPartDim = true;
-                }
-            }
-            if( !finalizedLastPartDim )
-                lastPartDim = d-1;
-            if( lastPartDim == d-1 )
-            {
-                // We must have partition dims of the form c -> d-1
-                SumScatter
+                MPI_Comm clusterComm = plan.GetClusterComm( level );
+                SumScatter    
                 ( partialWeightGridList.Buffer(), weightGridList.Buffer(),
                   &recvCounts[0], clusterComm );
             }
             else
             {
-                // We must have partition dims of the form 0 -> c < d-1.
-                // Thus we must copy 2^{d-log2NumMergingProcesses} chunks for 
-                // each of the 2^log2NumMergingProcesses processes.
-                const R* partialBuffer = partialWeightGridList.Buffer();
+                const std::size_t log2NumSubclusters = 
+                    log2NumMergingProcesses-log2SubclusterSize;
+                const std::size_t numSubclusters = 1u<<log2NumSubclusters;
+                const std::size_t subclusterSize = 1u<<log2SubclusterSize;
+
                 const std::size_t recvSize = recvCounts[0];
                 const std::size_t sendSize = recvSize*numMergingProcesses;
-                const std::size_t numChunksPerProcess = 
-                    1u<<(d-log2NumMergingProcesses);
+                const std::size_t numChunksPerProcess = subclusterSize;
                 const std::size_t chunkSize = recvSize / numChunksPerProcess;
+                const R* partialBuffer = partialWeightGridList.Buffer();
                 std::vector<R> sendBuffer( sendSize );
-                for( std::size_t p=0; p<numMergingProcesses; ++p )
+                for( std::size_t sc=0; sc<numSubclusters; ++sc )
                 {
-                    R* sendOffset = &sendBuffer[p*recvSize];
-                    for( std::size_t j=0; j<numChunksPerProcess; ++j )
+                    R* subclusterSendBuffer = 
+                        &sendBuffer[sc*subclusterSize*recvSize];
+                    const R* subclusterPartialBuffer = 
+                        &partialBuffer[sc*subclusterSize*recvSize];
+                    for( std::size_t p=0; p<subclusterSize; ++p )
                     {
-                        std::memcpy
-                        ( &sendOffset[j*chunkSize], 
-                          &partialBuffer[(p+j*numMergingProcesses)*chunkSize],
-                          chunkSize*sizeof(R) );
+                        R* processSend = &subclusterSendBuffer[p*recvSize];
+                        for( std::size_t c=0; c<numChunksPerProcess; ++c )
+                        {
+                            std::memcpy 
+                            ( &processSend[c*chunkSize],
+                              &subclusterPartialBuffer
+                              [(p+c*subclusterSize)*chunkSize],
+                              chunkSize*sizeof(R) );
+                        }
                     }
                 }
+                MPI_Comm clusterComm = plan.GetClusterComm( level );
                 SumScatter
                 ( &sendBuffer[0], weightGridList.Buffer(), 
                   &recvCounts[0], clusterComm );
             }
             Report( rank, "done." );
 
-            const Array<bool,d>& rightSideOfCut = 
-                plan.GetRightSideOfCut( numCommunications );
-            for( std::size_t j=0; j<d; ++j )
+            const std::vector<std::size_t>& targetDimsToCut = 
+                plan.GetTargetDimsToCut( level );
+            const std::vector<bool>& rightSideOfCut = 
+                plan.GetRightSideOfCut( level );
+            for( std::size_t i=0; i<log2NumMergingProcesses; ++i )
             {
-                if( targetDimsToCut[j] )
+                const std::size_t j = targetDimsToCut[i];
+                myTargetBox.widths[j] *= 0.5;
+                myTargetBoxCoords[j] *= 2;
+                if( rightSideOfCut[i] )
                 {
-                    myTargetBox.widths[j] *= 0.5;
-                    myTargetBoxCoords[j] *= 2;
-                    if( rightSideOfCut[j] )
-                    {
-                        myTargetBoxCoords[j] |= 1;
-                        myTargetBox.offsets[j] += myTargetBox.widths[j];
-                    }
-                    --log2LocalTargetBoxesPerDim[j];
-                    --log2LocalTargetBoxes;
+                    myTargetBoxCoords[j] |= 1;
+                    myTargetBox.offsets[j] += myTargetBox.widths[j];
                 }
+                --log2LocalTargetBoxesPerDim[j];
+                --log2LocalTargetBoxes;
             }
-
-            ++numCommunications;
         }
         if( level==log2N/2 )
         {

@@ -18,6 +18,10 @@
 #ifndef BFIO_STRUCTURES_PLAN_HPP
 #define BFIO_STRUCTURES_PLAN_HPP 1
 
+#ifndef RELEASE
+# include <iostream>
+#endif
+
 #include <bitset>
 #include <stdexcept>
 #include <vector>
@@ -37,22 +41,21 @@ protected:
     // Does not depend on the problem size
     int _rank;
     int _numProcesses;
-    std::size_t _log2NumProcesses;
     MPI_Group _group;
+    std::size_t _log2NumProcesses;
     std::size_t _log2N;
     Array<std::size_t,d> _myInitialSourceBoxCoords;
     Array<std::size_t,d> _myFinalTargetBoxCoords;
     Array<std::size_t,d> _log2InitialSourceBoxesPerDim;
     Array<std::size_t,d> _log2FinalTargetBoxesPerDim;
-    bool _backwardSourcePartitioning;
-    bool _backwardTargetPartitioning;
 
     // Depends on the problem size
-    std::vector<MPI_Comm> _subcomms;
-    std::vector<MPI_Group> _subgroups;
-    std::vector< Array<bool,d> > _sourceDimsToMerge;
-    std::vector< Array<bool,d> > _targetDimsToCut;
-    std::vector< Array<bool,d> > _rightSideOfCut;
+    std::vector< MPI_Group                > _clusterGroups;
+    std::vector< MPI_Comm                 > _clusterComms;
+    std::vector< std::size_t              > _log2SubclusterSizes;
+    std::vector< std::vector<std::size_t> > _sourceDimsToMerge;
+    std::vector< std::vector<std::size_t> > _targetDimsToCut;
+    std::vector< std::vector<bool       > > _rightSideOfCut;
 
     virtual void GeneratePlan() = 0;
     
@@ -72,27 +75,32 @@ public:
         _log2NumProcesses = Log2( _numProcesses );
         if( _log2NumProcesses > d*_log2N )
             throw std::runtime_error("Cannot use more than N^d processes");
+
+        _clusterGroups.resize( _log2N );
+        _clusterComms.resize( _log2N );
+        _log2SubclusterSizes.resize( _log2N );
+        _sourceDimsToMerge.resize( _log2N );
+        _targetDimsToCut.resize( _log2N );
+        _rightSideOfCut.resize( _log2N );
     }
     
     virtual ~Plan()
     {
-        for( std::size_t i=0; i<_subcomms.size(); ++i )
+        for( std::size_t level=1; level<=_log2N; ++level )
         {
-            MPI_Comm_free( &_subcomms[i] );
-            MPI_Group_free( &_subgroups[i] );
+            MPI_Comm_free( &_clusterComms[level-1] );
+            MPI_Group_free( &_clusterGroups[level-1] );
         }
         MPI_Group_free( &_group );
     }
 
-    MPI_Comm GetComm() const { return _comm; }
+    virtual std::size_t 
+    LocalToClusterSourceIndex
+    ( std::size_t level, std::size_t cLocal ) const = 0;
 
-    std::size_t GetN() const { return _N; }
+    inline MPI_Comm GetComm() const { return _comm; }
 
-    bool BackwardSourcePartitioning() const 
-    { return _backwardSourcePartitioning; }
-
-    bool BackwardTargetPartitioning() const
-    { return _backwardTargetPartitioning; }
+    inline std::size_t GetN() const { return _N; }
 
     template<typename R>
     Box<R,d> GetMyInitialSourceBox( const Box<R,d>& sourceBox ) const
@@ -124,50 +132,72 @@ public:
         return myFinalTargetBox;
     }
 
-    const Array<std::size_t,d>& GetMyInitialSourceBoxCoords() const
+    inline const Array<std::size_t,d>& 
+    GetMyInitialSourceBoxCoords() const
     { return _myInitialSourceBoxCoords; }
 
-    const Array<std::size_t,d>& GetMyFinalTargetBoxCoords() const
+    inline const Array<std::size_t,d>& 
+    GetMyFinalTargetBoxCoords() const
     { return _myFinalTargetBoxCoords; }
 
-    const Array<std::size_t,d>& GetLog2InitialSourceBoxesPerDim() const
+    inline const Array<std::size_t,d>& 
+    GetLog2InitialSourceBoxesPerDim() const
     { return _log2InitialSourceBoxesPerDim; }
 
-    const Array<std::size_t,d>& GetLog2FinalTargetBoxesPerDim() const
+    inline const Array<std::size_t,d>& 
+    GetLog2FinalTargetBoxesPerDim() const
     { return _log2FinalTargetBoxesPerDim; }
 
-    MPI_Comm GetSubcommunicator( std::size_t i ) const
-    { return _subcomms[i]; }
+    inline MPI_Comm 
+    GetClusterComm( std::size_t level ) const
+    { return _clusterComms[level-1]; }
 
-    const Array<bool,d>&
-    GetSourceDimsToMerge( std::size_t i ) const
-    { return _sourceDimsToMerge[i]; }
+    inline std::size_t 
+    GetLog2SubclusterSize( std::size_t level ) const
+    { return _log2SubclusterSizes[level-1]; }
 
-    const Array<bool,d>& 
-    GetTargetDimsToCut( std::size_t i ) const
-    { return _targetDimsToCut[i]; }
+    inline std::size_t
+    GetLog2NumMergingProcesses( std::size_t level ) const
+    { return _sourceDimsToMerge[level-1].size(); }
 
-    const Array<bool,d>& 
-    GetRightSideOfCut( std::size_t i ) const
-    { return _rightSideOfCut[i]; }
+    inline const std::vector<std::size_t>&
+    GetSourceDimsToMerge( std::size_t level ) const
+    { return _sourceDimsToMerge[level-1]; }
+
+    inline const std::vector<std::size_t>& 
+    GetTargetDimsToCut( std::size_t level ) const
+    { return _targetDimsToCut[level-1]; }
+
+    inline const std::vector<bool>& 
+    GetRightSideOfCut( std::size_t level ) const
+    { return _rightSideOfCut[level-1]; }
 };
 
 template<std::size_t d>
 class ForwardPlan : public Plan<d>
 {
+    std::vector<std::size_t> _myClusterRanks;
     virtual void GeneratePlan();
 public:
     ForwardPlan
     ( MPI_Comm comm, std::size_t N );
+
+    virtual std::size_t 
+    LocalToClusterSourceIndex
+    ( std::size_t level, std::size_t cLocal ) const;
 };
 
 template<std::size_t d>
 class InversePlan : public Plan<d>
 {
+    std::vector<std::size_t> _myMappedRanks;
     virtual void GeneratePlan();
 public:
     InversePlan
     ( MPI_Comm comm, std::size_t N );
+    
+    virtual std::size_t 
+    LocalToClusterSourceIndex( std::size_t level, std::size_t cLocal ) const;
 };
 
 // Implementations
@@ -175,36 +205,69 @@ template<std::size_t d>
 ForwardPlan<d>::ForwardPlan
 ( MPI_Comm comm, std::size_t N )
 : Plan<d>( comm, N )
-{ GeneratePlan(); }
+{ 
+    _myClusterRanks.resize( this->_log2N );
+    GeneratePlan(); 
+}
+
+template<std::size_t d>
+inline std::size_t
+ForwardPlan<d>::LocalToClusterSourceIndex
+( std::size_t level, std::size_t cLocal ) const
+{
+    return (cLocal<<this->_sourceDimsToMerge[level-1].size()) +     
+           this->_myClusterRanks[level-1];
+}
 
 template<std::size_t d>
 void
 ForwardPlan<d>::GeneratePlan()
 {
-    this->_backwardSourcePartitioning = false;
-    this->_backwardTargetPartitioning = true;
     std::bitset<8*sizeof(int)> rankBits(this->_rank);
 
     // Compute the number of source boxes per dimension and our coordinates
+    std::size_t nextSourceDimToCut = 0;
+    std::size_t lastSourceDimCut = 0; // initialize to avoid compiler warnings
     for( std::size_t j=0; j<d; ++j )
     {
         this->_myInitialSourceBoxCoords[j] = 0;
         this->_log2InitialSourceBoxesPerDim[j] = 0;
     }
-    std::size_t nextSourceDimToCut = 0;
     for( std::size_t m=this->_log2NumProcesses; m>0; --m )
     {
+#ifndef RELEASE
+        if( this->_rank == 0 )
+        {
+            std::cout << "Cutting source dimension " << nextSourceDimToCut
+                      << std::endl;
+        }
+#endif
+        lastSourceDimCut = nextSourceDimToCut;
         this->_myInitialSourceBoxCoords[nextSourceDimToCut] <<= 1;
         if( rankBits[m-1] )
             ++this->_myInitialSourceBoxCoords[nextSourceDimToCut];
         ++this->_log2InitialSourceBoxesPerDim[nextSourceDimToCut];
         nextSourceDimToCut = (nextSourceDimToCut+1) % d;
     }
+#ifndef RELEASE
+    for( int p=0; p<this->_numProcesses; ++p )
+    {
+        if( this->_rank == p )
+        {
+            std::cout << "Rank " << p << "'s initial source box coords: ";
+            for( std::size_t j=0; j<d; ++j )
+                std::cout << this->_myInitialSourceBoxCoords[j] << " ";
+            std::cout << std::endl;
+        }
+        MPI_Barrier( this->_comm );
+        usleep( 100000 );
+    }
+#endif
 
-    // Generate subcommunicator vector by walking through the FreqToSpatial
-    // process
+    // Generate subcommunicator vector by walking through the forward process
     std::size_t numTargetCuts = 0;
     std::size_t nextTargetDimToCut = d-1;
+    std::size_t nextSourceDimToMerge = lastSourceDimCut;
     std::size_t log2LocalSourceBoxes = 0;
     for( std::size_t j=0; j<d; ++j )
     {
@@ -218,12 +281,46 @@ ForwardPlan<d>::GeneratePlan()
         if( log2LocalSourceBoxes >= d )
         {
             log2LocalSourceBoxes -= d;
+
+            this->_myClusterRanks[level-1] = 0;
+            
+            MPI_Group_incl
+            ( this->_group, 
+              1, 
+              &(this->_rank), 
+              &(this->_clusterGroups[level-1]) );
+
+            MPI_Comm_create
+            ( this->_comm, 
+              this->_clusterGroups[level-1], 
+              &(this->_clusterComms[level-1]) );
+
+            this->_log2SubclusterSizes[level-1] = 0;
+
+#ifndef RELEASE
+            if( this->_rank == 0 )
+            {
+                std::cout << "No communication at level " << level
+                          << ", there are now 2^" << log2LocalSourceBoxes
+                          << " local source boxes." << std::endl;
+            }
+#endif
         }
         else
         {
             const std::size_t log2NumMergingProcesses = d-log2LocalSourceBoxes;
             const std::size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
             log2LocalSourceBoxes = 0;
+
+#ifndef RELEASE
+            if( this->_rank == 0 )
+            {
+                std::cout << "Merging " << log2NumMergingProcesses
+                          << " dimension(s), starting with "
+                          << nextSourceDimToMerge << " (cutting starting with "
+                          << nextTargetDimToCut << ")" << std::endl;
+            }
+#endif
 
             // Construct the group and communicator for our current cluster
             const std::size_t log2Stride = numTargetCuts;
@@ -239,35 +336,73 @@ ForwardPlan<d>::GeneratePlan()
                 for( std::size_t k=0; k<log2NumMergingProcesses; ++k )
                     jReversed |= ((j>>k)&1)<<(log2NumMergingProcesses-1-k);
                 ranks[j] = startRank+(jReversed<<log2Stride);
+                if( this->_rank == ranks[j] )
+                    this->_myClusterRanks[level-1] = j;
             }
-            MPI_Group clusterGroup;
+#ifndef RELEASE
+            for( int p=0; p<this->_numProcesses; ++p )
+            {
+                if( this->_rank == p )
+                {
+                    std::cout << "  process " << p << "'s cluster group: ";
+                    for( std::size_t j=0; j<numMergingProcesses; ++j )
+                        std::cout << ranks[j] << " ";
+                    std::cout << std::endl;
+                }
+                MPI_Barrier( this->_comm );
+                usleep( 100000 );
+            }
+#endif
             MPI_Group_incl
-            ( this->_group, numMergingProcesses, &ranks[0], &clusterGroup );
-            this->_subgroups.push_back( clusterGroup );
-            MPI_Comm clusterComm;
-            MPI_Comm_create( this->_comm, clusterGroup, &clusterComm );
-            this->_subcomms.push_back( clusterComm );
+            ( this->_group, 
+              numMergingProcesses, 
+              &ranks[0], 
+              &(this->_clusterGroups[level-1]) );
+            MPI_Comm_create
+            ( this->_comm, 
+              this->_clusterGroups[level-1],
+              &(this->_clusterComms[level-1]) );
+            this->_log2SubclusterSizes[level-1] = 0;
 
-            Array<bool,d> sourceDimsToMerge(0);
-            Array<bool,d> targetDimsToCut(0);
-            Array<bool,d> rightSideOfCut(0);
+            this->_sourceDimsToMerge[level-1].resize( log2NumMergingProcesses );
+            this->_targetDimsToCut[level-1].resize( log2NumMergingProcesses );
+            this->_rightSideOfCut[level-1].resize( log2NumMergingProcesses );
             for( std::size_t j=0; j<log2NumMergingProcesses; ++j )
             {
-                sourceDimsToMerge[j] = true;
-                targetDimsToCut[nextTargetDimToCut] = true;    
+                const std::size_t thisBit = numTargetCuts;
+
+                this->_sourceDimsToMerge[level-1][j] = nextSourceDimToMerge;
+                this->_targetDimsToCut[level-1][j] = nextTargetDimToCut;
+                this->_rightSideOfCut[level-1][j] = rankBits[thisBit];
+
                 this->_myFinalTargetBoxCoords[nextTargetDimToCut] <<= 1;
-                if( rankBits[numTargetCuts] )
-                {
-                    rightSideOfCut[nextTargetDimToCut] = true;
+                if( rankBits[thisBit] )
                     ++this->_myFinalTargetBoxCoords[nextTargetDimToCut];
-                }
                 ++this->_log2FinalTargetBoxesPerDim[nextTargetDimToCut];
+
                 ++numTargetCuts;
                 nextTargetDimToCut = (nextTargetDimToCut+d-1) % d;
+                nextSourceDimToMerge = (nextSourceDimToMerge+d-1) % d;
             }
-            this->_sourceDimsToMerge.push_back( sourceDimsToMerge );
-            this->_targetDimsToCut.push_back( targetDimsToCut );
-            this->_rightSideOfCut.push_back( rightSideOfCut );
+#ifndef RELEASE
+            for( int p=0; p<this->_numProcesses; ++p )
+            {
+                if( this->_rank == p )
+                {
+                    std::cout << "  process " << p << "'s cluster rank: "
+                              << this->_myClusterRanks[level-1] << std::endl;
+                    std::cout << "  process " << p << "'s cluster children: ";
+                    const std::size_t numLocalChildren =
+                        (1u<<(d-log2NumMergingProcesses));
+                    for( std::size_t i=0; i<numLocalChildren; ++i )
+                        std::cout << this->LocalToClusterSourceIndex( level, i )
+                                  << " ";
+                    std::cout << std::endl;
+                }
+                MPI_Barrier( this->_comm );
+                usleep( 100000 );
+            }
+#endif
         }
     }
 }
@@ -276,43 +411,72 @@ template<std::size_t d>
 InversePlan<d>::InversePlan
 ( MPI_Comm comm, std::size_t N )
 : Plan<d>( comm, N )
-{ GeneratePlan(); }
+{ 
+    _myMappedRanks.resize( this->_log2N );
+    GeneratePlan(); 
+}
+
+template<std::size_t d>
+inline std::size_t
+InversePlan<d>::LocalToClusterSourceIndex
+( std::size_t level, std::size_t cLocal ) const
+{
+    return (this->_myMappedRanks[level-1]<<
+            (d-this->_sourceDimsToMerge[level-1].size())) + cLocal;
+}
 
 template<std::size_t d>
 void
 InversePlan<d>::GeneratePlan()
 {
-    this->_backwardSourcePartitioning = true;
-    this->_backwardTargetPartitioning = false;
     std::bitset<8*sizeof(int)> rankBits(this->_rank);
 
-    if( this->_log2NumProcesses%d != 0 )
-        throw std::runtime_error
-        ("InversePlan currently only supports 2^{nd} processes, for integer n");
-
     // Compute the number of source boxes per dimension and our coordinates
+    std::size_t nextSourceDimToCut = d-1;
+    std::size_t lastSourceDimCut = 0; // initialize to avoid compiler warnings
     for( std::size_t j=0; j<d; ++j )
     {
         this->_myInitialSourceBoxCoords[j] = 0;
         this->_log2InitialSourceBoxesPerDim[j] = 0;
     }
-    std::size_t nextSourceDimToCut = d-1;
     for( std::size_t m=0; m<this->_log2NumProcesses; ++m )
     {
+#ifndef RELEASE
+        if( this->_rank == 0 )
+        {
+            std::cout << "Cutting source dimension " << nextSourceDimToCut
+                      << std::endl;
+        }
+#endif
+        lastSourceDimCut = nextSourceDimToCut;
         this->_myInitialSourceBoxCoords[nextSourceDimToCut] <<= 1;
         if( rankBits[m] )
             ++this->_myInitialSourceBoxCoords[nextSourceDimToCut];
         ++this->_log2InitialSourceBoxesPerDim[nextSourceDimToCut];
         nextSourceDimToCut = (nextSourceDimToCut+d-1) % d;
     }
+#ifndef RELEASE
+    for( int p=0; p<this->_numProcesses; ++p )
+    {
+        if( this->_rank == p )
+        {
+            std::cout << "Rank " << p << "'s initial source box coords: ";
+            for( std::size_t j=0; j<d; ++j )
+                std::cout << this->_myInitialSourceBoxCoords[j] << " ";
+            std::cout << std::endl;
+        }
+        MPI_Barrier( this->_comm );
+        usleep( 100000 );
+    }
+#endif
 
-    // Generate subcommunicator vector by walking through the SpatialToFreq
-    // process
+    // Generate subcommunicator vector by walking through the inverse process
     //
     // The following choice ensures that the first communication partitions 
     // dimensions of the form 0 -> c, and the rest are of the form 0 -> d-1.
     std::size_t numTargetCuts = 0;
     std::size_t nextTargetDimToCut = 0;
+    std::size_t nextSourceDimToMerge = lastSourceDimCut;
     std::size_t log2LocalSourceBoxes = 0;
     for( std::size_t j=0; j<d; ++j )
     {
@@ -325,7 +489,32 @@ InversePlan<d>::GeneratePlan()
     {
         if( log2LocalSourceBoxes >= d )
         {
+
             log2LocalSourceBoxes -= d;
+
+            this->_myMappedRanks[level-1] = 0;
+
+            MPI_Group_incl
+            ( this->_group, 
+              1, 
+              &(this->_rank), 
+              &(this->_clusterGroups[level-1]) );
+
+            MPI_Comm_create
+            ( this->_comm, 
+              this->_clusterGroups[level-1], 
+              &(this->_clusterComms[level-1]) );
+            
+            this->_log2SubclusterSizes[level-1] =  0;
+
+#ifndef RELEASE
+            if( this->_rank == 0 )
+            {
+                std::cout << "No communication at level " << level 
+                          << ", there are now 2^" << log2LocalSourceBoxes
+                          << " local source boxes." << std::endl;
+            }
+#endif
         }
         else
         {
@@ -333,64 +522,138 @@ InversePlan<d>::GeneratePlan()
             const std::size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
             log2LocalSourceBoxes = 0;
 
+#ifndef RELEASE
+            if( this->_rank == 0 )
+            {
+                std::cout << "Merging " << log2NumMergingProcesses 
+                          << " dimension(s), starting with " 
+                          << nextSourceDimToMerge << " (cutting starting with "
+                          << nextTargetDimToCut << ")" << std::endl;
+            }
+#endif
+
             // Construct the group and communicator for our current cluster
             const std::size_t log2Stride = 
                 this->_log2NumProcesses-numTargetCuts-log2NumMergingProcesses;
             const int startRank = 
                 this->_rank & ~((numMergingProcesses-1)<<log2Stride);
             std::vector<int> ranks( numMergingProcesses ); 
-            // The bits of j must be shuffled according to the ordering 
-            // on the partition dimensions:
-            //  - The last d-nextTargetDimToCut bits are reversed and last
-            //  - The remaining bits are reversed but occur first
-            const std::size_t lastBitsetSize = 
-                std::min(d-nextTargetDimToCut,log2NumMergingProcesses);
-            const std::size_t firstBitsetSize = 
-                log2NumMergingProcesses-lastBitsetSize;
-            for( std::size_t j=0; j<numMergingProcesses; ++j )
             {
-                std::size_t jWrapped = 0;
+                // The bits of j must be shuffled according to the ordering 
+                // on the partition dimensions:
+                //  - The last d-nextTargetDimToCut bits are reversed and last
+                //  - The remaining bits are reversed but occur first
+                const std::size_t lastBitsetSize = 
+                    std::min(d-nextTargetDimToCut,log2NumMergingProcesses);
+                const std::size_t firstBitsetSize = 
+                    log2NumMergingProcesses-lastBitsetSize;
+                for( std::size_t j=0; j<numMergingProcesses; ++j )
+                {
+                    std::size_t jWrapped = 0;
+                    for( std::size_t k=0; k<firstBitsetSize; ++k )
+                    {
+                        jWrapped |= 
+                            ((j>>k)&1)<<(firstBitsetSize-1-k);
+                    }
+                    for( std::size_t k=0; k<lastBitsetSize; ++k )
+                    {
+                        jWrapped |=
+                            ((j>>(k+firstBitsetSize))&1)<<
+                            (lastBitsetSize-1-k+firstBitsetSize);
+                    }
+                    ranks[j] = startRank + (jWrapped<<log2Stride);
+                }
+            }
+#ifndef RELEASE
+            for( int p=0; p<this->_numProcesses; ++p )
+            {
+                if( this->_rank == p )
+                {
+                    std::cout << "  process " << p << "'s cluster group: ";
+                    for( std::size_t j=0; j<numMergingProcesses; ++j )
+                        std::cout << ranks[j] << " ";
+                    std::cout << std::endl;
+                }
+                MPI_Barrier( this->_comm );
+                usleep( 100000 );
+            }
+#endif
+
+            {
+                const std::size_t lastBitsetSize = 
+                    std::min(d-nextSourceDimToMerge,log2NumMergingProcesses);
+                const std::size_t firstBitsetSize = 
+                    log2NumMergingProcesses-lastBitsetSize;
+                // Apply the same transformation to our shifted rank
+                const std::size_t shiftedRank = this->_rank-startRank;
+                const std::size_t scaledRank = shiftedRank >> log2Stride;
+                std::size_t wrappedRank = 0;
                 for( std::size_t k=0; k<firstBitsetSize; ++k )
                 {
-                    jWrapped |= 
-                        ((j>>k)&1)<<(firstBitsetSize-1-k);
+                    wrappedRank |=
+                        ((scaledRank>>k)&1)<<(firstBitsetSize-1-k);
                 }
                 for( std::size_t k=0; k<lastBitsetSize; ++k )
                 {
-                    jWrapped |=
-                        ((j>>(k+firstBitsetSize))&1)<<
-                        (lastBitsetSize-1-k+firstBitsetSize);
+                    wrappedRank |=
+                        ((scaledRank>>(k+firstBitsetSize))&1)<<
+                         (lastBitsetSize-1-k+firstBitsetSize);
                 }
-                ranks[j] = startRank + (jWrapped<<log2Stride);
+                this->_myMappedRanks[level-1] = wrappedRank;
             }
-            MPI_Group clusterGroup;
             MPI_Group_incl
-            ( this->_group, numMergingProcesses, &ranks[0], &clusterGroup );
-            this->_subgroups.push_back( clusterGroup );
-            MPI_Comm clusterComm;
-            MPI_Comm_create( this->_comm, clusterGroup, &clusterComm );
-            this->_subcomms.push_back( clusterComm );
+            ( this->_group,
+              numMergingProcesses,
+              &ranks[0],
+              &(this->_clusterGroups[level-1]) );
+            MPI_Comm_create
+            ( this->_comm, 
+              this->_clusterGroups[level-1],
+              &(this->_clusterComms[level-1]) );
+            this->_log2SubclusterSizes[level-1] = 
+                this->_log2NumProcesses % d;
 
-            Array<bool,d> sourceDimsToMerge(0);
-            Array<bool,d> targetDimsToCut(0);
-            Array<bool,d> rightSideOfCut(0);
+            this->_sourceDimsToMerge[level-1].resize( log2NumMergingProcesses );
+            this->_targetDimsToCut[level-1].resize( log2NumMergingProcesses );
+            this->_rightSideOfCut[level-1].resize( log2NumMergingProcesses );
             for( std::size_t j=0; j<log2NumMergingProcesses; ++j )
             {
-                sourceDimsToMerge[j] = true;
-                targetDimsToCut[nextTargetDimToCut] = true;
+                const std::size_t thisBit = 
+                    (this->_log2NumProcesses-1) - numTargetCuts;
+
+                this->_sourceDimsToMerge[level-1][j] =  nextSourceDimToMerge;
+                this->_targetDimsToCut[level-1][j] = nextTargetDimToCut;
+                this->_rightSideOfCut[level-1][j] =  rankBits[thisBit];
+
                 this->_myFinalTargetBoxCoords[nextTargetDimToCut] <<= 1;
-                if( rankBits[this->_log2NumProcesses-1-numTargetCuts] )
-                {
-                    rightSideOfCut[nextTargetDimToCut] = true;
+                if( rankBits[thisBit] )
                     ++this->_myFinalTargetBoxCoords[nextTargetDimToCut];
-                }
                 ++this->_log2FinalTargetBoxesPerDim[nextTargetDimToCut];
+
                 ++numTargetCuts;
                 nextTargetDimToCut = (nextTargetDimToCut+1) % d;
+                nextSourceDimToMerge = (nextSourceDimToMerge+1) % d;
             }
-            this->_sourceDimsToMerge.push_back( sourceDimsToMerge );
-            this->_targetDimsToCut.push_back( targetDimsToCut );
-            this->_rightSideOfCut.push_back( rightSideOfCut );
+            
+#ifndef RELEASE
+            for( int p=0; p<this->_numProcesses; ++p )
+            {
+                if( this->_rank == p )
+                {
+                    std::cout << "  process " << p << "'s mapped rank: "
+                              << this->_myMappedRanks[level-1] << std::endl;
+                    std::cout << "  process " << p << "'s cluster children: ";
+                    const std::size_t numLocalChildren = 
+                        (1u<<(d-log2NumMergingProcesses));
+                    for( std::size_t i=0; i<numLocalChildren; ++i ) 
+                        std::cout << this->LocalToClusterSourceIndex( level, i )
+                                  << " ";
+                    std::cout << std::endl;
+                }
+                MPI_Barrier( this->_comm );
+                usleep( 100000 );
+            }
+#endif
         }
     }
 }

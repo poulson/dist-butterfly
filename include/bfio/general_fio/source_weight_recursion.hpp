@@ -43,8 +43,7 @@ SourceWeightRecursion
 ( const general_fio::Context<R,d,q>& context,
   const Plan<d>& plan,
   const PhaseFunctor<R,d>& Phi,
-  const std::size_t log2NumMergingProcesses,
-  const std::size_t myClusterRank,
+  const std::size_t level,
   const Array<R,d>& x0A,
   const Array<R,d>& p0B,
   const Array<R,d>& wB,
@@ -54,6 +53,9 @@ SourceWeightRecursion
 {
     const std::size_t q_to_d = Pow<q,d>::val;
     const std::size_t q_to_2d = Pow<q,2*d>::val;
+    
+    const std::size_t log2NumMergingProcesses = 
+        plan.GetLog2NumMergingProcesses( level );
 
     // We seek performance by isolating the Lagrangian interpolation as
     // a matrix-vector multiplication
@@ -80,11 +82,8 @@ SourceWeightRecursion
          ++cLocal )
     {
         // Step 1
-        const std::size_t c = 
-            ( plan.BackwardSourcePartitioning() ? 
-              cLocal + (myClusterRank<<(d-log2NumMergingProcesses)) :
-              (cLocal<<log2NumMergingProcesses) + myClusterRank );
         const std::size_t interactionIndex = parentInteractionOffset + cLocal;
+        const std::size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
 
         // Form the set of p points to evaluate
         {

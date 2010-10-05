@@ -43,8 +43,7 @@ TargetWeightRecursion
 ( const general_fio::Context<R,d,q>& context,
   const Plan<d>& plan,
   const PhaseFunctor<R,d>& Phi,
-  const std::size_t log2NumMergingProcesses,
-  const std::size_t myClusterRank,
+  const std::size_t level,
   const std::size_t ARelativeToAp,
   const Array<R,d>& x0A,
   const Array<R,d>& x0Ap,
@@ -57,6 +56,9 @@ TargetWeightRecursion
 {
     const std::size_t q_to_d = Pow<q,d>::val;
     const std::size_t q_to_2d = Pow<q,2*d>::val;
+
+    const std::size_t log2NumMergingProcesses = 
+        plan.GetLog2NumMergingProcesses( level );
 
     std::memset( weightGrid.Buffer(), 0, 2*q_to_d*sizeof(R) );
 
@@ -81,11 +83,9 @@ TargetWeightRecursion
     {
         // Step 1: scale the old weights
         WeightGrid<R,d,q> scaledWeightGrid;
-        const std::size_t c = 
-            ( plan.BackwardSourcePartitioning() ? 
-              cLocal + (myClusterRank<<(d-log2NumMergingProcesses)) :
-              (cLocal<<log2NumMergingProcesses) + myClusterRank );
         const std::size_t interactionIndex = parentInteractionOffset + cLocal;
+        const std::size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
+
         for( std::size_t j=0; j<d; ++j )
             pPoint[0][j] = p0B[j] + ( (c>>j)&1 ? wB[j]/4 : -wB[j]/4 );
         {
