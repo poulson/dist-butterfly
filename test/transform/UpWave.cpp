@@ -21,7 +21,6 @@
 #include <memory>
 #include "bfio.hpp"
 
-namespace {
 void 
 Usage()
 {
@@ -32,7 +31,6 @@ Usage()
               << "  visualize?: create data files iff 1\n" 
               << std::endl;
 }
-} // anonymous namespace
 
 // Define the dimension of the problem and the order of interpolation
 static const std::size_t d = 3;

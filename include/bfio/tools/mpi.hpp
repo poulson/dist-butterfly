@@ -38,10 +38,14 @@ inline void
 SumScatter<float>
 ( const float* sendBuf, float* recvBuf, int* recvCounts, MPI_Comm comm )
 {
+#ifdef RELEASE
+    MPI_Reduce_scatter
+    ( const_cast<float*>(sendBuf), 
+      recvBuf, recvCounts, MPI_FLOAT, MPI_SUM, comm );
+#else
     int ierror = MPI_Reduce_scatter
     ( const_cast<float*>(sendBuf), 
       recvBuf, recvCounts, MPI_FLOAT, MPI_SUM, comm );
-#ifndef RELEASE
     if( ierror != 0 )
     {
         std::ostringstream msg;
@@ -56,10 +60,14 @@ inline void
 SumScatter<double>
 ( const double* sendBuf, double* recvBuf, int* recvCounts, MPI_Comm comm )
 {
+#ifdef RELEASE
+    MPI_Reduce_scatter
+    ( const_cast<double*>(sendBuf), 
+      recvBuf, recvCounts, MPI_DOUBLE, MPI_SUM, comm );
+#else
     int ierror = MPI_Reduce_scatter
     ( const_cast<double*>(sendBuf), 
       recvBuf, recvCounts, MPI_DOUBLE, MPI_SUM, comm );
-#ifndef RELEASE
     if( ierror != 0 )
     {
         std::ostringstream msg;

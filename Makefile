@@ -20,7 +20,7 @@
 # only been tested on TACC's Ranger, and the IBM one has only been tested on 
 # a Blue Gene/P. The apple implementation has been tested on my laptop; its 
 # only difference from gnu is the additional '-fast' compilation flag.
-config = ibm
+config = apple
 ifneq ($(config),ibm)
   ifneq ($(config),intel)
     ifneq ($(config),gnu)
