@@ -34,7 +34,7 @@ IsPowerOfTwo( std::size_t N )
 //       than unsigned in order to be more compatible with the STL. However,
 //       it _extremely_ unlikely that the problem size will be larger than the 
 //       range of an unsigned.
-inline std::size_t
+std::size_t
 Log2( unsigned N )
 {
     static const unsigned MultiplyDeBruijnBitPosition[32] = 
@@ -64,7 +64,7 @@ Log2( unsigned N )
 //       than unsigned in order to be more compatible with the STL. However,
 //       it _extremely_ unlikely that the problem size will be larger than the 
 //       range of an unsigned.
-inline std::size_t
+std::size_t
 NumberOfTrailingOnes( unsigned N )
 {
     unsigned int c;

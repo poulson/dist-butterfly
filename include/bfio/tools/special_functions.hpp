@@ -45,7 +45,7 @@ ImagExp( float alpha )
 }
 
 template<>
-inline std::complex<double>
+std::complex<double>
 ImagExp( double alpha )
 {
     const double real = cos(alpha);
@@ -55,13 +55,13 @@ ImagExp( double alpha )
 
 // For performing many sin computations
 template<typename R>
-inline void
+void
 SinBatch
 ( const std::vector<R>& a, 
         std::vector<R>& sinResults );
 
 template<>
-inline void
+void
 SinBatch
 ( const std::vector<float>& a, 
         std::vector<float>& sinResults )
@@ -83,7 +83,7 @@ SinBatch
 }
 
 template<>
-inline void
+void
 SinBatch
 ( const std::vector<double>& a, 
         std::vector<double>& sinResults )
@@ -106,13 +106,13 @@ SinBatch
 
 // For performing many cos computations
 template<typename R>
-inline void
+void
 CosBatch
 ( const std::vector<R>& a, 
         std::vector<R>& cosResults );
 
 template<>
-inline void
+void
 CosBatch
 ( const std::vector<float>& a, 
         std::vector<float>& cosResults )
@@ -134,7 +134,7 @@ CosBatch
 }
 
 template<>
-inline void
+void
 CosBatch
 ( const std::vector<double>& a, 
         std::vector<double>& cosResults )
@@ -157,14 +157,14 @@ CosBatch
 
 // For performing many sin(a)/cos(a) pairs
 template<typename R>
-inline void
+void
 SinCosBatch
 ( const std::vector<R>& a, 
         std::vector<R>& sinResults,
         std::vector<R>& cosResults );
 
 template<>
-inline void
+void
 SinCosBatch
 ( const std::vector<float>& a, 
         std::vector<float>& sinResults,
@@ -192,7 +192,7 @@ SinCosBatch
 }
 
 template<>
-inline void
+void
 SinCosBatch
 ( const std::vector<double>& a, 
         std::vector<double>& sinResults,
@@ -221,13 +221,13 @@ SinCosBatch
 
 // For performing many sqrt computations
 template<typename R>
-inline void
+void
 SqrtBatch
 ( const std::vector<R>& a, 
         std::vector<R>& sqrtResults );
 
 template<>
-inline void
+void
 SqrtBatch
 ( const std::vector<float>& a, 
         std::vector<float>& sqrtResults )
@@ -249,7 +249,7 @@ SqrtBatch
 }
 
 template<>
-inline void
+void
 SqrtBatch
 ( const std::vector<double>& a, 
         std::vector<double>& sqrtResults )

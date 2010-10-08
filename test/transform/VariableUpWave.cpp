@@ -53,78 +53,14 @@ public:
     // This is the only routine required to be implemented
     virtual std::complex<R>
     operator() 
-    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
-    {
-        return 1. + 0.5*sin(1*bfio::Pi*x[0])*sin(4*bfio::Pi*x[1])*
-                        cos(3*bfio::Pi*p[0])*cos(4*bfio::Pi*p[1]);
-    }
+    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const;
 
     // We can optionally override the batched application for better efficiency
     virtual void
     BatchEvaluate
     ( const std::vector< bfio::Array<R,d> >& xPoints,
       const std::vector< bfio::Array<R,d> >& pPoints,
-            std::vector< std::complex<R>  >& results ) const
-    {
-        const std::size_t nxPoints = xPoints.size();
-        const std::size_t npPoints = pPoints.size();
-
-        // Set up the sin and cos arguments
-        std::vector<R> sinArguments( d*nxPoints );
-        {
-            R* sinArgBuffer = &sinArguments[0];
-            const R* xPointsBuffer = &(xPoints[0][0]);
-            for( std::size_t i=0; i<nxPoints; ++i )
-            {
-                sinArgBuffer[i*d+0] =   bfio::Pi*xPointsBuffer[i*d+0];
-                sinArgBuffer[i*d+1] = 4*bfio::Pi*xPointsBuffer[i*d+1];
-            }
-        }
-        std::vector<R> cosArguments( d*pPoints.size() );
-        {
-            R* cosArgBuffer = &cosArguments[0];
-            const R* pPointsBuffer = &(pPoints[0][0]);
-            for( std::size_t j=0; j<npPoints; ++j )
-            {
-                cosArgBuffer[j*d+0] = 3*bfio::Pi*pPointsBuffer[j*d+0];
-                cosArgBuffer[j*d+1] = 4*bfio::Pi*pPointsBuffer[j*d+1];
-            }
-        }
-
-        // Call the vector sin and cos
-        std::vector<R> sinResults;
-        std::vector<R> cosResults;
-        bfio::SinBatch( sinArguments, sinResults );
-        bfio::CosBatch( cosArguments, cosResults );
-
-        // Form the x and p coefficients
-        std::vector<R> xCoefficients( nxPoints ); 
-        std::vector<R> pCoefficients( npPoints );
-        {
-            R* xCoefficientsBuffer = &xCoefficients[0];
-            const R* sinBuffer = &sinResults[0];
-            for( std::size_t i=0; i<nxPoints; ++i )
-                xCoefficientsBuffer[i] = 0.5*sinBuffer[i*d]*sinBuffer[i*d+1];
-        }
-        {
-            R* pCoefficientsBuffer = &pCoefficients[0];
-            const R* cosBuffer = &cosResults[0];
-            for( std::size_t j=0; j<npPoints; ++j )
-                pCoefficientsBuffer[j] = cosBuffer[j*d]*cosBuffer[j*d+1];
-        }
-
-        // Form the answer
-        results.resize( nxPoints*npPoints );
-        {
-            std::complex<R>* resultsBuffer = &results[0];
-            const R* xCoefficientsBuffer = &xCoefficients[0];
-            const R* pCoefficientsBuffer = &pCoefficients[0];
-            for( std::size_t i=0; i<nxPoints; ++i )
-                for( std::size_t j=0; j<npPoints; ++j )
-                    resultsBuffer[i*npPoints+j] = 
-                        1. + xCoefficientsBuffer[i]*pCoefficientsBuffer[j];
-        }
-    }
+            std::vector< std::complex<R>  >& results ) const;
 };
 
 template<typename R>
@@ -132,60 +68,148 @@ class UpWave : public bfio::PhaseFunctor<R,d>
 {
 public:
     // This is the only routine required to be implemented
-    R
+    virtual R 
     operator() 
-    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
-    {
-        return x[0]*p[0]+x[1]*p[1] + 0.5*sqrt(p[0]*p[0]+p[1]*p[1]); 
-    }
+    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const;
 
     // We can optionally override the batched application for better efficiency
     virtual void
     BatchEvaluate
     ( const std::vector< bfio::Array<R,d> >& xPoints,
       const std::vector< bfio::Array<R,d> >& pPoints,
-            std::vector< R                >& results ) const
+            std::vector< R                >& results ) const;
+};
+
+template<typename R>
+inline std::complex<R>
+Oscillatory<R>::operator() 
+( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
+{
+    return 1. + 0.5*sin(1*bfio::Pi*x[0])*sin(4*bfio::Pi*x[1])*
+                    cos(3*bfio::Pi*p[0])*cos(4*bfio::Pi*p[1]);
+}
+
+template<typename R>
+void
+Oscillatory<R>::BatchEvaluate
+( const std::vector< bfio::Array<R,d> >& xPoints,
+  const std::vector< bfio::Array<R,d> >& pPoints,
+        std::vector< std::complex<R>  >& results ) const
+{
+    const std::size_t nxPoints = xPoints.size();
+    const std::size_t npPoints = pPoints.size();
+
+    // Set up the sin and cos arguments
+    std::vector<R> sinArguments( d*nxPoints );
     {
-        const std::size_t nxPoints = xPoints.size();
-        const std::size_t npPoints = pPoints.size();
-
-        // Set up the square root arguments 
-        std::vector<R> sqrtArguments( npPoints );
+        R* sinArgBuffer = &sinArguments[0];
+        const R* xPointsBuffer = &(xPoints[0][0]);
+        for( std::size_t i=0; i<nxPoints; ++i )
         {
-            R* sqrtArgBuffer = &sqrtArguments[0];
-            const R* pPointsBuffer = &(pPoints[0][0]);
-            for( std::size_t j=0; j<npPoints; ++j )
-                sqrtArgBuffer[j] = pPointsBuffer[j*d+0]*pPointsBuffer[j*d+0] +
-                                   pPointsBuffer[j*d+1]*pPointsBuffer[j*d+1];
-        }
-
-        // Perform the batched square roots
-        std::vector<R> sqrtResults;
-        bfio::SqrtBatch( sqrtArguments, sqrtResults );
-
-        // Scale the square roots by 1/2
-        {
-            R* sqrtBuffer = &sqrtResults[0];
-            for( std::size_t j=0; j<npPoints; ++j )
-                sqrtBuffer[j] *= 0.5;
-        }
-
-        // Form the final results
-        results.resize( nxPoints*npPoints );
-        {
-            R* resultsBuffer = &results[0];
-            const R* sqrtBuffer = &sqrtResults[0];
-            const R* xPointsBuffer = &(xPoints[0][0]);
-            const R* pPointsBuffer = &(pPoints[0][0]);
-            for( std::size_t i=0; i<nxPoints; ++i )
-                for( std::size_t j=0; j<npPoints; ++j )
-                    resultsBuffer[i*npPoints+j] =
-                        xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] +
-                        xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] +
-                        sqrtBuffer[j];
+            sinArgBuffer[i*d+0] =   bfio::Pi*xPointsBuffer[i*d+0];
+            sinArgBuffer[i*d+1] = 4*bfio::Pi*xPointsBuffer[i*d+1];
         }
     }
-};
+    std::vector<R> cosArguments( d*pPoints.size() );
+    {
+        R* cosArgBuffer = &cosArguments[0];
+        const R* pPointsBuffer = &(pPoints[0][0]);
+        for( std::size_t j=0; j<npPoints; ++j )
+        {
+            cosArgBuffer[j*d+0] = 3*bfio::Pi*pPointsBuffer[j*d+0];
+            cosArgBuffer[j*d+1] = 4*bfio::Pi*pPointsBuffer[j*d+1];
+        }
+    }
+
+    // Call the vector sin and cos
+    std::vector<R> sinResults;
+    std::vector<R> cosResults;
+    bfio::SinBatch( sinArguments, sinResults );
+    bfio::CosBatch( cosArguments, cosResults );
+
+    // Form the x and p coefficients
+    std::vector<R> xCoefficients( nxPoints ); 
+    std::vector<R> pCoefficients( npPoints );
+    {
+        R* xCoefficientsBuffer = &xCoefficients[0];
+        const R* sinBuffer = &sinResults[0];
+        for( std::size_t i=0; i<nxPoints; ++i )
+            xCoefficientsBuffer[i] = 0.5*sinBuffer[i*d]*sinBuffer[i*d+1];
+    }
+    {
+        R* pCoefficientsBuffer = &pCoefficients[0];
+        const R* cosBuffer = &cosResults[0];
+        for( std::size_t j=0; j<npPoints; ++j )
+            pCoefficientsBuffer[j] = cosBuffer[j*d]*cosBuffer[j*d+1];
+    }
+
+    // Form the answer
+    results.resize( nxPoints*npPoints );
+    {
+        std::complex<R>* resultsBuffer = &results[0];
+        const R* xCoefficientsBuffer = &xCoefficients[0];
+        const R* pCoefficientsBuffer = &pCoefficients[0];
+        for( std::size_t i=0; i<nxPoints; ++i )
+            for( std::size_t j=0; j<npPoints; ++j )
+                resultsBuffer[i*npPoints+j] = 
+                    1. + xCoefficientsBuffer[i]*pCoefficientsBuffer[j];
+    }
+}
+
+template<typename R>
+inline R
+UpWave<R>::operator() 
+( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
+{
+    return x[0]*p[0]+x[1]*p[1] + 0.5*sqrt(p[0]*p[0]+p[1]*p[1]); 
+}
+
+template<typename R>
+void
+UpWave<R>::BatchEvaluate
+( const std::vector< bfio::Array<R,d> >& xPoints,
+  const std::vector< bfio::Array<R,d> >& pPoints,
+        std::vector< R                >& results ) const
+{
+    const std::size_t nxPoints = xPoints.size();
+    const std::size_t npPoints = pPoints.size();
+
+    // Set up the square root arguments 
+    std::vector<R> sqrtArguments( npPoints );
+    {
+        R* sqrtArgBuffer = &sqrtArguments[0];
+        const R* pPointsBuffer = &(pPoints[0][0]);
+        for( std::size_t j=0; j<npPoints; ++j )
+            sqrtArgBuffer[j] = pPointsBuffer[j*d+0]*pPointsBuffer[j*d+0] +
+                               pPointsBuffer[j*d+1]*pPointsBuffer[j*d+1];
+    }
+
+    // Perform the batched square roots
+    std::vector<R> sqrtResults;
+    bfio::SqrtBatch( sqrtArguments, sqrtResults );
+
+    // Scale the square roots by 1/2
+    {
+        R* sqrtBuffer = &sqrtResults[0];
+        for( std::size_t j=0; j<npPoints; ++j )
+            sqrtBuffer[j] *= 0.5;
+    }
+
+    // Form the final results
+    results.resize( nxPoints*npPoints );
+    {
+        R* resultsBuffer = &results[0];
+        const R* sqrtBuffer = &sqrtResults[0];
+        const R* xPointsBuffer = &(xPoints[0][0]);
+        const R* pPointsBuffer = &(pPoints[0][0]);
+        for( std::size_t i=0; i<nxPoints; ++i )
+            for( std::size_t j=0; j<npPoints; ++j )
+                resultsBuffer[i*npPoints+j] =
+                    xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] +
+                    xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] +
+                    sqrtBuffer[j];
+    }
+}
 
 int
 main

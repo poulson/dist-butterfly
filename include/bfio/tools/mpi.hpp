@@ -41,12 +41,14 @@ SumScatter<float>
     int ierror = MPI_Reduce_scatter
     ( const_cast<float*>(sendBuf), 
       recvBuf, recvCounts, MPI_FLOAT, MPI_SUM, comm );
+#ifndef RELEASE
     if( ierror != 0 )
     {
         std::ostringstream msg;
         msg << "ierror from MPI_Reduce_scatter = " << ierror;
         throw std::runtime_error( msg.str() );
     }
+#endif
 }
 
 template<>
@@ -57,12 +59,14 @@ SumScatter<double>
     int ierror = MPI_Reduce_scatter
     ( const_cast<double*>(sendBuf), 
       recvBuf, recvCounts, MPI_DOUBLE, MPI_SUM, comm );
+#ifndef RELEASE
     if( ierror != 0 )
     {
         std::ostringstream msg;
         msg << "ierror from MPI_Reduce_scatter = " << ierror;
         throw std::runtime_error( msg.str() );
     }
+#endif
 }
 
 } // bfio

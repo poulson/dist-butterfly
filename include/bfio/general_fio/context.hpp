@@ -75,14 +75,16 @@ public:
 // Implementations
 
 template<typename R,std::size_t d,std::size_t q>
-void Context<R,d,q>::GenerateChebyshevNodes()
+void 
+Context<R,d,q>::GenerateChebyshevNodes()
 {
     for( std::size_t t=0; t<q; ++t )
         _chebyshevNodes[t] = 0.5*cos(static_cast<R>(t*Pi/(q-1)));
 }
 
 template<typename R,std::size_t d,std::size_t q>
-void Context<R,d,q>::GenerateChebyshevIndices()
+void 
+Context<R,d,q>::GenerateChebyshevIndices()
 {
     const std::size_t q_to_d = _chebyshevIndices.size();
 
@@ -99,7 +101,8 @@ void Context<R,d,q>::GenerateChebyshevIndices()
 }
 
 template<typename R,std::size_t d,std::size_t q>
-void Context<R,d,q>::GenerateChebyshevGrid()
+void 
+Context<R,d,q>::GenerateChebyshevGrid()
 {
     const std::size_t q_to_d = _chebyshevGrid.size();
 
@@ -116,7 +119,8 @@ void Context<R,d,q>::GenerateChebyshevGrid()
 }
 
 template<typename R,std::size_t d,std::size_t q>
-void Context<R,d,q>::GenerateSourceMapsAndChildGrids()
+void 
+Context<R,d,q>::GenerateSourceMapsAndChildGrids()
 {
     const std::size_t q_to_d = _chebyshevGrid.size();
     const std::size_t q_to_2d = q_to_d * q_to_d;
@@ -151,7 +155,8 @@ void Context<R,d,q>::GenerateSourceMapsAndChildGrids()
 }
 
 template<typename R,std::size_t d,std::size_t q>
-void Context<R,d,q>::GenerateTargetMaps()
+void 
+Context<R,d,q>::GenerateTargetMaps()
 {
     const std::size_t q_to_d = _chebyshevGrid.size();
     const std::size_t q_to_2d = q_to_d * q_to_d;
@@ -251,32 +256,32 @@ Context<R,d,q>::LagrangeBatch
 }
 
 template<typename R,std::size_t d,std::size_t q>
-const Array<R,d>&
+inline const Array<R,d>&
 Context<R,d,q>::GetChebyshevNodes() const
 { return _chebyshevNodes; }
 
 template<typename R,std::size_t d,std::size_t q>
-const std::vector< Array<std::size_t,d> >&
+inline const std::vector< Array<std::size_t,d> >&
 Context<R,d,q>::GetChebyshevIndices() const
 { return _chebyshevIndices; }
 
 template<typename R,std::size_t d,std::size_t q>
-const std::vector< Array<R,d> >&
+inline const std::vector< Array<R,d> >&
 Context<R,d,q>::GetChebyshevGrid() const
 { return _chebyshevGrid; }
 
 template<typename R,std::size_t d,std::size_t q>
-const std::vector<R>&
+inline const std::vector<R>&
 Context<R,d,q>::GetSourceMaps() const
 { return _sourceMaps; }
 
 template<typename R,std::size_t d,std::size_t q>
-const std::vector<R>&
+inline const std::vector<R>&
 Context<R,d,q>::GetTargetMaps() const
 { return _targetMaps; }
 
 template<typename R,std::size_t d,std::size_t q>
-const std::vector< Array<R,d> >&
+inline const std::vector< Array<R,d> >&
 Context<R,d,q>::GetSourceChildGrids() const
 { return _sourceChildGrids; }
 

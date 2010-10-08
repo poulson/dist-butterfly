@@ -30,7 +30,7 @@ template<typename R,std::size_t d>
 class PhaseFunctor
 {
 public:
-    virtual ~PhaseFunctor() {}
+    virtual ~PhaseFunctor();
 
     // Point-wise evaluation of the phase function
     virtual R operator() 
@@ -42,14 +42,28 @@ public:
     virtual void BatchEvaluate
     ( const std::vector< Array<R,d> >& x,
       const std::vector< Array<R,d> >& p,
-            std::vector< R          >& results ) const
-    {
-        results.resize( x.size()*p.size() );
-        for( std::size_t i=0; i<x.size(); ++i )
-            for( std::size_t j=0; j<p.size(); ++j )
-                results[i*p.size()+j] = (*this)(x[i],p[j]);
-    }
+            std::vector< R          >& results ) const;
 };
+
+// Implementations
+
+template<typename R,std::size_t d>
+inline
+PhaseFunctor<R,d>::~PhaseFunctor() 
+{ }
+
+template<typename R,std::size_t d>
+void 
+PhaseFunctor<R,d>::BatchEvaluate
+( const std::vector< Array<R,d> >& x,
+  const std::vector< Array<R,d> >& p,
+        std::vector< R          >& results ) const
+{
+    results.resize( x.size()*p.size() );
+    for( std::size_t i=0; i<x.size(); ++i )
+        for( std::size_t j=0; j<p.size(); ++j )
+            results[i*p.size()+j] = (*this)(x[i],p[j]);
+}
 
 } // bfio
 

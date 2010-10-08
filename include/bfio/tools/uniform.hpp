@@ -24,7 +24,7 @@ namespace bfio {
 
 // Samples uniformly within (0,1]
 template<typename R>
-inline R
+R
 Uniform()
 { return static_cast<R>(rand())/RAND_MAX; }
 

@@ -133,7 +133,7 @@ PotentialField<R,d,q>::PotentialField
 }
 
 template<typename R,std::size_t d,std::size_t q>
-inline std::complex<R>
+std::complex<R>
 PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 {
     typedef std::complex<R> C;

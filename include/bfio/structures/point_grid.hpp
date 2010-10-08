@@ -31,25 +31,50 @@ class PointGrid
     std::vector< Array<R,d> > _points;
 
 public:
-    PointGrid() : _points(Pow<q,d>::val) {}
-    ~PointGrid() {}
+    PointGrid();
+    ~PointGrid();
 
     const Array<R,d>&
-    operator[] ( std::size_t i ) const
-    { return _points[i]; }
+    operator[] ( std::size_t i ) const;
 
     Array<R,d>&
-    operator[] ( std::size_t i )
-    { return _points[i]; }
+    operator[] ( std::size_t i );
 
     const PointGrid<R,d,q>&
-    operator= ( const PointGrid<R,d,q>& pointGrid )
-    {
-        const std::size_t q_to_d = Pow<q,d>::val;
-        std::memcpy( &(_points[0][0]), &(pointGrid[0][0]), q_to_d*sizeof(R) );
-        return *this;
-    }
+    operator= ( const PointGrid<R,d,q>& pointGrid );
 };
+
+// Implementations
+
+template<typename R,std::size_t d,std::size_t q>
+inline
+PointGrid<R,d,q>::PointGrid() 
+: _points(Pow<q,d>::val) 
+{ }
+
+template<typename R,std::size_t d,std::size_t q>
+inline
+PointGrid<R,d,q>::~PointGrid() 
+{ }
+
+template<typename R,std::size_t d,std::size_t q>
+inline const Array<R,d>&
+PointGrid<R,d,q>::operator[] ( std::size_t i ) const
+{ return _points[i]; }
+
+template<typename R,std::size_t d,std::size_t q>
+inline Array<R,d>&
+PointGrid<R,d,q>::operator[] ( std::size_t i )
+{ return _points[i]; }
+
+template<typename R,std::size_t d,std::size_t q>
+inline const PointGrid<R,d,q>&
+PointGrid<R,d,q>::operator= ( const PointGrid<R,d,q>& pointGrid )
+{
+    const std::size_t q_to_d = Pow<q,d>::val;
+    std::memcpy( &(_points[0][0]), &(pointGrid[0][0]), q_to_d*sizeof(R) );
+    return *this;
+}
 
 } // bfio
 

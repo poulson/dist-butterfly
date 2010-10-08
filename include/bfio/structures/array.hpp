@@ -31,20 +31,48 @@ class Array
 {
     T _x[d];
 public:
-    Array() { }
-    Array( T alpha ) { for( std::size_t j=0; j<d; ++j ) _x[j] = alpha; }
-    ~Array() { }
+    Array();
+    Array( T alpha );
+    ~Array();
 
-    T& operator[]( std::size_t j ) { return _x[j]; }
-    const T& operator[]( std::size_t j ) const { return _x[j]; }
+    T& operator[]( std::size_t j );
+    const T& operator[]( std::size_t j ) const;
 
     const Array<T,d>&
-    operator=( const Array<T,d>& array )
-    {
-        std::memcpy( _x, &array[0], d*sizeof(T) );
-        return *this;
-    }
+    operator=( const Array<T,d>& array );
 };
+
+// Implementations
+
+template<typename T,std::size_t d>
+inline Array<T,d>::Array() 
+{ }
+
+template<typename T,std::size_t d>
+inline Array<T,d>::Array( T alpha ) 
+{ for( std::size_t j=0; j<d; ++j ) _x[j] = alpha; }
+
+template<typename T,std::size_t d>
+inline Array<T,d>::~Array() 
+{ }
+
+template<typename T,std::size_t d>
+inline T& 
+Array<T,d>::operator[]( std::size_t j ) 
+{ return _x[j]; }
+
+template<typename T,std::size_t d>
+inline const T& 
+Array<T,d>::operator[]( std::size_t j ) const 
+{ return _x[j]; }
+
+template<typename T,std::size_t d>
+inline const Array<T,d>&
+Array<T,d>::operator=( const Array<T,d>& array )
+{
+    std::memcpy( _x, &array[0], d*sizeof(T) );
+    return *this;
+}
 
 } // bfio
 

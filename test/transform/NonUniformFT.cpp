@@ -51,34 +51,46 @@ class Fourier : public bfio::PhaseFunctor<R,d>
 {
 public:
     // This is the only routines that must be implemented
-    virtual R
-    operator() 
-    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
-    {
-        return x[0]*p[0]+x[1]*p[1];
-    }
+    virtual R 
+    operator()
+    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const;
 
     // We can optionally override the batched application for better efficiency
     virtual void
     BatchEvaluate
     ( const std::vector< bfio::Array<R,d> >& xPoints,
       const std::vector< bfio::Array<R,d> >& pPoints,
-            std::vector< R                >& results ) const
-    {
-        const std::size_t nxPoints = xPoints.size();
-        const std::size_t npPoints = pPoints.size();
-        results.resize( nxPoints*npPoints );
-
-        R* resultsBuffer = &results[0];
-        const R* xPointsBuffer = &(xPoints[0][0]);
-        const R* pPointsBuffer = &(pPoints[0][0]);
-        for( std::size_t i=0; i<nxPoints; ++i )
-            for( std::size_t j=0; j<npPoints; ++j )
-                resultsBuffer[i*npPoints+j] = 
-                    xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
-                    xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1];
-    }
+            std::vector< R                >& results ) const;
 };
+
+// This is the only routines that must be implemented
+template<typename R>
+inline R
+Fourier<R>::operator() 
+( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
+{ return x[0]*p[0]+x[1]*p[1]; }
+
+// We can optionally override the batched application for better efficiency
+template<typename R>
+void
+Fourier<R>::BatchEvaluate
+( const std::vector< bfio::Array<R,d> >& xPoints,
+  const std::vector< bfio::Array<R,d> >& pPoints,
+        std::vector< R                >& results ) const
+{
+    const std::size_t nxPoints = xPoints.size();
+    const std::size_t npPoints = pPoints.size();
+    results.resize( nxPoints*npPoints );
+
+    R* resultsBuffer = &results[0];
+    const R* xPointsBuffer = &(xPoints[0][0]);
+    const R* pPointsBuffer = &(pPoints[0][0]);
+    for( std::size_t i=0; i<nxPoints; ++i )
+        for( std::size_t j=0; j<npPoints; ++j )
+            resultsBuffer[i*npPoints+j] = 
+                xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
+                xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1];
+}
 
 int
 main

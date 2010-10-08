@@ -35,11 +35,11 @@ class AmplitudeFunctor
     bool _isUnity; 
                    
 public:
-    AmplitudeFunctor() : _isUnity(false) {}
-    AmplitudeFunctor( bool isUnity ) : _isUnity(isUnity) {}
-    virtual ~AmplitudeFunctor() {}
+    AmplitudeFunctor();
+    AmplitudeFunctor( bool isUnity );
+    virtual ~AmplitudeFunctor();
 
-    bool IsUnity() const { return _isUnity; }
+    bool IsUnity() const;
 
     // Point-wise evaluation of the amplitude function
     virtual std::complex<R> operator() 
@@ -51,25 +51,66 @@ public:
     virtual void BatchEvaluate
     ( const std::vector< Array<R,d>      >& x,
       const std::vector< Array<R,d>      >& p,
-            std::vector< std::complex<R> >& results ) const
-    {
-        results.resize( x.size()*p.size() );
-        for( std::size_t i=0; i<x.size(); ++i )
-            for( std::size_t j=0; j<p.size(); ++j )
-                results[i*p.size()+j] = (*this)(x[i],p[j]);
-    }
+            std::vector< std::complex<R> >& results ) const;
 };
 
 template<typename R,std::size_t d>
 class UnitAmplitude : public AmplitudeFunctor<R,d>
 {
 public:
-    UnitAmplitude() : AmplitudeFunctor<R,d>(true) {}
+    UnitAmplitude();
 
     virtual std::complex<R> operator()
-    ( const Array<R,d>& x, const Array<R,d>& p ) const
-    { return 1; }
+    ( const Array<R,d>& x, const Array<R,d>& p ) const;
 };
+
+// Implementations
+
+template<typename R,std::size_t d>
+AmplitudeFunctor<R,d>::AmplitudeFunctor() 
+: _isUnity(false) 
+{ }
+
+template<typename R,std::size_t d>
+inline
+AmplitudeFunctor<R,d>::AmplitudeFunctor( bool isUnity ) 
+: _isUnity(isUnity) 
+{ }
+
+template<typename R,std::size_t d>
+inline
+AmplitudeFunctor<R,d>::~AmplitudeFunctor() 
+{ }
+
+template<typename R,std::size_t d>
+inline bool 
+AmplitudeFunctor<R,d>::IsUnity() const 
+{ return _isUnity; }
+
+template<typename R,std::size_t d>
+void 
+AmplitudeFunctor<R,d>::BatchEvaluate
+( const std::vector< Array<R,d>      >& x,
+  const std::vector< Array<R,d>      >& p,
+        std::vector< std::complex<R> >& results ) const
+{
+    results.resize( x.size()*p.size() );
+    for( std::size_t i=0; i<x.size(); ++i )
+        for( std::size_t j=0; j<p.size(); ++j )
+            results[i*p.size()+j] = (*this)(x[i],p[j]);
+}
+
+template<typename R,std::size_t d>
+inline
+UnitAmplitude<R,d>::UnitAmplitude() 
+: AmplitudeFunctor<R,d>(true) 
+{ }
+
+template<typename R,std::size_t d>
+inline std::complex<R> 
+UnitAmplitude<R,d>::operator()
+( const Array<R,d>& x, const Array<R,d>& p ) const
+{ return 1; }
 
 } // bfio
 

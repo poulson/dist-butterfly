@@ -60,117 +60,39 @@ protected:
     virtual void GeneratePlan() = 0;
     
 public:        
-    Plan( MPI_Comm comm, std::size_t N ) 
-    : _comm(comm), _N(N)
-    { 
-        MPI_Comm_rank( comm, &_rank );
-        MPI_Comm_size( comm, &_numProcesses );
-        MPI_Comm_group( comm, &_group );
-
-        if( ! IsPowerOfTwo(N) )
-            throw std::runtime_error("Must use power of 2 problem size");
-        if( ! IsPowerOfTwo(_numProcesses) )
-            throw std::runtime_error("Must use power of 2 number of processes");
-        _log2N = Log2( N );
-        _log2NumProcesses = Log2( _numProcesses );
-        if( _log2NumProcesses > d*_log2N )
-            throw std::runtime_error("Cannot use more than N^d processes");
-
-        _clusterGroups.resize( _log2N );
-        _clusterComms.resize( _log2N );
-        _log2SubclusterSizes.resize( _log2N );
-        _sourceDimsToMerge.resize( _log2N );
-        _targetDimsToCut.resize( _log2N );
-        _rightSideOfCut.resize( _log2N );
-    }
-    
-    virtual ~Plan()
-    {
-        for( std::size_t level=1; level<=_log2N; ++level )
-        {
-            MPI_Comm_free( &_clusterComms[level-1] );
-            MPI_Group_free( &_clusterGroups[level-1] );
-        }
-        MPI_Group_free( &_group );
-    }
+    Plan( MPI_Comm comm, std::size_t N );
+    virtual ~Plan();
 
     virtual std::size_t 
     LocalToClusterSourceIndex
     ( std::size_t level, std::size_t cLocal ) const = 0;
 
-    inline MPI_Comm GetComm() const { return _comm; }
-
-    inline std::size_t GetN() const { return _N; }
-
-    template<typename R>
-    Box<R,d> GetMyInitialSourceBox( const Box<R,d>& sourceBox ) const
-    {
-        Box<R,d> myInitialSourceBox;
-        for( std::size_t j=0; j<d; ++j )
-        {
-            myInitialSourceBox.widths[j] = 
-                sourceBox.widths[j] / (1u<<_log2InitialSourceBoxesPerDim[j]);
-            myInitialSourceBox.offsets[j] = 
-                sourceBox.offsets[j] + 
-                _myInitialSourceBoxCoords[j]*myInitialSourceBox.widths[j];
-        }
-        return myInitialSourceBox;
-    }
+    MPI_Comm GetComm() const;
+    std::size_t GetN() const;
 
     template<typename R>
-    Box<R,d> GetMyFinalTargetBox( const Box<R,d>& targetBox ) const
-    {
-        Box<R,d> myFinalTargetBox;
-        for( std::size_t j=0; j<d; ++j )
-        {
-            myFinalTargetBox.widths[j] = 
-                targetBox.widths[j] / (1u<<_log2FinalTargetBoxesPerDim[j]);
-            myFinalTargetBox.offsets[j] = 
-                targetBox.offsets[j] + 
-                _myFinalTargetBoxCoords[j]*myFinalTargetBox.widths[j];
-        }
-        return myFinalTargetBox;
-    }
+    Box<R,d> GetMyInitialSourceBox( const Box<R,d>& sourceBox ) const;
 
-    inline const Array<std::size_t,d>& 
-    GetMyInitialSourceBoxCoords() const
-    { return _myInitialSourceBoxCoords; }
+    template<typename R>
+    Box<R,d> GetMyFinalTargetBox( const Box<R,d>& targetBox ) const;
 
-    inline const Array<std::size_t,d>& 
-    GetMyFinalTargetBoxCoords() const
-    { return _myFinalTargetBoxCoords; }
+    const Array<std::size_t,d>& GetMyInitialSourceBoxCoords() const;
+    const Array<std::size_t,d>& GetMyFinalTargetBoxCoords() const;
+    const Array<std::size_t,d>& GetLog2InitialSourceBoxesPerDim() const;
+    const Array<std::size_t,d>& GetLog2FinalTargetBoxesPerDim() const;
 
-    inline const Array<std::size_t,d>& 
-    GetLog2InitialSourceBoxesPerDim() const
-    { return _log2InitialSourceBoxesPerDim; }
+    MPI_Comm GetClusterComm( std::size_t level ) const;
+    std::size_t GetLog2SubclusterSize( std::size_t level ) const;
+    std::size_t GetLog2NumMergingProcesses( std::size_t level ) const;
 
-    inline const Array<std::size_t,d>& 
-    GetLog2FinalTargetBoxesPerDim() const
-    { return _log2FinalTargetBoxesPerDim; }
+    const std::vector<std::size_t>& 
+    GetSourceDimsToMerge( std::size_t level ) const;
 
-    inline MPI_Comm 
-    GetClusterComm( std::size_t level ) const
-    { return _clusterComms[level-1]; }
+    const std::vector<std::size_t>& 
+    GetTargetDimsToCut( std::size_t level ) const;
 
-    inline std::size_t 
-    GetLog2SubclusterSize( std::size_t level ) const
-    { return _log2SubclusterSizes[level-1]; }
-
-    inline std::size_t
-    GetLog2NumMergingProcesses( std::size_t level ) const
-    { return _sourceDimsToMerge[level-1].size(); }
-
-    inline const std::vector<std::size_t>&
-    GetSourceDimsToMerge( std::size_t level ) const
-    { return _sourceDimsToMerge[level-1]; }
-
-    inline const std::vector<std::size_t>& 
-    GetTargetDimsToCut( std::size_t level ) const
-    { return _targetDimsToCut[level-1]; }
-
-    inline const std::vector<bool>& 
-    GetRightSideOfCut( std::size_t level ) const
-    { return _rightSideOfCut[level-1]; }
+    const std::vector<bool>& 
+    GetRightSideOfCut( std::size_t level ) const;
 };
 
 template<std::size_t d>
@@ -201,6 +123,134 @@ public:
 };
 
 // Implementations
+    
+template<std::size_t d>
+Plan<d>::Plan( MPI_Comm comm, std::size_t N ) 
+: _comm(comm), _N(N)
+{ 
+    MPI_Comm_rank( comm, &_rank );
+    MPI_Comm_size( comm, &_numProcesses );
+    MPI_Comm_group( comm, &_group );
+
+    if( ! IsPowerOfTwo(N) )
+        throw std::runtime_error("Must use power of 2 problem size");
+    if( ! IsPowerOfTwo(_numProcesses) )
+        throw std::runtime_error("Must use power of 2 number of processes");
+    _log2N = Log2( N );
+    _log2NumProcesses = Log2( _numProcesses );
+    if( _log2NumProcesses > d*_log2N )
+        throw std::runtime_error("Cannot use more than N^d processes");
+
+    _clusterGroups.resize( _log2N );
+    _clusterComms.resize( _log2N );
+    _log2SubclusterSizes.resize( _log2N );
+    _sourceDimsToMerge.resize( _log2N );
+    _targetDimsToCut.resize( _log2N );
+    _rightSideOfCut.resize( _log2N );
+}
+
+template<std::size_t d>
+Plan<d>::~Plan()
+{
+    for( std::size_t level=1; level<=_log2N; ++level )
+    {
+        MPI_Comm_free( &_clusterComms[level-1] );
+        MPI_Group_free( &_clusterGroups[level-1] );
+    }
+    MPI_Group_free( &_group );
+}
+
+template<std::size_t d>
+inline MPI_Comm Plan<d>::GetComm() const 
+{ return _comm; }
+
+template<std::size_t d>
+inline std::size_t 
+Plan<d>::GetN() const 
+{ return _N; }
+
+template<std::size_t d> template<typename R>
+Box<R,d> 
+Plan<d>::GetMyInitialSourceBox( const Box<R,d>& sourceBox ) const
+{
+    Box<R,d> myInitialSourceBox;
+    for( std::size_t j=0; j<d; ++j )
+    {
+        myInitialSourceBox.widths[j] = 
+            sourceBox.widths[j] / (1u<<_log2InitialSourceBoxesPerDim[j]);
+        myInitialSourceBox.offsets[j] = 
+            sourceBox.offsets[j] + 
+            _myInitialSourceBoxCoords[j]*myInitialSourceBox.widths[j];
+    }
+    return myInitialSourceBox;
+}
+
+template<std::size_t d> template<typename R>
+Box<R,d> 
+Plan<d>::GetMyFinalTargetBox( const Box<R,d>& targetBox ) const
+{
+    Box<R,d> myFinalTargetBox;
+    for( std::size_t j=0; j<d; ++j )
+    {
+        myFinalTargetBox.widths[j] = 
+            targetBox.widths[j] / (1u<<_log2FinalTargetBoxesPerDim[j]);
+        myFinalTargetBox.offsets[j] = 
+            targetBox.offsets[j] + 
+            _myFinalTargetBoxCoords[j]*myFinalTargetBox.widths[j];
+    }
+    return myFinalTargetBox;
+}
+
+template<std::size_t d>
+inline const Array<std::size_t,d>& 
+Plan<d>::GetMyInitialSourceBoxCoords() const
+{ return _myInitialSourceBoxCoords; }
+
+template<std::size_t d>
+inline const Array<std::size_t,d>& 
+Plan<d>::GetMyFinalTargetBoxCoords() const
+{ return _myFinalTargetBoxCoords; }
+
+template<std::size_t d>
+inline const Array<std::size_t,d>& 
+Plan<d>::GetLog2InitialSourceBoxesPerDim() const
+{ return _log2InitialSourceBoxesPerDim; }
+
+template<std::size_t d>
+inline const Array<std::size_t,d>& 
+Plan<d>::GetLog2FinalTargetBoxesPerDim() const
+{ return _log2FinalTargetBoxesPerDim; }
+
+template<std::size_t d>
+inline MPI_Comm 
+Plan<d>::GetClusterComm( std::size_t level ) const
+{ return _clusterComms[level-1]; }
+
+template<std::size_t d>
+inline std::size_t 
+Plan<d>::GetLog2SubclusterSize( std::size_t level ) const
+{ return _log2SubclusterSizes[level-1]; }
+
+template<std::size_t d>
+inline std::size_t
+Plan<d>::GetLog2NumMergingProcesses( std::size_t level ) const
+{ return _sourceDimsToMerge[level-1].size(); }
+
+template<std::size_t d>
+inline const std::vector<std::size_t>&
+Plan<d>::GetSourceDimsToMerge( std::size_t level ) const
+{ return _sourceDimsToMerge[level-1]; }
+
+template<std::size_t d>
+inline const std::vector<std::size_t>& 
+Plan<d>::GetTargetDimsToCut( std::size_t level ) const
+{ return _targetDimsToCut[level-1]; }
+
+template<std::size_t d>
+inline const std::vector<bool>& 
+Plan<d>::GetRightSideOfCut( std::size_t level ) const
+{ return _rightSideOfCut[level-1]; }
+
 template<std::size_t d>
 ForwardPlan<d>::ForwardPlan
 ( MPI_Comm comm, std::size_t N )
