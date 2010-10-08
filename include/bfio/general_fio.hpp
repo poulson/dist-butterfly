@@ -36,28 +36,6 @@
 namespace bfio {
 namespace general_fio {
 
-namespace {
-inline void 
-ReportWithFlush( int rank, const std::string& msg )
-{
-#ifndef RELEASE
-    if( rank == 0 )
-    {
-        std::cout << msg;
-        std::cout.flush();
-    }
-#endif
-}
-inline void
-Report( int rank, const std::string& msg )
-{
-#ifndef RELEASE
-    if( rank == 0 )
-        std::cout << msg << std::endl;
-#endif
-}
-}
-
 template<typename R,std::size_t d,std::size_t q>
 std::auto_ptr< const general_fio::PotentialField<R,d,q> >
 transform
@@ -115,24 +93,20 @@ transform
 
     // Initialize the weights using Lagrangian interpolation on the 
     // smooth component of the kernel.
-    ReportWithFlush( rank, "  Initializing weights..." );
     WeightGridList<R,d,q> weightGridList( 1<<log2LocalSourceBoxes );
     general_fio::InitializeWeights<R,d,q>
     ( context, plan, Phi, sourceBox, targetBox, mySourceBox, 
       log2LocalSourceBoxes, log2LocalSourceBoxesPerDim, mySources, 
       weightGridList );
-    Report( rank, "done." );
 
     // Start the main recursion loop
     if( log2N == 0 || log2N == 1 )
     {
-        ReportWithFlush( rank, "  Switching to target interpolation..." );
         general_fio::SwitchToTargetInterp<R,d,q>
         ( context, plan, Amp, Phi, sourceBox, targetBox, mySourceBox, 
           myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
           log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
           weightGridList );
-        Report( rank, "done." );
     }
     for( std::size_t level=1; level<=log2N; ++level )
     {
@@ -195,12 +169,10 @@ transform
 
                     if( level <= log2N/2 )
                     {
-                        ReportWithFlush( rank, "  Source weight recursion..." );
                         general_fio::SourceWeightRecursion<R,d,q>
                         ( context, plan, Phi, level, x0A, p0B, wB, 
                           parentInteractionOffset, oldWeightGridList,
                           weightGridList[interactionIndex] );
-                        Report( rank, "done." );
                     }
                     else
                     {
@@ -216,13 +188,11 @@ transform
                                       (globalA[j]|1)*wA[j];
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
-                        ReportWithFlush( rank, "  Target weight recursion..." );
                         general_fio::TargetWeightRecursion<R,d,q>
                         ( context, plan, Phi, level,
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentInteractionOffset, oldWeightGridList, 
                           weightGridList[interactionIndex] );
-                        Report( rank, "done." );
                     }
                 }
             }
@@ -281,13 +251,10 @@ transform
                     ((targetIndex>>d)<<(d-log2NumMergingProcesses));
                 if( level <= log2N/2 )
                 {
-                    ReportWithFlush
-                    ( rank, "  Parallel source weight recursion..." );
                     general_fio::SourceWeightRecursion<R,d,q>
                     ( context, plan, Phi, level, x0A, p0B, wB,
                       parentInteractionOffset, weightGridList,
                       partialWeightGridList[targetIndex] );
-                    Report( rank, "done." );
                 }
                 else
                 {
@@ -302,14 +269,11 @@ transform
                         x0Ap[j] = targetBox.offsets[j] + (globalA[j]|1)*wA[j];
                         ARelativeToAp |= (globalA[j]&1)<<j;
                     }
-                    ReportWithFlush
-                    ( rank, "  Parallel target weight recursion..." );
                     general_fio::TargetWeightRecursion<R,d,q>
                     ( context, plan, Phi, level,
                       ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                       parentInteractionOffset, weightGridList, 
                       partialWeightGridList[targetIndex] );
-                    Report( rank, "done." );
                 }
             }
 
@@ -317,7 +281,6 @@ transform
             std::vector<int> recvCounts( numMergingProcesses );
             for( std::size_t j=0; j<numMergingProcesses; ++j )
                 recvCounts[j] = 2*weightGridList.Length()*q_to_d;
-            ReportWithFlush( rank, "  SumScatter..." );
             // Currently two types of planned communication are supported, as 
             // they are the only required types for transforming and inverting 
             // the transform:
@@ -371,7 +334,6 @@ transform
                 ( &sendBuffer[0], weightGridList.Buffer(), 
                   &recvCounts[0], clusterComm );
             }
-            Report( rank, "done." );
 
             const std::vector<std::size_t>& targetDimsToCut = 
                 plan.GetTargetDimsToCut( level );
@@ -393,24 +355,20 @@ transform
         }
         if( level==log2N/2 )
         {
-            ReportWithFlush( rank, "  Switching to target interpolation..." );
             general_fio::SwitchToTargetInterp<R,d,q>
             ( context, plan, Amp, Phi, sourceBox, targetBox, mySourceBox, 
               myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
               log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
               weightGridList );
-            Report( rank, "done." );
         }
     }
 
     // Construct the general FIO PotentialField
-    ReportWithFlush( rank, "  Constructing PotentialField..." );
     std::auto_ptr< const general_fio::PotentialField<R,d,q> > potentialField( 
         new general_fio::PotentialField<R,d,q>
             ( context, Phi, sourceBox, myTargetBox, log2LocalTargetBoxesPerDim,
               weightGridList )
     );
-    Report( rank, "done." );
 
     return potentialField;
 }
