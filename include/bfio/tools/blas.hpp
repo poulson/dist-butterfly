@@ -29,6 +29,13 @@
 namespace bfio {
 
 template<typename R>
+void Gemv
+( char transa, int m, int n,
+  R alpha, const R* A, int lda,
+           const R* x, int incx,
+  R beta,        R* y, int incy );
+
+template<typename R>
 void Gemm
 ( char transa, char transb, int m, int n, int k,
   R alpha, const R* A, int lda,
@@ -38,6 +45,20 @@ void Gemm
 } // bfio
 
 extern "C" {
+
+void C2F(sgemv)
+( const char* transa,
+  const int* m, const int* n,
+  const float* alpha, const float* A, const int* lda,
+                      const float* x, const int* incx,
+  const float* beta,        float* y, const int* incy );
+
+void C2F(dgemv)
+( const char* transa,
+  const int* m, const int* n,
+  const double* alpha, const double* A, const int* lda,
+                       const double* x, const int* incx,
+  const double* beta,        double* y, const int* incy );
 
 void C2F(sgemm)
 ( const char* transA, const char* transB,
@@ -57,6 +78,32 @@ void C2F(dgemm)
 
 // Implementations
 namespace bfio {
+
+template<>
+inline void
+Gemv<float>
+( char transa, int m, int n,
+  float alpha, const float* A, int lda,
+               const float* x, int incx,
+  float beta,        float* y, int incy )
+{
+    C2F(sgemv)
+    ( &transa, &m, &n,
+      &alpha, A, &lda, x, &incx, &beta, y, &incy );
+}
+
+template<>
+inline void
+Gemv<double>
+( char transa, int m, int n,
+  double alpha, const double* A, int lda,
+                const double* x, int incx,
+  double beta,        double* y, int incy )
+{
+    C2F(dgemv)
+    ( &transa, &m, &n,
+      &alpha, A, &lda, x, &incx, &beta, y, &incy );
+}
 
 template<>
 inline void

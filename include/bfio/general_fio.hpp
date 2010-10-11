@@ -94,7 +94,7 @@ transform
     // Initialize the weights using Lagrangian interpolation on the 
     // smooth component of the kernel.
     WeightGridList<R,d,q> weightGridList( 1<<log2LocalSourceBoxes );
-    general_fio::InitializeWeights<R,d,q>
+    general_fio::InitializeWeights
     ( context, plan, Phi, sourceBox, targetBox, mySourceBox, 
       log2LocalSourceBoxes, log2LocalSourceBoxesPerDim, mySources, 
       weightGridList );
@@ -102,7 +102,7 @@ transform
     // Start the main recursion loop
     if( log2N == 0 || log2N == 1 )
     {
-        general_fio::SwitchToTargetInterp<R,d,q>
+        general_fio::SwitchToTargetInterp
         ( context, plan, Amp, Phi, sourceBox, targetBox, mySourceBox, 
           myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
           log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
@@ -169,7 +169,7 @@ transform
 
                     if( level <= log2N/2 )
                     {
-                        general_fio::SourceWeightRecursion<R,d,q>
+                        general_fio::SourceWeightRecursion
                         ( context, plan, Phi, level, x0A, p0B, wB, 
                           parentInteractionOffset, oldWeightGridList,
                           weightGridList[interactionIndex] );
@@ -188,7 +188,7 @@ transform
                                       (globalA[j]|1)*wA[j];
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
-                        general_fio::TargetWeightRecursion<R,d,q>
+                        general_fio::TargetWeightRecursion
                         ( context, plan, Phi, level,
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentInteractionOffset, oldWeightGridList, 
@@ -251,7 +251,7 @@ transform
                     ((targetIndex>>d)<<(d-log2NumMergingProcesses));
                 if( level <= log2N/2 )
                 {
-                    general_fio::SourceWeightRecursion<R,d,q>
+                    general_fio::SourceWeightRecursion
                     ( context, plan, Phi, level, x0A, p0B, wB,
                       parentInteractionOffset, weightGridList,
                       partialWeightGridList[targetIndex] );
@@ -269,7 +269,7 @@ transform
                         x0Ap[j] = targetBox.offsets[j] + (globalA[j]|1)*wA[j];
                         ARelativeToAp |= (globalA[j]&1)<<j;
                     }
-                    general_fio::TargetWeightRecursion<R,d,q>
+                    general_fio::TargetWeightRecursion
                     ( context, plan, Phi, level,
                       ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                       parentInteractionOffset, weightGridList, 
@@ -355,7 +355,7 @@ transform
         }
         if( level==log2N/2 )
         {
-            general_fio::SwitchToTargetInterp<R,d,q>
+            general_fio::SwitchToTargetInterp
             ( context, plan, Amp, Phi, sourceBox, targetBox, mySourceBox, 
               myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
               log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,

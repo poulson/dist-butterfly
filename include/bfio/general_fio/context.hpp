@@ -30,20 +30,23 @@ template<typename R,std::size_t d,std::size_t q>
 class Context
 {
     Array<R,q> _chebyshevNodes;
+    std::vector<R> _leftChebyshevMap;
+    std::vector<R> _rightChebyshevMap;
     std::vector< Array<std::size_t,d> > _chebyshevIndices;
     std::vector< Array<R,d> > _chebyshevGrid;
-    std::vector<R> _sourceMaps;
-    std::vector<R> _targetMaps;
     std::vector< Array<R,d> > _sourceChildGrids;
 
     void GenerateChebyshevNodes();
     void GenerateChebyshevIndices();
     void GenerateChebyshevGrid();
-    void GenerateSourceMapsAndChildGrids();
-    void GenerateTargetMaps();
+    void GenerateChebyshevMaps();
+    void GenerateChildGrids();
     
 public:        
     Context();
+
+    // Evaluate a 1d Lagrangian basis function at point p in [-1/2,+1/2]
+    R Lagrange1d( std::size_t i, R p ) const;
 
     // Evaluate the t'th Lagrangian basis function at point p in [-1/2,+1/2]^d
     R Lagrange( std::size_t t, const Array<R,d>& p ) const;
@@ -63,10 +66,10 @@ public:
     GetChebyshevGrid() const;
 
     const std::vector<R>&
-    GetSourceMaps() const;
+    GetLeftChebyshevMap() const;
 
     const std::vector<R>&
-    GetTargetMaps() const;
+    GetRightChebyshevMap() const;
 
     const std::vector< Array<R,d> >&
     GetSourceChildGrids() const;
@@ -119,11 +122,25 @@ Context<R,d,q>::GenerateChebyshevGrid()
 }
 
 template<typename R,std::size_t d,std::size_t q>
+void
+Context<R,d,q>::GenerateChebyshevMaps()
+{
+    // Create 1d Lagrangian evaluation maps being left and right of the center
+    for( std::size_t i=0; i<q; ++i )
+        for( std::size_t k=0; k<q; ++k )
+            _leftChebyshevMap[k*q+i] = 
+                Lagrange1d( i, (2*_chebyshevNodes[k]-1)/4 );
+    for( std::size_t i=0; i<q; ++i )
+        for( std::size_t k=0; k<q; ++k )
+            _rightChebyshevMap[k*q+i] = 
+                Lagrange1d( i, (2*_chebyshevNodes[k]+1)/4 );
+}
+
+template<typename R,std::size_t d,std::size_t q>
 void 
-Context<R,d,q>::GenerateSourceMapsAndChildGrids()
+Context<R,d,q>::GenerateChildGrids()
 {
     const std::size_t q_to_d = _chebyshevGrid.size();
-    const std::size_t q_to_2d = q_to_d * q_to_d;
 
     for( std::size_t c=0; c<(1u<<d); ++c )
     {
@@ -139,62 +156,40 @@ Context<R,d,q>::GenerateSourceMapsAndChildGrids()
             }
         }
     }
-
-    // Store all of the Lagrangian evaluations on p_t'(Bc)'s
-    for( std::size_t c=0; c<(1u<<d); ++c )
-    {
-        for( std::size_t t=0; t<q_to_d; ++t )
-        {
-            for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
-            {
-                _sourceMaps[c*q_to_2d+tPrime*q_to_d+t] = 
-                    Lagrange( t, _sourceChildGrids[c*q_to_d+tPrime] ); 
-            }
-        }
-    }
-}
-
-template<typename R,std::size_t d,std::size_t q>
-void 
-Context<R,d,q>::GenerateTargetMaps()
-{
-    const std::size_t q_to_d = _chebyshevGrid.size();
-    const std::size_t q_to_2d = q_to_d * q_to_d;
-    for( std::size_t p=0; p<(1u<<d); ++p )
-    {
-        for( std::size_t t=0; t<q_to_d; ++t )
-        {
-            // Map x_t(A) to the reference domain ([-1/2,+1/2]^d) of its parent.
-            Array<R,d> xtARefAp;
-            for( std::size_t j=0; j<d; ++j )
-            {
-                xtARefAp[j] = 
-                    ( (p>>j)&1 ? (2*_chebyshevGrid[t][j]+1)/4 
-                               : (2*_chebyshevGrid[t][j]-1)/4 ); 
-            }
-
-            for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
-            {
-                _targetMaps[p*q_to_2d + t+tPrime*q_to_d] = 
-                    Lagrange( tPrime, xtARefAp );
-            }
-        }
-    }
 }
 
 template<typename R,std::size_t d,std::size_t q>
 Context<R,d,q>::Context() 
-: _chebyshevIndices(Pow<q,d>::val), 
-  _chebyshevGrid(Pow<q,d>::val),
-  _sourceMaps( Pow<q,2*d>::val<<d ),
-  _targetMaps( Pow<q,2*d>::val<<d ),
+: _leftChebyshevMap( q*q ),
+  _rightChebyshevMap( q*q ),
+  _chebyshevIndices( Pow<q,d>::val ), 
+  _chebyshevGrid( Pow<q,d>::val ),
   _sourceChildGrids( Pow<q,d>::val<<d )
 {
     GenerateChebyshevNodes();
     GenerateChebyshevIndices();
     GenerateChebyshevGrid();
-    GenerateSourceMapsAndChildGrids();
-    GenerateTargetMaps();
+    GenerateChebyshevMaps();
+    GenerateChildGrids();
+}
+
+template<typename R,std::size_t d,std::size_t q>
+R
+Context<R,d,q>::Lagrange1d
+( std::size_t i, R p ) const
+{
+    R product = static_cast<R>(1);
+    const R* chebyshevNodeBuffer = &_chebyshevNodes[0];
+    for( std::size_t k=0; k<q; ++k )
+    {
+        if( i != k )
+        {
+            const R iNode = chebyshevNodeBuffer[i];
+            const R kNode = chebyshevNodeBuffer[k];
+            product *= (p-kNode) / (iNode-kNode);
+        }
+    }
+    return product;
 }
 
 template<typename R,std::size_t d,std::size_t q>
@@ -271,14 +266,14 @@ Context<R,d,q>::GetChebyshevGrid() const
 { return _chebyshevGrid; }
 
 template<typename R,std::size_t d,std::size_t q>
-inline const std::vector<R>&
-Context<R,d,q>::GetSourceMaps() const
-{ return _sourceMaps; }
+inline const std::vector<R>& 
+Context<R,d,q>::GetLeftChebyshevMap() const
+{ return _leftChebyshevMap; }
 
 template<typename R,std::size_t d,std::size_t q>
-inline const std::vector<R>&
-Context<R,d,q>::GetTargetMaps() const
-{ return _targetMaps; }
+inline const std::vector<R>& 
+Context<R,d,q>::GetRightChebyshevMap() const
+{ return _rightChebyshevMap; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const std::vector< Array<R,d> >&

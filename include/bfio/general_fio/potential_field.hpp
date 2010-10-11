@@ -138,6 +138,7 @@ PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 {
     typedef std::complex<R> C;
 
+#ifndef RELEASE
     for( std::size_t j=0; j<d; ++j )
     {
         if( x[j] < _targetBox.offsets[j] || 
@@ -147,6 +148,7 @@ PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
                   ( "Tried to evaluate outside of potential range." );
         }
     }
+#endif
 
     // Compute the lexographic index of the LRP to use for evaluation
     std::size_t k = 0;
