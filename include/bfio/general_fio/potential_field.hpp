@@ -35,8 +35,8 @@
 #include "bfio/tools/special_functions.hpp"
 
 namespace bfio {
-namespace general_fio {
 
+namespace general_fio {
 template<typename R,std::size_t d,std::size_t q>
 struct LRP
 {
@@ -76,11 +76,12 @@ public:
     const Array<std::size_t,d>& GetLog2SubboxesPerDim() const;
     const Array<std::size_t,d>& GetLog2SubboxesUpToDim() const;
 };
+} // general_fio
 
 // Implementations
 
 template<typename R,std::size_t d,std::size_t q>
-PotentialField<R,d,q>::PotentialField
+general_fio::PotentialField<R,d,q>::PotentialField
 ( const general_fio::Context<R,d,q>& context,
   const PhaseFunctor<R,d>& Phi,
   const Box<R,d>& sourceBox,
@@ -134,7 +135,7 @@ PotentialField<R,d,q>::PotentialField
 
 template<typename R,std::size_t d,std::size_t q>
 std::complex<R>
-PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
+general_fio::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 {
     typedef std::complex<R> C;
 
@@ -184,37 +185,36 @@ PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
         imagValue += lambda*(imagWeight*real(beta)+realWeight*imag(beta));
     }
     const C beta = ImagExp<R>( TwoPi*_Phi(x,_p0) );
-    realValue = realValue*real(beta)-imagValue*imag(beta);
-    imagValue = imagValue*real(beta)+realValue*imag(beta);
-    return C( realValue, imagValue );
+    const R realAnswer = realValue*real(beta)-imagValue*imag(beta);
+    const R imagAnswer = imagValue*real(beta)+realValue*imag(beta);
+    return C( realAnswer, imagAnswer );
 }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Box<R,d>&
-PotentialField<R,d,q>::GetBox() const
+general_fio::PotentialField<R,d,q>::GetBox() const
 { return _targetBox; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline std::size_t
-PotentialField<R,d,q>::GetNumSubboxes() const
+general_fio::PotentialField<R,d,q>::GetNumSubboxes() const
 { return _LRPs.size(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<R,d>&
-PotentialField<R,d,q>::GetSubboxWidths() const
+general_fio::PotentialField<R,d,q>::GetSubboxWidths() const
 { return _wA; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
-PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
+general_fio::PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
 { return _log2TargetSubboxesPerDim; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
-PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
+general_fio::PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
 { return _log2TargetSubboxesUpToDim; }
 
-} // general_fio
 } // bfio
 
 #endif // BFIO_GENERAL_FIO_POTENTIAL_FIELD_HPP

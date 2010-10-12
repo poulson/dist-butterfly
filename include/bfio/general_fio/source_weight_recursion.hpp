@@ -425,8 +425,12 @@ SourceWeightRecursion
         // q^(d-2) gemms on right-hand sides of size q x q for both the real 
         // and imaginary buffers.
         {
-            R* realWriteBuffer = scaledWeightGrid.RealBuffer();
-            R* imagWriteBuffer = scaledWeightGrid.ImagBuffer();
+            R* realWriteBuffer = 
+                ( d==2 ? weightGrid.RealBuffer()
+                       : scaledWeightGrid.RealBuffer() );
+            R* imagWriteBuffer = 
+                ( d==2 ? weightGrid.ImagBuffer()
+                       : scaledWeightGrid.ImagBuffer() );
             const R* realReadBuffer = tempWeightGrid.RealBuffer();
             const R* imagReadBuffer = tempWeightGrid.ImagBuffer();
             const R* mapBuffer = ( (c>>1)&1 ? &rightMap[0] : &leftMap[0] );

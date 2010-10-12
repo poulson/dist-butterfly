@@ -1,0 +1,119 @@
+/*
+   ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
+   Copyright (C) 2010 Jack Poulson <jack.poulson@gmail.com>
+ 
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+ 
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+#ifndef BFIO_NUFT_CONTEXT_HPP
+#define BFIO_NUFT_CONTEXT_HPP 1
+
+#include "bfio/general_fio/context.hpp"
+
+namespace bfio {
+
+namespace nuft {
+template<typename R,std::size_t d,std::size_t q>
+class Context
+{
+    const general_fio::Context<R,d,q>& _generalContext;
+
+    Array< std::vector<R>, d > _realOffsetEvaluations;
+    Array< std::vector<R>, d > _imagOffsetEvaluations;
+
+public:        
+    Context
+    ( const std::size_t N,
+      const Box<R,d>& sourceBox,
+      const Box<R,d>& targetBox );
+
+    Context
+    ( const general_fio::Context<R,d,q>& generalContext,
+      const std::size_t N,
+      const Box<R,d>& sourceBox,
+      const Box<R,d>& targetBox );
+
+    const general_fio::Context<R,d,q>&
+    GetGeneralContext() const;
+
+    const Array< std::vector<R>, d >&
+    GetRealOffsetEvaluations() const;
+
+    const Array< std::vector<R>, d >&
+    GetImagOffsetEvaluations() const;
+};
+} // nuft
+
+// Implementations
+
+template<typename R,std::size_t d,std::size_t q>
+nuft::Context<R,d,q>::GenerateOffsetEvaluations()
+{
+    const std::size_t log2N = Log2( N );
+    const std::size_t middleLevel = log2N/2;
+
+    Array<R,d> wAMiddle, wBMiddle;
+    for( std::size_t j=0; j<d; ++j )
+    {
+        wAMiddle[j] = targetBox.widths[j] / (1<<middleLevel);
+        wBMiddle[j] = sourceBox.widths[j] / (1<<(log2N-middleLevel));
+    }
+
+    // Form the offset grid evaluations
+    std::vector<R> phaseEvaluations(q*q);
+    const std::vector<R> chebyshevNodes = _generalContext.GetChebyshevNodes();
+    const R* chebyshevBuffer = &chebyshevNodes[0];
+    for( std::size_t j=0; j<d; ++j )
+    {
+        for( std::size_t t=0; t<q; ++t )
+            for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                _phaseEvaluations(t*q+tPrime) =
+                    TwoPi*wAMiddle[j]*wBMiddle[j]*
+                    chebyshevBuffer[t]*chebyshevBuffer[tPrime];
+        SinCosBatch
+        ( phaseEvaluations, 
+          _imagOffsetEvaluations[j], _realOffsetEvaluations[j] );
+    }
+}
+
+template<typename R,std::size_t d,std::size_t q>
+nuft::Context<R,d,q>::Context
+( std::size_t N, const Box<R,d>& sourceBox, const Box<R,d>& targetBox ) 
+: _generalContext()
+{ GenerateOffsetEvaluations(); }
+
+template<typename R,std::size_t d,std::size_t q>
+nuft::Context<R,d,q>::Context
+( const general_fio::Context<R,d,q>& generalContext )
+: _generalContext(generalContext)
+{ GenerateOffsetEvaluations(); }
+
+template<typename R,std::size_t d,std::size_t q>
+const general_fio::Context<R,d,q>&
+nuft::Context<R,d,q>::GetGeneralContext() const
+{ return _generalContext; }
+
+template<typename R,std::size_t d,std::size_t q>
+const Array< std::vector<R>, d >&
+nuft::Context<R,d,q>::GetRealOffsetEvaluations() const
+{ return _realOffsetEvaluations; }
+
+template<typename R,std::size_t d,std::size_t q>
+const Array< std::vector<R>, d >&
+nuft::Context<R,d,q>::GetImagOffsetEvaluations() const
+{ return _imagOffsetEvaluations; }
+
+} // bfio
+
+#endif // BFIO_NUFT_CONTEXT_HPP
+

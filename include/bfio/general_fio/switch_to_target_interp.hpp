@@ -49,8 +49,7 @@ SwitchToTargetInterp
   const std::size_t log2LocalTargetBoxes,
   const Array<std::size_t,d>& log2LocalSourceBoxesPerDim,
   const Array<std::size_t,d>& log2LocalTargetBoxesPerDim,
-        WeightGridList<R,d,q>& weightGridList
-)
+        WeightGridList<R,d,q>& weightGridList )
 {
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
@@ -66,10 +65,11 @@ SwitchToTargetInterp
         wB[j] = sourceBox.widths[j] / (1<<(log2N-level));
     }
 
+    std::vector<R> oldRealWeights( q_to_d );
+    std::vector<R> oldImagWeights( q_to_d );
     const bool unitAmplitude = Amp.IsUnity();
     const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
-    WeightGridList<R,d,q> oldWeightGridList( weightGridList );
     for( std::size_t i=0; i<(1u<<log2LocalTargetBoxes); ++i, AWalker.Walk() )
     {
         const Array<std::size_t,d> A = AWalker.State();
@@ -128,12 +128,17 @@ SwitchToTargetInterp
             SinCosBatch( phiResults, sinResults, cosResults );
             const std::size_t key = k+(i<<log2LocalSourceBoxes);
 
+            std::memcpy
+            ( &oldRealWeights[0], weightGridList[key].RealBuffer(), 
+              q_to_d*sizeof(R) );
+            std::memcpy
+            ( &oldImagWeights[0], weightGridList[key].ImagBuffer(),
+              q_to_d*sizeof(R) );
             std::memset( weightGridList[key].Buffer(), 0, 2*q_to_d*sizeof(R) );
             R* realBuffer = weightGridList[key].RealBuffer();
             R* imagBuffer = weightGridList[key].ImagBuffer();
-            const WeightGrid<R,d,q>& oldGrid = oldWeightGridList[key];
-            const R* oldRealBuffer = oldGrid.RealBuffer();
-            const R* oldImagBuffer = oldGrid.ImagBuffer();
+            const R* oldRealBuffer = &oldRealWeights[0];
+            const R* oldImagBuffer = &oldImagWeights[0];
             const R* cosBuffer = &cosResults[0];
             const R* sinBuffer = &sinResults[0];
             if( unitAmplitude )
