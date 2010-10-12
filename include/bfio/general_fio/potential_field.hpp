@@ -184,9 +184,9 @@ PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
         imagValue += lambda*(imagWeight*real(beta)+realWeight*imag(beta));
     }
     const C beta = ImagExp<R>( TwoPi*_Phi(x,_p0) );
-    realValue = realValue*real(beta)-imagValue*imag(beta);
-    imagValue = imagValue*real(beta)+realValue*imag(beta);
-    return C( realValue, imagValue );
+    const R realAnswer = realValue*real(beta)-imagValue*imag(beta);
+    const R imagAnswer = imagValue*real(beta)+realValue*imag(beta);
+    return C( realAnswer, imagAnswer );
 }
 
 template<typename R,std::size_t d,std::size_t q>

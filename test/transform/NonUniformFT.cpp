@@ -125,6 +125,7 @@ main
     const bool visualize = atoi(argv[4]);
 
     const std::size_t log2N = bfio::Log2( N );
+    std::cout << "N: " << N << ", log2N: " << log2N << std::endl;
     const std::size_t log2NumProcesses = bfio::Log2( numProcesses );
     if( log2NumProcesses > d*log2N )
     {

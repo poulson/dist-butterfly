@@ -49,8 +49,7 @@ SwitchToTargetInterp
   const std::size_t log2LocalTargetBoxes,
   const Array<std::size_t,d>& log2LocalSourceBoxesPerDim,
   const Array<std::size_t,d>& log2LocalTargetBoxesPerDim,
-        WeightGridList<R,d,q>& weightGridList
-)
+        WeightGridList<R,d,q>& weightGridList )
 {
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
