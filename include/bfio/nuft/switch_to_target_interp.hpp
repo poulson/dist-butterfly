@@ -228,8 +228,6 @@ SwitchToTargetInterp
   const Array<std::size_t,2>& log2LocalTargetBoxesPerDim,
         WeightGridList<R,2,q>& weightGridList )
 {
-    std::cout << "Switching to target interp...";
-    std::cout.flush();
     typedef std::complex<R> C;
     const std::size_t d = 2;
     const std::size_t q_to_d = Pow<q,d>::val;
@@ -470,7 +468,6 @@ SwitchToTargetInterp
             }
         }
     }
-    std::cout << "done." << std::endl;
 }
 
 // Fallback for 3d and above
