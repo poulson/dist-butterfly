@@ -26,7 +26,7 @@
 #include "bfio/tools.hpp"
 
 #include "bfio/nuft/context.hpp"
-#include "bfio/nuft/phase_function.hpp"
+#include "bfio/nuft/dot_product.hpp"
 #include "bfio/nuft/potential_field.hpp"
 
 #include "bfio/general_fio/initialize_weights.hpp"
@@ -36,12 +36,11 @@
 #include "bfio/nuft/switch_to_target_interp.hpp"
 
 namespace bfio {
-namespace nuft {
 
 template<typename R,std::size_t d,std::size_t q>
 std::auto_ptr< const nuft::PotentialField<R,d,q> >
 NUFT
-( const nuft::Context<R,d,q>& context,
+( const nuft::Context<R,d,q>& nuftContext,
   const Plan<d>& plan,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
@@ -49,7 +48,9 @@ NUFT
 {
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
-    const nuft::DotProduct dotProduct;
+    const nuft::DotProduct<R,d> dotProduct;
+    const general_fio::Context<R,d,q>& generalContext = 
+        nuftContext.GetGeneralContext();
 
     // Extract our communicator and its size
     MPI_Comm comm = plan.GetComm();
@@ -96,7 +97,7 @@ NUFT
     // smooth component of the kernel.
     WeightGridList<R,d,q> weightGridList( 1<<log2LocalSourceBoxes );
     general_fio::InitializeWeights
-    ( context, plan, dotProduct, sourceBox, targetBox, mySourceBox, 
+    ( generalContext, plan, dotProduct, sourceBox, targetBox, mySourceBox, 
       log2LocalSourceBoxes, log2LocalSourceBoxesPerDim, mySources, 
       weightGridList );
 
@@ -104,7 +105,7 @@ NUFT
     if( log2N == 0 || log2N == 1 )
     {
         nuft::SwitchToTargetInterp
-        ( context, plan, sourceBox, targetBox, mySourceBox, 
+        ( nuftContext, plan, sourceBox, targetBox, mySourceBox, 
           myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
           log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
           weightGridList );
@@ -171,7 +172,7 @@ NUFT
                     if( level <= log2N/2 )
                     {
                         general_fio::SourceWeightRecursion
-                        ( context, plan, dotProduct, level, x0A, p0B, wB, 
+                        ( generalContext, plan, dotProduct, level, x0A, p0B, wB,
                           parentInteractionOffset, oldWeightGridList,
                           weightGridList[interactionIndex] );
                     }
@@ -190,7 +191,7 @@ NUFT
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
                         general_fio::TargetWeightRecursion
-                        ( context, plan, dotProduct, level,
+                        ( generalContext, plan, dotProduct, level,
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentInteractionOffset, oldWeightGridList, 
                           weightGridList[interactionIndex] );
@@ -253,7 +254,7 @@ NUFT
                 if( level <= log2N/2 )
                 {
                     general_fio::SourceWeightRecursion
-                    ( context, plan, dotProduct, level, x0A, p0B, wB,
+                    ( generalContext, plan, dotProduct, level, x0A, p0B, wB,
                       parentInteractionOffset, weightGridList,
                       partialWeightGridList[targetIndex] );
                 }
@@ -271,7 +272,7 @@ NUFT
                         ARelativeToAp |= (globalA[j]&1)<<j;
                     }
                     general_fio::TargetWeightRecursion
-                    ( context, plan, dotProduct, level,
+                    ( generalContext, plan, dotProduct, level,
                       ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                       parentInteractionOffset, weightGridList, 
                       partialWeightGridList[targetIndex] );
@@ -357,7 +358,7 @@ NUFT
         if( level==log2N/2 )
         {
             nuft::SwitchToTargetInterp
-            ( context, plan, sourceBox, targetBox, mySourceBox, 
+            ( nuftContext, plan, sourceBox, targetBox, mySourceBox, 
               myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
               log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
               weightGridList );
@@ -367,14 +368,13 @@ NUFT
     // Construct the general FIO PotentialField
     std::auto_ptr< const nuft::PotentialField<R,d,q> > potentialField( 
         new nuft::PotentialField<R,d,q>
-            ( context, sourceBox, myTargetBox, log2LocalTargetBoxesPerDim,
+            ( nuftContext, sourceBox, myTargetBox, log2LocalTargetBoxesPerDim,
               weightGridList )
     );
 
     return potentialField;
 }
 
-} // general_fio
 } // bfio
 
 #endif // BFIO_GENERAL_FIO_HPP

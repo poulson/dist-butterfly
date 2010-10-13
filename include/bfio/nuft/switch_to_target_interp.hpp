@@ -39,7 +39,7 @@ namespace nuft {
 template<typename R,std::size_t q>
 void
 SwitchToTargetInterp
-( const nuft::Context<R,1,q>& context,
+( const nuft::Context<R,1,q>& nuftContext,
   const Plan<1>& plan,
   const Box<R,1>& sourceBox,
   const Box<R,1>& targetBox,
@@ -53,6 +53,8 @@ SwitchToTargetInterp
 { 
     typedef std::complex<R> C;
     const std::size_t d = 1;
+    const general_fio::Context<R,1,q>& generalContext =
+        nuftContext.GetGeneralContext();
 
     // Compute the width of the nodes at level log2N/2
     const std::size_t N = plan.GetN();
@@ -64,9 +66,9 @@ SwitchToTargetInterp
 
     // Get the precomputed grid offset evaluations, exp( TwoPi i (dx,dp) )
     const Array< std::vector<R>, d >& realOffsetEvals = 
-        context.GetRealOffsetEvaluations();
+        nuftContext.GetRealOffsetEvaluations();
     const Array< std::vector<R>, d >& imagOffsetEvals = 
-        context.GetImagOffsetEvaluations();
+        nuftContext.GetImagOffsetEvaluations();
 
     // Create space for holding the mixed offset evaluations, i.e., 
     // exp( TwoPi i (x0,dp) ) and exp( TwoPi i (dx,p0) )
@@ -88,7 +90,7 @@ SwitchToTargetInterp
     std::vector<R> realTempWeights( q );
     std::vector<R> imagTempWeights( q );
 
-    const std::vector<R>& chebyshevNodes = context.GetChebyshevNodes();
+    const std::vector<R>& chebyshevNodes = generalContext.GetChebyshevNodes();
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
     for( std::size_t i=0; i<(1u<<log2LocalTargetBoxes); ++i, AWalker.Walk() )
     {
@@ -141,39 +143,40 @@ SwitchToTargetInterp
             {
                 R* realBuffer = &realOldWeights[0];
                 R* imagBuffer = &imagOldWeights[0];
-                const R* realScalingBuffer = &(realFixedTargetEvals[0][0]);
-                const R* imagScalingBuffer = &(imagFixedTargetEvals[0][0]);
-                for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                const R* realScalingBuffer = &realFixedTargetEvals[0][0];
+                const R* imagScalingBuffer = &imagFixedTargetEvals[0][0];
+                for( std::size_t t=0; t<q; ++t )
                 {
-                    const R realWeight = realBuffer[tPrime];
-                    const R imagWeight = imagBuffer[tPrime];
-                    const R realScaling = realScalingBuffer[tPrime];
-                    const R imagScaling = imagScalingBuffer[tPrime];
-                    realBuffer[tPrime] = 
+                    const R realWeight = realBuffer[t];
+                    const R imagWeight = imagBuffer[t];
+                    const R realScaling = realScalingBuffer[t];
+                    const R imagScaling = imagScalingBuffer[t];
+                    realBuffer[t] = 
                         realWeight*realScaling - imagWeight*imagScaling;
-                    imagOldBuffer[tPrime] = 
+                    imagBuffer[t] = 
                         imagWeight*realScaling + realWeight*imagScaling;
                 }
             }
             // Form real part
+            // TODO: Replace with Gemv's
             Gemm
-            ( 'N', 'N', q, 2, q,
+            ( 'N', 'N', q, 1, q,
               (R)1, &realOffsetEvals[0][0], q,
                     &realOldWeights[0],     q,
               (R)0, &realTempWeights[0],    q );
             Gemm
-            ( 'N', 'N', q, 2, q,
+            ( 'N', 'N', q, 1, q,
               (R)-1, &imagOffsetEvals[0][0], q,
                      &imagOldWeights[0],     q,
               (R)+1, &realTempWeights[0],    q );
             // Form imaginary part
             Gemm
-            ( 'N', 'N', q, 2, q,
+            ( 'N', 'N', q, 1, q,
               (R)1, &realOffsetEvals[0][0], q,
                     &imagOldWeights[0],     q,
               (R)0, &imagTempWeights[0],    q );
             Gemm
-            ( 'N', 'N', q, 2, q,
+            ( 'N', 'N', q, 1, q,
               (R)-1, &imagOffsetEvals[0][0], q,
                      &realOldWeights[0],     q,
               (R)+1, &imagTempWeights[0],    q );
@@ -183,29 +186,27 @@ SwitchToTargetInterp
             R phase = TwoPi*x0A[0]*p0B[0];
             const R realPhase = cos(phase);
             const R imagPhase = sin(phase);
+            std::vector<R> realScalings( q );
+            std::vector<R> imagScalings( q );
             for( std::size_t t=0; t<q; ++t )
             {
-                const R realTerm = realFixedSourceEvals[0][t];
-                const R imagTerm = imagFixedSourceEvals[0][t];
-                realFixedSourceEvals[0][t] = 
-                    realTerm*realPhase - imagTerm*imagPhase;
-                imagFixedSourceEvals[0][t] = 
-                    imagTerm*realPhase + realTerm*imagPhase;
+                const R realTerm = realFixedSourceEvals[k][0][t];
+                const R imagTerm = imagFixedSourceEvals[k][0][t];
+                realScalings[t] = realTerm*realPhase - imagTerm*imagPhase;
+                imagScalings[t] = imagTerm*realPhase + realTerm*imagPhase;
             }
             R* realBuffer = weightGridList[key].RealBuffer();
             R* imagBuffer = weightGridList[key].ImagBuffer();
-            const R* realScalingBuffer = &(realFixedSourceEvals[0][0]);
-            const R* imagScalingBuffer = &(imagFixedSourceEvals[0][0]);
+            const R* realScalingBuffer = &realScalings[0];
+            const R* imagScalingBuffer = &imagScalings[0];
             for( std::size_t t=0; t<q; ++t )
             {
-                const R realWeight = offsetRealBuffer[t];
-                const R imagWeight = offsetImagBuffer[t];
+                const R realWeight = realBuffer[t];
+                const R imagWeight = imagBuffer[t];
                 const R realScaling = realScalingBuffer[t];
                 const R imagScaling = imagScalingBuffer[t];
-                offsetRealBuffer[t] = 
-                    realWeight*realScaling - imagWeight*imagScaling;
-                offsetImagBuffer[t] = 
-                    imagWeight*realScaling + realWeight*imagScaling;
+                realBuffer[t] = realWeight*realScaling - imagWeight*imagScaling;
+                imagBuffer[t] = imagWeight*realScaling + realWeight*imagScaling;
             }
         }
     }
@@ -215,7 +216,7 @@ SwitchToTargetInterp
 template<typename R,std::size_t q>
 void
 SwitchToTargetInterp
-( const nuft::Context<R,2,q>& context,
+( const nuft::Context<R,2,q>& nuftContext,
   const Plan<2>& plan,
   const Box<R,2>& sourceBox,
   const Box<R,2>& targetBox,
@@ -227,9 +228,13 @@ SwitchToTargetInterp
   const Array<std::size_t,2>& log2LocalTargetBoxesPerDim,
         WeightGridList<R,2,q>& weightGridList )
 {
+    std::cout << "Switching to target interp...";
+    std::cout.flush();
     typedef std::complex<R> C;
     const std::size_t d = 2;
     const std::size_t q_to_d = Pow<q,d>::val;
+    const general_fio::Context<R,2,q>& generalContext = 
+        nuftContext.GetGeneralContext();
 
     // Compute the width of the nodes at level log2N/2
     const std::size_t N = plan.GetN();
@@ -244,9 +249,9 @@ SwitchToTargetInterp
 
     // Get the precomputed grid offset evaluations, exp( TwoPi i (dx,dp) )
     const Array< std::vector<R>, d >& realOffsetEvals = 
-        context.GetRealOffsetEvaluations();
+        nuftContext.GetRealOffsetEvaluations();
     const Array< std::vector<R>, d >& imagOffsetEvals = 
-        context.GetImagOffsetEvaluations();
+        nuftContext.GetImagOffsetEvaluations();
 
     // Create space for holding the mixed offset evaluations, i.e., 
     // exp( TwoPi i (x0,dp) ) and exp( TwoPi i (dx,p0) )
@@ -268,7 +273,7 @@ SwitchToTargetInterp
     std::vector<R> realTempWeights( q_to_d );
     std::vector<R> imagTempWeights( q_to_d );
 
-    const std::vector<R>& chebyshevNodes = context.GetChebyshevNodes();
+    const std::vector<R>& chebyshevNodes = generalContext.GetChebyshevNodes();
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
     for( std::size_t i=0; i<(1u<<log2LocalTargetBoxes); ++i, AWalker.Walk() )
     {
@@ -319,10 +324,10 @@ SwitchToTargetInterp
 
             const std::size_t key = k+(i<<log2LocalSourceBoxes);
             std::memcpy
-            ( &realOldWeights, weightGridList[key].RealBuffer(), 
+            ( &realOldWeights[0], weightGridList[key].RealBuffer(), 
               q_to_d*sizeof(R) );
             std::memcpy
-            ( &imagOldWeights, weightGridList[key].ImagBuffer(),
+            ( &imagOldWeights[0], weightGridList[key].ImagBuffer(),
               q_to_d*sizeof(R) );
             std::memset( weightGridList[key].Buffer(), 0, 2*q_to_d*sizeof(R) );
 
@@ -331,8 +336,8 @@ SwitchToTargetInterp
             {
                 R* realBuffer = &realOldWeights[0];
                 R* imagBuffer = &imagOldWeights[0];
-                const R* realScalingBuffer = &(realFixedTargetEvals[0][0]);
-                const R* imagScalingBuffer = &(imagFixedTargetEvals[0][0]);
+                const R* realScalingBuffer = &realFixedTargetEvals[0][0];
+                const R* imagScalingBuffer = &imagFixedTargetEvals[0][0];
                 for( std::size_t t=0; t<q; ++t )
                 {
                     for( std::size_t tPrime=0; tPrime<q; ++tPrime )
@@ -343,31 +348,31 @@ SwitchToTargetInterp
                         const R imagScaling = imagScalingBuffer[tPrime];
                         realBuffer[t*q+tPrime] = 
                             realWeight*realScaling - imagWeight*imagScaling;
-                        imagOldBuffer[t*q+tPrime] = 
+                        imagBuffer[t*q+tPrime] = 
                             imagWeight*realScaling + realWeight*imagScaling;
                     }
                 }
             }
             // Form real part
             Gemm
-            ( 'N', 'N', q, 2*q, q,
+            ( 'N', 'N', q, q, q,
               (R)1, &realOffsetEvals[0][0], q,
                     &realOldWeights[0],     q,
               (R)0, &realTempWeights[0],    q );
             Gemm
-            ( 'N', 'N', q, 2*q, q,
+            ( 'N', 'N', q, q, q,
               (R)-1, &imagOffsetEvals[0][0], q,
                      &imagOldWeights[0],     q,
               (R)+1, &realTempWeights[0],    q );
             // Form imaginary part
             Gemm
-            ( 'N', 'N', q, 2*q, q,
+            ( 'N', 'N', q, q, q,
               (R)1, &realOffsetEvals[0][0], q,
                     &imagOldWeights[0],     q,
               (R)0, &imagTempWeights[0],    q );
             Gemm
-            ( 'N', 'N', q, 2*q, q,
-              (R)-1, &imagOffsetEvals[0][0], q,
+            ( 'N', 'N', q, q, q,
+              (R)+1, &imagOffsetEvals[0][0], q,
                      &realOldWeights[0],     q,
               (R)+1, &imagTempWeights[0],    q );
 
@@ -376,8 +381,8 @@ SwitchToTargetInterp
             {
                 R* realBuffer = &realTempWeights[0];
                 R* imagBuffer = &imagTempWeights[0];
-                const R* realScalingBuffer = &(realFixedTargetEvals[1][0]);
-                const R* imagScalingBuffer = &(imagFixedTargetEvals[1][0]);
+                const R* realScalingBuffer = &realFixedTargetEvals[1][0];
+                const R* imagScalingBuffer = &imagFixedTargetEvals[1][0];
                 for( std::size_t w=0; w<q; ++w )
                 {
                     for( std::size_t t=0; t<q; ++t )
@@ -397,56 +402,55 @@ SwitchToTargetInterp
             Gemm
             ( 'N', 'T', q, q, q,
               (R)+1, &realTempWeights[0], q,
-                     &realOffsetEvals[0], q,
+                     &realOffsetEvals[1][0], q,
               (R)+1, weightGridList[key].RealBuffer(), q );
             Gemm
             ( 'N', 'T', q, q, q,
               (R)-1, &imagTempWeights[0], q,
-                     &imagOffsetEvals[0], q,
+                     &imagOffsetEvals[1][0], q,
               (R)+1, weightGridList[key].RealBuffer(), q );
 
             Gemm
             ( 'N', 'T', q, q, q,
               (R)+1, &imagTempWeights[0], q,
-                     &realOffsetEvals[0], q,
+                     &realOffsetEvals[1][0], q,
               (R)+1, weightGridList[key].ImagBuffer(), q );
             Gemm
             ( 'N', 'T', q, q, q,
               (R)+1, &realTempWeights[0], q,
-                     &imagOffsetEvals[0], q,
+                     &imagOffsetEvals[1][0], q,
               (R)+1, weightGridList[key].ImagBuffer(), q );
 
             // Post process scaling
             //
             // Apply the exp( TwoPi i (x0,p0) ) term by scaling the 
             // exp( TwoPi i (dx,p0) ) terms before their application
-            for( std:;size_t j=0; j<d; ++j )
+            std::size_t q_to_j = 1;
+            R* realBuffer = weightGridList[key].RealBuffer();
+            R* imagBuffer = weightGridList[key].ImagBuffer();
+            std::vector<R> realScalings( q );
+            std::vector<R> imagScalings( q );
+            for( std::size_t j=0; j<d; ++j )
             {
-                R phase = TwoPi*x0A[j]*p0B[j];
+                const R phase = TwoPi*x0A[j]*p0B[j]; 
                 const R realPhase = cos(phase);
                 const R imagPhase = sin(phase);
                 for( std::size_t t=0; t<q; ++t )
                 {
-                    const R realTerm = realFixedSourceEvals[j][t];
-                    const R imagTerm = imagFixedSourceEvals[j][t];
-                    realFixedSourceEvals[j][t] = 
-                        realTerm*realPhase - imagTerm*imagPhase;
-                    imagFixedSourceEvals[j][t] = 
-                        imagTerm*realPhase + realTerm*imagPhase;
+                    const R realTerm = realFixedSourceEvals[k][j][t];
+                    const R imagTerm = imagFixedSourceEvals[k][j][t];
+                    realScalings[t] = realTerm*realPhase - imagTerm*imagPhase;
+                    imagScalings[t] = imagTerm*realPhase + realTerm*imagPhase;
                 }
-            }
-            q_to_j = 1;
-            R* realBuffer = weightGridList[key].RealBuffer();
-            R* imagBuffer = weightGridList[key].ImagBuffer();
-            for( std::size_t j=0; j<d; ++j )
-            {
+
+                const std::size_t stride = q_to_j;
                 for( std::size_t p=0; p<q/q_to_j; ++p )
                 {
                     const std::size_t offset = p*(q_to_j*q);
                     R* offsetRealBuffer = &realBuffer[offset];
                     R* offsetImagBuffer = &imagBuffer[offset];
-                    const R* realScalingBuffer = &(realFixedSourceEvals[j][0]);
-                    const R* imagScalingBuffer = &(imagFixedSourceEvals[j][0]);
+                    const R* realScalingBuffer = &realScalings[0];
+                    const R* imagScalingBuffer = &imagScalings[0];
                     for( std::size_t w=0; w<q_to_j; ++w )
                     {
                         for( std::size_t t=0; t<q; ++t )
@@ -466,13 +470,14 @@ SwitchToTargetInterp
             }
         }
     }
+    std::cout << "done." << std::endl;
 }
 
 // Fallback for 3d and above
 template<typename R,std::size_t d,std::size_t q>
 void
 SwitchToTargetInterp
-( const nuft::Context<R,d,q>& context,
+( const nuft::Context<R,d,q>& nuftContext,
   const Plan<d>& plan,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
@@ -486,6 +491,8 @@ SwitchToTargetInterp
 {
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
+    const general_fio::Context<R,d,q>& generalContext = 
+        nuftContext.GetGeneralContext();
 
     // Compute the width of the nodes at level log2N/2
     const std::size_t N = plan.GetN();
@@ -500,9 +507,9 @@ SwitchToTargetInterp
 
     // Get the precomputed grid offset evaluations, exp( TwoPi i (dx,dp) )
     const Array< std::vector<R>, d >& realOffsetEvals = 
-        context.GetRealOffsetEvaluations();
+        nuftContext.GetRealOffsetEvaluations();
     const Array< std::vector<R>, d >& imagOffsetEvals = 
-        context.GetImagOffsetEvaluations();
+        nuftContext.GetImagOffsetEvaluations();
 
     // Create space for holding the mixed offset evaluations, i.e., 
     // exp( TwoPi i (x0,dp) ) and exp( TwoPi i (dx,p0) )
@@ -524,7 +531,7 @@ SwitchToTargetInterp
     std::vector<R> realTempWeights( q_to_d );
     std::vector<R> imagTempWeights( q_to_d );
 
-    const std::vector<R>& chebyshevNodes = context.GetChebyshevNodes();
+    const std::vector<R>& chebyshevNodes = generalContext.GetChebyshevNodes();
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
     for( std::size_t i=0; i<(1u<<log2LocalTargetBoxes); ++i, AWalker.Walk() )
     {
@@ -587,8 +594,8 @@ SwitchToTargetInterp
             {
                 R* realBuffer = &realOldWeights[0];
                 R* imagBuffer = &imagOldWeights[0];
-                const R* realScalingBuffer = &(realFixedTargetEvals[0][0]);
-                const R* imagScalingBuffer = &(imagFixedTargetEvals[0][0]);
+                const R* realScalingBuffer = &realFixedTargetEvals[0][0];
+                const R* imagScalingBuffer = &imagFixedTargetEvals[0][0];
                 for( std::size_t t=0; t<Pow<q,d-1>::val; ++t )
                 {
                     for( std::size_t tPrime=0; tPrime<q; ++tPrime )
@@ -599,31 +606,31 @@ SwitchToTargetInterp
                         const R imagScaling = imagScalingBuffer[tPrime];
                         realBuffer[t*q+tPrime] = 
                             realWeight*realScaling - imagWeight*imagScaling;
-                        imagOldBuffer[t*q+tPrime] = 
+                        imagBuffer[t*q+tPrime] = 
                             imagWeight*realScaling + realWeight*imagScaling;
                     }
                 }
             }
             // Form real part
             Gemm
-            ( 'N', 'N', q, 2*Pow<q,d-1>::val, q,
+            ( 'N', 'N', q, Pow<q,d-1>::val, q,
               (R)1, &realOffsetEvals[0][0], q,
                     &realOldWeights[0],     q,
               (R)0, &realTempWeights[0],    q );
             Gemm
-            ( 'N', 'N', q, 2*Pow<q,d-1>::val, q,
+            ( 'N', 'N', q, Pow<q,d-1>::val, q,
               (R)-1, &imagOffsetEvals[0][0], q,
                      &imagOldWeights[0],     q,
               (R)+1, &realTempWeights[0],    q );
             // Form imaginary part
             Gemm
-            ( 'N', 'N', q, 2*Pow<q,d-1>::val, q,
+            ( 'N', 'N', q, Pow<q,d-1>::val, q,
               (R)1, &realOffsetEvals[0][0], q,
                     &imagOldWeights[0],     q,
               (R)0, &imagTempWeights[0],    q );
             Gemm
-            ( 'N', 'N', q, 2*Pow<q,d-1>::val, q,
-              (R)-1, &imagOffsetEvals[0][0], q,
+            ( 'N', 'N', q, Pow<q,d-1>::val, q,
+              (R)+1, &imagOffsetEvals[0][0], q,
                      &realOldWeights[0],     q,
               (R)+1, &imagTempWeights[0],    q );
 
@@ -634,8 +641,8 @@ SwitchToTargetInterp
                 const std::size_t offset = p*q*q;
                 R* offsetRealBuffer = &realTempWeights[offset];
                 R* offsetImagBuffer = &imagTempWeights[offset];
-                const R* realScalingBuffer = &(realFixedTargetEvals[1][0]);
-                const R* imagScalingBuffer = &(imagFixedTargetEvals[1][0]);
+                const R* realScalingBuffer = &realFixedTargetEvals[1][0];
+                const R* imagScalingBuffer = &imagFixedTargetEvals[1][0];
                 for( std::size_t w=0; w<q; ++w )
                 {
                     for( std::size_t t=0; t<q; ++t )
@@ -657,23 +664,23 @@ SwitchToTargetInterp
                 Gemm
                 ( 'N', 'T', q, q, q,
                   (R)1, &realTempWeights[w*q*q], q,
-                        &realOffsetEvals[0],     q,
+                        &realOffsetEvals[1][0],  q,
                   (R)0, &realOldWeights[w*q*q],  q );
                 Gemm
                 ( 'N', 'T', q, q, q,
                   (R)-1, &imagTempWeights[w*q*q], q,
-                         &imagOffsetEvals[0],     q,
+                         &imagOffsetEvals[1][0],  q,
                   (R)+1, &realOldWeights[w*q*q],  q );
 
                 Gemm
                 ( 'N', 'T', q, q, q,
                   (R)1, &imagTempWeights[w*q*q], q,
-                        &realOffsetEvals[0],     q,
+                        &realOffsetEvals[1][0],  q,
                   (R)0, &imagOldWeights[w*q*q],  q );
                 Gemm
                 ( 'N', 'T', q, q, q,
                   (R)1, &realTempWeights[w*q*q], q,
-                        &imagOffsetEvals[0],     q,
+                        &imagOffsetEvals[1][0],  q,
                   (R)1, &imagOldWeights[w*q*q],  q );
             }
 
@@ -695,8 +702,8 @@ SwitchToTargetInterp
                     ( j&1 ? &realTempWeights[0] : &realOldWeights[0] );
                 R* imagReadBuffer = 
                     ( j&1 ? &imagTempWeights[0] : &imagOldWeights[0] );
-                const R* realOffsetBuffer = &realOffsetEvals[0];
-                const R* imagOffsetBuffer = &imagOffsetEvals[0];
+                const R* realOffsetBuffer = &realOffsetEvals[j][0];
+                const R* imagOffsetBuffer = &imagOffsetEvals[j][0];
 
                 // Scale and transform
                 if( j != d-1 )
@@ -711,8 +718,8 @@ SwitchToTargetInterp
                     R* offsetImagReadBuffer = &imagReadBuffer[offset];
                     R* offsetRealWriteBuffer = &realWriteBuffer[offset];
                     R* offsetImagWriteBuffer = &imagWriteBuffer[offset];
-                    const R* realScalingBuffer = &(realFixedTargetEvals[j][0]);
-                    const R* imagScalingBuffer = &(imagFixedTargetEvals[j][0]);
+                    const R* realScalingBuffer = &realFixedTargetEvals[j][0];
+                    const R* imagScalingBuffer = &imagFixedTargetEvals[j][0];
                     for( std::size_t w=0; w<q_to_j; ++w )
                     {
                         for( std::size_t t=0; t<q; ++t )
@@ -756,33 +763,32 @@ SwitchToTargetInterp
             //
             // Apply the exp( TwoPi i (x0,p0) ) term by scaling the 
             // exp( TwoPi i (dx,p0) ) terms before their application
-            for( std:;size_t j=0; j<d; ++j )
+            q_to_j = 1;
+            R* realBuffer = weightGridList[key].RealBuffer();
+            R* imagBuffer = weightGridList[key].ImagBuffer();
+            std::vector<R> realScalings( q );
+            std::vector<R> imagScalings( q );
+            for( std::size_t j=0; j<d; ++j )
             {
-                R phase = TwoPi*x0A[j]*p0B[j];
+                const R phase = TwoPi*x0A[j]*p0B[j];
                 const R realPhase = cos(phase);
                 const R imagPhase = sin(phase);
                 for( std::size_t t=0; t<q; ++t )
                 {
-                    const R realTerm = realFixedSourceEvals[j][t];
-                    const R imagTerm = imagFixedSourceEvals[j][t];
-                    realFixedSourceEvals[j][t] = 
-                        realTerm*realPhase - imagTerm*imagPhase;
-                    imagFixedSourceEvals[j][t] = 
-                        imagTerm*realPhase + realTerm*imagPhase;
+                    const R realTerm = realFixedSourceEvals[k][j][t];
+                    const R imagTerm = imagFixedSourceEvals[k][j][t];
+                    realScalings[t] = realTerm*realPhase - imagTerm*imagPhase;
+                    imagScalings[t] = imagTerm*realPhase + realTerm*imagPhase;
                 }
-            }
-            q_to_j = 1;
-            R* realBuffer = weightGridList[key].RealBuffer();
-            R* imagBuffer = weightGridList[key].ImagBuffer();
-            for( std::size_t j=0; j<d; ++j )
-            {
+
+                const std::size_t stride = q_to_j;
                 for( std::size_t p=0; p<q_to_d/(q_to_j*q); ++p )
                 {
                     const std::size_t offset = p*(q_to_j*q);
                     R* offsetRealBuffer = &realBuffer[offset];
                     R* offsetImagBuffer = &imagBuffer[offset];
-                    const R* realScalingBuffer = &(realFixedSourceEvals[j][0]);
-                    const R* imagScalingBuffer = &(imagFixedSourceEvals[j][0]);
+                    const R* realScalingBuffer = &realScalings[0];
+                    const R* imagScalingBuffer = &imagScalings[0];
                     for( std::size_t w=0; w<q_to_j; ++w )
                     {
                         for( std::size_t t=0; t<q; ++t )

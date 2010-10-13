@@ -227,24 +227,45 @@ main
         // Set up our phase functor
         Fourier<double> fourier;
 
-        // Create a context 
+        // Create a general context 
         if( rank == 0 )
-            std::cout << "Creating context..." << std::endl;
-        bfio::general_fio::Context<double,d,q> context;
+            std::cout << "Creating GeneralFIO context..." << std::endl;
+        bfio::general_fio::Context<double,d,q> generalContext;
 
         // Run the algorithm
-        std::auto_ptr< const bfio::general_fio::PotentialField<double,d,q> > u;
+        std::auto_ptr< const bfio::general_fio::PotentialField<double,d,q> > v;
         if( rank == 0 )
-            std::cout << "Starting transform..." << std::endl;
+            std::cout << "Starting GeneralFIO transform..." << std::endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        u = bfio::GeneralFIO
-        ( context, plan, fourier, sourceBox, targetBox, mySources );
+        v = bfio::GeneralFIO
+        ( generalContext, plan, fourier, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
         if( rank == 0 )
         {
             std::cout << "Runtime: " << stopTime-startTime << " seconds.\n" 
+                      << std::endl;
+        }
+
+        // Create a context for NUFTs
+        if( rank == 0 )
+            std::cout << "Creating NUFT context..." << std::endl;
+        bfio::nuft::Context<double,d,q> nuftContext( N, sourceBox, targetBox );
+
+        // Run again with the version specialized for NUFT
+        std::auto_ptr< const bfio::nuft::PotentialField<double,d,q> > u;
+        if( rank == 0 )
+            std::cout << "Starting NUFT..." << std::endl;
+        MPI_Barrier( comm );
+        startTime = MPI_Wtime();
+        u = bfio::NUFT
+        ( nuftContext, plan, sourceBox, targetBox, mySources );
+        MPI_Barrier( comm );
+        stopTime = MPI_Wtime();
+        if( rank == 0 )
+        {
+            std::cout << "Runtime: " << stopTime-startTime << " seconds.\n"
                       << std::endl;
         }
 

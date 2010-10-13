@@ -29,12 +29,12 @@ namespace general_fio {
 template<typename R,std::size_t d,std::size_t q>
 class Context
 {
-    Array<R,q> _chebyshevNodes;
+    std::vector<R> _chebyshevNodes;
     std::vector<R> _leftChebyshevMap;
     std::vector<R> _rightChebyshevMap;
     std::vector< Array<std::size_t,d> > _chebyshevIndices;
-    std::vector< Array<R,d> > _chebyshevGrid;
-    std::vector< Array<R,d> > _sourceChildGrids;
+    std::vector< Array<R,          d> > _chebyshevGrid;
+    std::vector< Array<R,          d> > _sourceChildGrids;
 
     void GenerateChebyshevNodes();
     void GenerateChebyshevIndices();
@@ -56,7 +56,7 @@ public:
       const std::vector< Array<R,d> >& p,
             std::vector< R          >& results ) const;
 
-    const Array<R,d>&
+    const std::vector<R>&
     GetChebyshevNodes() const;
 
     const std::vector< Array<std::size_t,d> >&
@@ -161,7 +161,8 @@ general_fio::Context<R,d,q>::GenerateChildGrids()
 
 template<typename R,std::size_t d,std::size_t q>
 general_fio::Context<R,d,q>::Context() 
-: _leftChebyshevMap( q*q ),
+: _chebyshevNodes( q ),
+  _leftChebyshevMap( q*q ),
   _rightChebyshevMap( q*q ),
   _chebyshevIndices( Pow<q,d>::val ), 
   _chebyshevGrid( Pow<q,d>::val ),
@@ -252,7 +253,7 @@ general_fio::Context<R,d,q>::LagrangeBatch
 }
 
 template<typename R,std::size_t d,std::size_t q>
-inline const Array<R,d>&
+inline const std::vector<R>&
 general_fio::Context<R,d,q>::GetChebyshevNodes() const
 { return _chebyshevNodes; }
 

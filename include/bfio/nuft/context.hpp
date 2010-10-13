@@ -26,20 +26,19 @@ namespace nuft {
 template<typename R,std::size_t d,std::size_t q>
 class Context
 {
-    const general_fio::Context<R,d,q>& _generalContext;
+    const general_fio::Context<R,d,q> _generalContext;
+    const std::size_t _N;
+    const Box<R,d> _sourceBox;
+    const Box<R,d> _targetBox;
 
     Array< std::vector<R>, d > _realOffsetEvaluations;
     Array< std::vector<R>, d > _imagOffsetEvaluations;
 
+    void GenerateOffsetEvaluations();
+
 public:        
     Context
     ( const std::size_t N,
-      const Box<R,d>& sourceBox,
-      const Box<R,d>& targetBox );
-
-    Context
-    ( const general_fio::Context<R,d,q>& generalContext,
-      const std::size_t N,
       const Box<R,d>& sourceBox,
       const Box<R,d>& targetBox );
 
@@ -57,27 +56,28 @@ public:
 // Implementations
 
 template<typename R,std::size_t d,std::size_t q>
+void
 nuft::Context<R,d,q>::GenerateOffsetEvaluations()
 {
-    const std::size_t log2N = Log2( N );
+    const std::size_t log2N = Log2( _N );
     const std::size_t middleLevel = log2N/2;
 
     Array<R,d> wAMiddle, wBMiddle;
     for( std::size_t j=0; j<d; ++j )
     {
-        wAMiddle[j] = targetBox.widths[j] / (1<<middleLevel);
-        wBMiddle[j] = sourceBox.widths[j] / (1<<(log2N-middleLevel));
+        wAMiddle[j] = _targetBox.widths[j] / (1<<middleLevel);
+        wBMiddle[j] = _sourceBox.widths[j] / (1<<(log2N-middleLevel));
     }
 
     // Form the offset grid evaluations
     std::vector<R> phaseEvaluations(q*q);
-    const std::vector<R> chebyshevNodes = _generalContext.GetChebyshevNodes();
+    const std::vector<R>& chebyshevNodes = _generalContext.GetChebyshevNodes();
     const R* chebyshevBuffer = &chebyshevNodes[0];
     for( std::size_t j=0; j<d; ++j )
     {
         for( std::size_t t=0; t<q; ++t )
             for( std::size_t tPrime=0; tPrime<q; ++tPrime )
-                _phaseEvaluations(t*q+tPrime) =
+                phaseEvaluations[t*q+tPrime] =
                     TwoPi*wAMiddle[j]*wBMiddle[j]*
                     chebyshevBuffer[t]*chebyshevBuffer[tPrime];
         SinCosBatch
@@ -89,13 +89,7 @@ nuft::Context<R,d,q>::GenerateOffsetEvaluations()
 template<typename R,std::size_t d,std::size_t q>
 nuft::Context<R,d,q>::Context
 ( std::size_t N, const Box<R,d>& sourceBox, const Box<R,d>& targetBox ) 
-: _generalContext()
-{ GenerateOffsetEvaluations(); }
-
-template<typename R,std::size_t d,std::size_t q>
-nuft::Context<R,d,q>::Context
-( const general_fio::Context<R,d,q>& generalContext )
-: _generalContext(generalContext)
+: _generalContext(), _N(N), _sourceBox(sourceBox), _targetBox(targetBox)
 { GenerateOffsetEvaluations(); }
 
 template<typename R,std::size_t d,std::size_t q>

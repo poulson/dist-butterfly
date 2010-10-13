@@ -28,8 +28,8 @@ template<typename R,std::size_t d,std::size_t q>
 class PotentialField
 {
     const nuft::Context<R,d,q>& _nuftContext;
-    const nuft::DotProduct<R,d>& _dotProduct;
-    const general_fio::PotentialField<R,d,q>& _generalPotential;
+    const nuft::DotProduct<R,d> _dotProduct;
+    const general_fio::PotentialField<R,d,q> _generalPotential;
 
 public:
     PotentialField
@@ -54,15 +54,15 @@ public:
 
 template<typename R,std::size_t d,std::size_t q>
 nuft::PotentialField<R,d,q>::PotentialField
-( const nuft::Context<R,d,q>& context,
+( const nuft::Context<R,d,q>& nuftContext,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
   const Array<std::size_t,d>& log2TargetSubboxesPerDim,
   const WeightGridList<R,d,q>& weightGridList )
-: _context(context), 
+: _nuftContext(nuftContext), 
   _dotProduct(),
   _generalPotential
-  ( context.GeneralFIOContext(),
+  ( nuftContext.GetGeneralContext(),
     this->_dotProduct,
     sourceBox,
     targetBox,
@@ -73,12 +73,12 @@ nuft::PotentialField<R,d,q>::PotentialField
 template<typename R,std::size_t d,std::size_t q>
 std::complex<R>
 nuft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
-{ return _generalPotential->Evaluate( x ); }
+{ return _generalPotential.Evaluate( x ); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Box<R,d>&
 nuft::PotentialField<R,d,q>::GetBox() const
-{ return _generalPotential->GetBox(); }
+{ return _generalPotential.GetBox(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline std::size_t
