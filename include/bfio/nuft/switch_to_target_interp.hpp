@@ -579,10 +579,10 @@ SwitchToTargetInterp
 
             const std::size_t key = k+(i<<log2LocalSourceBoxes);
             std::memcpy
-            ( &realOldWeights, weightGridList[key].RealBuffer(), 
+            ( &realOldWeights[0], weightGridList[key].RealBuffer(), 
               q_to_d*sizeof(R) );
             std::memcpy
-            ( &imagOldWeights, weightGridList[key].ImagBuffer(),
+            ( &imagOldWeights[0], weightGridList[key].ImagBuffer(),
               q_to_d*sizeof(R) );
             std::memset( weightGridList[key].Buffer(), 0, 2*q_to_d*sizeof(R) );
 
