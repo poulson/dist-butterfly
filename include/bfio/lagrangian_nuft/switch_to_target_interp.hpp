@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_NUFT_SWITCH_TO_TARGET_INTERP_HPP
-#define BFIO_NUFT_SWITCH_TO_TARGET_INTERP_HPP 1
+#ifndef BFIO_LAGRANGIAN_NUFT_SWITCH_TO_TARGET_INTERP_HPP
+#define BFIO_LAGRANGIAN_NUFT_SWITCH_TO_TARGET_INTERP_HPP 1
 
 #include <cstddef>
 #include <complex>
@@ -29,17 +29,17 @@
 #include "bfio/structures/weight_grid.hpp"
 #include "bfio/structures/weight_grid_list.hpp"
 
-#include "bfio/nuft/context.hpp"
-#include "bfio/nuft/dot_product.hpp"
+#include "bfio/lagrangian_nuft/context.hpp"
+#include "bfio/lagrangian_nuft/dot_product.hpp"
 
 namespace bfio {
-namespace nuft {
+namespace lagrangian_nuft {
 
 // 1d specialization
 template<typename R,std::size_t q>
 void
 SwitchToTargetInterp
-( const nuft::Context<R,1,q>& nuftContext,
+( const lagrangian_nuft::Context<R,1,q>& nuftContext,
   const Plan<1>& plan,
   const Box<R,1>& sourceBox,
   const Box<R,1>& targetBox,
@@ -216,7 +216,7 @@ SwitchToTargetInterp
 template<typename R,std::size_t q>
 void
 SwitchToTargetInterp
-( const nuft::Context<R,2,q>& nuftContext,
+( const lagrangian_nuft::Context<R,2,q>& nuftContext,
   const Plan<2>& plan,
   const Box<R,2>& sourceBox,
   const Box<R,2>& targetBox,
@@ -474,7 +474,7 @@ SwitchToTargetInterp
 template<typename R,std::size_t d,std::size_t q>
 void
 SwitchToTargetInterp
-( const nuft::Context<R,d,q>& nuftContext,
+( const lagrangian_nuft::Context<R,d,q>& nuftContext,
   const Plan<d>& plan,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
@@ -807,8 +807,8 @@ SwitchToTargetInterp
     }
 }
 
-} // nuft
+} // lagrangian_nuft
 } // bfio
 
-#endif // BFIO_NUFT_SWITCH_TO_TARGET_INTERP_HPP
+#endif // BFIO_LAGRANGIAN_NUFT_SWITCH_TO_TARGET_INTERP_HPP
 

@@ -15,14 +15,14 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_NUFT_DOT_PRODUCT_HPP
-#define BFIO_NUFT_DOT_PRODUCT_HPP 1
+#ifndef BFIO_LAGRANGIAN_NUFT_DOT_PRODUCT_HPP
+#define BFIO_LAGRANGIAN_NUFT_DOT_PRODUCT_HPP 1
 
 #include "bfio/functors/phase_functor.hpp"
 
 namespace bfio {
 
-namespace nuft {
+namespace lagrangian_nuft {
 template<typename R,std::size_t d>
 class DotProduct : public PhaseFunctor<R,d>
 {
@@ -39,13 +39,13 @@ public:
       const std::vector< bfio::Array<R,d> >& pPoints,
             std::vector< R                >& results ) const;
 };
-} // nuft
+} // lagrangian_nuft
 
 // Implementations
 
 template<typename R,std::size_t d>
 inline R
-nuft::DotProduct<R,d>::operator()
+lagrangian_nuft::DotProduct<R,d>::operator()
 ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
 {
     R sum = 0;
@@ -58,7 +58,7 @@ nuft::DotProduct<R,d>::operator()
 
 template<typename R,std::size_t d>
 void
-nuft::DotProduct<R,d>::BatchEvaluate
+lagrangian_nuft::DotProduct<R,d>::BatchEvaluate
 ( const std::vector< bfio::Array<R,d> >& xPoints,
   const std::vector< bfio::Array<R,d> >& pPoints,
         std::vector< R                >& results ) const
@@ -80,5 +80,5 @@ nuft::DotProduct<R,d>::BatchEvaluate
 
 } // bfio
 
-#endif // BFIO_NUFT_DOT_PRODUCT_HPP
+#endif // BFIO_LAGRANGIAN_NUFT_DOT_PRODUCT_HPP
 

@@ -250,16 +250,18 @@ main
 
         // Create a context for NUFTs
         if( rank == 0 )
-            std::cout << "Creating NUFT context..." << std::endl;
-        bfio::nuft::Context<double,d,q> nuftContext( N, sourceBox, targetBox );
+            std::cout << "Creating LagrangianNUFT context..." << std::endl;
+        bfio::lagrangian_nuft::Context<double,d,q> 
+            nuftContext( N, sourceBox, targetBox );
 
         // Run again with the version specialized for NUFT
-        std::auto_ptr< const bfio::nuft::PotentialField<double,d,q> > u;
+        std::auto_ptr< const bfio::lagrangian_nuft::PotentialField<double,d,q> >
+            u;
         if( rank == 0 )
-            std::cout << "Starting NUFT..." << std::endl;
+            std::cout << "Starting LagrangianNUFT..." << std::endl;
         MPI_Barrier( comm );
         startTime = MPI_Wtime();
-        u = bfio::NUFT
+        u = bfio::LagrangianNUFT
         ( nuftContext, plan, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         stopTime = MPI_Wtime();

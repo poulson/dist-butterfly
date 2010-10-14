@@ -15,14 +15,14 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_NUFT_CONTEXT_HPP
-#define BFIO_NUFT_CONTEXT_HPP 1
+#ifndef BFIO_LAGRANGIAN_NUFT_CONTEXT_HPP
+#define BFIO_LAGRANGIAN_NUFT_CONTEXT_HPP 1
 
 #include "bfio/general_fio/context.hpp"
 
 namespace bfio {
 
-namespace nuft {
+namespace lagrangian_nuft {
 template<typename R,std::size_t d,std::size_t q>
 class Context
 {
@@ -51,13 +51,13 @@ public:
     const Array< std::vector<R>, d >&
     GetImagOffsetEvaluations() const;
 };
-} // nuft
+} // lagrangian_nuft
 
 // Implementations
 
 template<typename R,std::size_t d,std::size_t q>
 void
-nuft::Context<R,d,q>::GenerateOffsetEvaluations()
+lagrangian_nuft::Context<R,d,q>::GenerateOffsetEvaluations()
 {
     const std::size_t log2N = Log2( _N );
     const std::size_t middleLevel = log2N/2;
@@ -87,27 +87,27 @@ nuft::Context<R,d,q>::GenerateOffsetEvaluations()
 }
 
 template<typename R,std::size_t d,std::size_t q>
-nuft::Context<R,d,q>::Context
+lagrangian_nuft::Context<R,d,q>::Context
 ( std::size_t N, const Box<R,d>& sourceBox, const Box<R,d>& targetBox ) 
 : _generalContext(), _N(N), _sourceBox(sourceBox), _targetBox(targetBox)
 { GenerateOffsetEvaluations(); }
 
 template<typename R,std::size_t d,std::size_t q>
 const general_fio::Context<R,d,q>&
-nuft::Context<R,d,q>::GetGeneralContext() const
+lagrangian_nuft::Context<R,d,q>::GetGeneralContext() const
 { return _generalContext; }
 
 template<typename R,std::size_t d,std::size_t q>
 const Array< std::vector<R>, d >&
-nuft::Context<R,d,q>::GetRealOffsetEvaluations() const
+lagrangian_nuft::Context<R,d,q>::GetRealOffsetEvaluations() const
 { return _realOffsetEvaluations; }
 
 template<typename R,std::size_t d,std::size_t q>
 const Array< std::vector<R>, d >&
-nuft::Context<R,d,q>::GetImagOffsetEvaluations() const
+lagrangian_nuft::Context<R,d,q>::GetImagOffsetEvaluations() const
 { return _imagOffsetEvaluations; }
 
 } // bfio
 
-#endif // BFIO_NUFT_CONTEXT_HPP
+#endif // BFIO_LAGRANGIAN_NUFT_CONTEXT_HPP
 

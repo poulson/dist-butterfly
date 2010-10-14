@@ -99,11 +99,11 @@ includefiles = bfio.hpp \
                bfio/general_fio/source_weight_recursion.hpp \
                bfio/general_fio/switch_to_target_interp.hpp \
                bfio/general_fio/target_weight_recursion.hpp \
-               bfio/nuft.hpp \
-               bfio/nuft/context.hpp \
-               bfio/nuft/dot_product.hpp \
-               bfio/nuft/potential_field.hpp \
-               bfio/nuft/switch_to_target_interp.hpp \
+               bfio/lagrangian_nuft.hpp \
+               bfio/lagrangian_nuft/context.hpp \
+               bfio/lagrangian_nuft/dot_product.hpp \
+               bfio/lagrangian_nuft/potential_field.hpp \
+               bfio/lagrangian_nuft/switch_to_target_interp.hpp \
                bfio/structures/array.hpp \
                bfio/structures/box.hpp \
                bfio/structures/constrained_htree_walker.hpp \

@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_NUFT_HPP
-#define BFIO_NUFT_HPP 1
+#ifndef BFIO_LAGRANGIAN_NUFT_HPP
+#define BFIO_LAGRANGIAN_NUFT_HPP 1
 
 #include <iostream>
 #include <memory>
@@ -25,22 +25,22 @@
 #include "bfio/structures.hpp"
 #include "bfio/tools.hpp"
 
-#include "bfio/nuft/context.hpp"
-#include "bfio/nuft/dot_product.hpp"
-#include "bfio/nuft/potential_field.hpp"
+#include "bfio/lagrangian_nuft/context.hpp"
+#include "bfio/lagrangian_nuft/dot_product.hpp"
+#include "bfio/lagrangian_nuft/potential_field.hpp"
 
 #include "bfio/general_fio/initialize_weights.hpp"
 #include "bfio/general_fio/source_weight_recursion.hpp"
 #include "bfio/general_fio/target_weight_recursion.hpp"
 
-#include "bfio/nuft/switch_to_target_interp.hpp"
+#include "bfio/lagrangian_nuft/switch_to_target_interp.hpp"
 
 namespace bfio {
 
 template<typename R,std::size_t d,std::size_t q>
-std::auto_ptr< const nuft::PotentialField<R,d,q> >
-NUFT
-( const nuft::Context<R,d,q>& nuftContext,
+std::auto_ptr< const lagrangian_nuft::PotentialField<R,d,q> >
+LagrangianNUFT
+( const lagrangian_nuft::Context<R,d,q>& nuftContext,
   const Plan<d>& plan,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
@@ -48,7 +48,7 @@ NUFT
 {
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
-    const nuft::DotProduct<R,d> dotProduct;
+    const lagrangian_nuft::DotProduct<R,d> dotProduct;
     const general_fio::Context<R,d,q>& generalContext = 
         nuftContext.GetGeneralContext();
 
@@ -104,7 +104,7 @@ NUFT
     // Start the main recursion loop
     if( log2N == 0 || log2N == 1 )
     {
-        nuft::SwitchToTargetInterp
+        lagrangian_nuft::SwitchToTargetInterp
         ( nuftContext, plan, sourceBox, targetBox, mySourceBox, 
           myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
           log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
@@ -357,7 +357,7 @@ NUFT
         }
         if( level==log2N/2 )
         {
-            nuft::SwitchToTargetInterp
+            lagrangian_nuft::SwitchToTargetInterp
             ( nuftContext, plan, sourceBox, targetBox, mySourceBox, 
               myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
               log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
@@ -366,16 +366,17 @@ NUFT
     }
 
     // Construct the general FIO PotentialField
-    std::auto_ptr< const nuft::PotentialField<R,d,q> > potentialField( 
-        new nuft::PotentialField<R,d,q>
-            ( nuftContext, sourceBox, myTargetBox, log2LocalTargetBoxesPerDim,
-              weightGridList )
-    );
+    std::auto_ptr< const lagrangian_nuft::PotentialField<R,d,q> > 
+        potentialField( 
+            new lagrangian_nuft::PotentialField<R,d,q>
+                ( nuftContext, sourceBox, myTargetBox, 
+                  log2LocalTargetBoxesPerDim, weightGridList )
+        );
 
     return potentialField;
 }
 
 } // bfio
 
-#endif // BFIO_GENERAL_FIO_HPP
+#endif // BFIO_LAGRANGIAN_NUFT_HPP
 

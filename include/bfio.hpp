@@ -26,6 +26,6 @@
 #include "bfio/functors.hpp"
 
 #include "bfio/general_fio.hpp"
-#include "bfio/nuft.hpp"
+#include "bfio/lagrangian_nuft.hpp"
 
 #endif // BFIO_HPP 
