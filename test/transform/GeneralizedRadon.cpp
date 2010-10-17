@@ -233,7 +233,7 @@ main
         // Create our redistribution plan in order to compute our process's 
         // initial source box
         bfio::ForwardPlan<d> plan( comm, N );
-        //bfio::InversePlan<d> plan( comm, N );
+        //bfio::AdjointPlan<d> plan( comm, N );
         bfio::Box<double,d> mySourceBox = 
             plan.GetMyInitialSourceBox( sourceBox );;
 

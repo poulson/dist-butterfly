@@ -15,18 +15,22 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_HPP
-#define BFIO_HPP 1
+#ifndef BFIO_STRUCTURES_LOW_RANK_POTENTIAL_HPP
+#define BFIO_STRUCTURES_LOW_RANK_POTENTIAL_HPP 1
 
-// One could probably speed up compile time by including everything in a 
-// dependency-aware order
-#include "bfio/constants.hpp"
-#include "bfio/structures.hpp"
-#include "bfio/tools.hpp"
-#include "bfio/functors.hpp"
+#include "bfio/structures/array.hpp"
+#include "bfio/structures/weight_grid.hpp"
 
-#include "bfio/general_fio.hpp"
-#include "bfio/lagrangian_nuft.hpp"
-#include "bfio/interpolative_nuft.hpp"
+namespace bfio {
 
-#endif // BFIO_HPP 
+template<typename R,std::size_t d,std::size_t q>
+struct LRP
+{
+    Array<R,d> x0;
+    WeightGrid<R,d,q> weightGrid;
+};
+
+} // bfio
+
+#endif // BFIO_STRUCTURES_LOW_RANK_POTENTIAL_HPP
+

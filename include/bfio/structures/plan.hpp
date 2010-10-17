@@ -110,12 +110,12 @@ public:
 };
 
 template<std::size_t d>
-class InversePlan : public Plan<d>
+class AdjointPlan : public Plan<d>
 {
     std::vector<std::size_t> _myMappedRanks;
     virtual void GeneratePlan();
 public:
-    InversePlan
+    AdjointPlan
     ( MPI_Comm comm, std::size_t N );
     
     virtual std::size_t 
@@ -458,7 +458,7 @@ ForwardPlan<d>::GeneratePlan()
 }
 
 template<std::size_t d>
-InversePlan<d>::InversePlan
+AdjointPlan<d>::AdjointPlan
 ( MPI_Comm comm, std::size_t N )
 : Plan<d>( comm, N )
 { 
@@ -468,7 +468,7 @@ InversePlan<d>::InversePlan
 
 template<std::size_t d>
 inline std::size_t
-InversePlan<d>::LocalToClusterSourceIndex
+AdjointPlan<d>::LocalToClusterSourceIndex
 ( std::size_t level, std::size_t cLocal ) const
 {
     return (this->_myMappedRanks[level-1]<<
@@ -477,7 +477,7 @@ InversePlan<d>::LocalToClusterSourceIndex
 
 template<std::size_t d>
 void
-InversePlan<d>::GeneratePlan()
+AdjointPlan<d>::GeneratePlan()
 {
     std::bitset<8*sizeof(int)> rankBits(this->_rank);
 

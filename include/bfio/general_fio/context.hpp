@@ -112,12 +112,12 @@ general_fio::Context<R,d,q>::GenerateChebyshevGrid()
 
     for( std::size_t t=0; t<q_to_d; ++t )
     {
-        std::size_t qToThej = 1;
+        std::size_t q_to_j = 1;
         for( std::size_t j=0; j<d; ++j )
         {
-            std::size_t i = (t/qToThej)%q;
+            std::size_t i = (t/q_to_j) % q;
             _chebyshevGrid[t][j] = 0.5*cos(static_cast<R>(i*Pi/(q-1)));
-            qToThej *= q;
+            q_to_j *= q;
         }
     }
 }

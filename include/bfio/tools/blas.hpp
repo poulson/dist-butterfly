@@ -20,10 +20,10 @@
 
 #include <complex>
 
-#ifdef FUNDERSCORE
-#define C2F( name ) name ## _
+#ifdef BLAS_UNDERSCORE
+#define BLAS( name ) name ## _
 #else
-#define C2F( name ) name
+#define BLAS( name ) name
 #endif
 
 namespace bfio {
@@ -42,37 +42,56 @@ void Gemm
            const R* B, int ldb,
   R beta,        R* C, int ldc );
 
+template<typename R>
+void Ger
+( int m, int n, 
+  R alpha, const R* x, int incx, 
+           const R* y, int incy, 
+                 R* A, int lda );
+
 } // bfio
 
 extern "C" {
 
-void C2F(sgemv)
+void BLAS(sgemv)
 ( const char* transa,
   const int* m, const int* n,
   const float* alpha, const float* A, const int* lda,
                       const float* x, const int* incx,
   const float* beta,        float* y, const int* incy );
 
-void C2F(dgemv)
+void BLAS(dgemv)
 ( const char* transa,
   const int* m, const int* n,
   const double* alpha, const double* A, const int* lda,
                        const double* x, const int* incx,
   const double* beta,        double* y, const int* incy );
 
-void C2F(sgemm)
+void BLAS(sgemm)
 ( const char* transA, const char* transB,
   const int* m, const int* n, const int* k,
   const float* alpha, const float* A, const int* lda,
                       const float* B, const int* ldb,
   const float* beta,        float* C, const int* ldc );
 
-void C2F(dgemm)
+void BLAS(dgemm)
 ( const char* transA, const char* transB,
   const int* m, const int* n, const int* k,
   const double* alpha, const double* A, const int* lda,
                        const double* B, const int* ldb,
   const double* beta,        double* C, const int* ldc );
+
+void BLAS(sger)
+( const int* m, const int* n,
+  const float* alpha, const float* x, const int* incx,
+                      const float* y, const int* incy,
+                            float* A, const int* lda );
+
+void BLAS(dger)
+( const int* m, const int* n,
+  const double* alpha, const double* x, const int* incx,
+                       const double* y, const int* incy,
+                             double* A, const int* lda );
 
 } // extern "C"
 
@@ -87,7 +106,7 @@ Gemv<float>
                const float* x, int incx,
   float beta,        float* y, int incy )
 {
-    C2F(sgemv)
+    BLAS(sgemv)
     ( &transa, &m, &n,
       &alpha, A, &lda, x, &incx, &beta, y, &incy );
 }
@@ -100,7 +119,7 @@ Gemv<double>
                 const double* x, int incx,
   double beta,        double* y, int incy )
 {
-    C2F(dgemv)
+    BLAS(dgemv)
     ( &transa, &m, &n,
       &alpha, A, &lda, x, &incx, &beta, y, &incy );
 }
@@ -113,7 +132,7 @@ Gemm<float>
                const float* B, int ldb,
   float beta,        float* C, int ldc )
 {
-    C2F(sgemm)
+    BLAS(sgemm)
     ( &transa, &transb, &m, &n, &k,
       &alpha, A, &lda, B, &ldb, &beta, C, &ldc );
 }
@@ -126,10 +145,28 @@ Gemm<double>
                 const double* B, int ldb,
   double beta,        double* C, int ldc )
 {
-    C2F(dgemm)
+    BLAS(dgemm)
     ( &transa, &transb, &m, &n, &k,
       &alpha, A, &lda, B, &ldb, &beta, C, &ldc );
 }
+
+template<>
+inline void
+Ger<float>
+( int m, int n,
+  float alpha, const float* x, int incx,
+               const float* y, int incy,
+                     float* A, int lda )
+{ BLAS(sger)( &m, &n, &alpha, x, &incx, y, &incy, A, &lda ); }
+
+template<>
+inline void
+Ger<double>
+( int m, int n,
+  double alpha, const double* x, int incx,
+                const double* y, int incy,
+                      double* A, int lda )
+{ BLAS(dger)( &m, &n, &alpha, x, &incx, y, &incy, A, &lda ); }
 
 } // bfio
 

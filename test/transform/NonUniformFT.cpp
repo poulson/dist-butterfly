@@ -34,7 +34,7 @@ Usage()
 
 // Define the dimension of the problem and the order of interpolation
 static const std::size_t d = 2;
-static const std::size_t q = 8;
+static const std::size_t q = 7;
 
 // If we test the accuracy, define the number of tests to perform per box
 static const std::size_t numAccuracyTestsPerBox = 10;
@@ -168,7 +168,7 @@ main
 
         // Compute the box that our process owns within the source box
         bfio::ForwardPlan<d> plan( comm, N );
-        //bfio::InversePlan<d> plan( comm, N );
+        //bfio::AdjointPlan<d> plan( comm, N );
         bfio::Box<double,d> mySourceBox = 
             plan.GetMyInitialSourceBox( sourceBox );
 
@@ -233,12 +233,12 @@ main
         bfio::general_fio::Context<double,d,q> generalContext;
 
         // Run the algorithm
-        std::auto_ptr< const bfio::general_fio::PotentialField<double,d,q> > v;
+        std::auto_ptr< const bfio::general_fio::PotentialField<double,d,q> > w;
         if( rank == 0 )
             std::cout << "Starting GeneralFIO transform..." << std::endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        v = bfio::GeneralFIO
+        w = bfio::GeneralFIO
         ( generalContext, plan, fourier, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
@@ -248,21 +248,44 @@ main
                       << std::endl;
         }
 
-        // Create a context for NUFTs
+        // Create a context for NUFTs with Lagrangian interpolation
         if( rank == 0 )
             std::cout << "Creating LagrangianNUFT context..." << std::endl;
         bfio::lagrangian_nuft::Context<double,d,q> 
-            nuftContext( N, sourceBox, targetBox );
+            lagrangianNuftContext( N, sourceBox, targetBox );
 
         // Run again with the version specialized for NUFT
         std::auto_ptr< const bfio::lagrangian_nuft::PotentialField<double,d,q> >
-            u;
+            v;
         if( rank == 0 )
             std::cout << "Starting LagrangianNUFT..." << std::endl;
         MPI_Barrier( comm );
         startTime = MPI_Wtime();
-        u = bfio::LagrangianNUFT
-        ( nuftContext, plan, sourceBox, targetBox, mySources );
+        v = bfio::LagrangianNUFT
+        ( lagrangianNuftContext, plan, sourceBox, targetBox, mySources );
+        MPI_Barrier( comm );
+        stopTime = MPI_Wtime();
+        if( rank == 0 )
+        {
+            std::cout << "Runtime: " << stopTime-startTime << " seconds.\n"
+                      << std::endl;
+        }
+
+        // Create a context for Interpolative NUFTs
+        if( rank == 0 )
+            std::cout << "Creating InterpolativeNUFT context..." << std::endl;
+        bfio::interpolative_nuft::Context<double,d,q> 
+            interpolativeNuftContext( N, sourceBox, targetBox );
+
+        // Run a third time with the interpolative NUFT
+        std::auto_ptr< 
+            const bfio::interpolative_nuft::PotentialField<double,d,q> > u;
+        if( rank == 0 )
+            std::cout << "Starting InterpolativeNUFT..." << std::endl;
+        MPI_Barrier( comm );
+        startTime = MPI_Wtime();
+        u = bfio::InterpolativeNUFT
+        ( interpolativeNuftContext, plan, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         stopTime = MPI_Wtime();
         if( rank == 0 )

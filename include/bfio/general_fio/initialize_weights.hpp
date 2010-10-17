@@ -57,10 +57,12 @@ InitializeWeights
     const std::size_t N = plan.GetN();
     const std::size_t q_to_d = Pow<q,d>::val;
 
+    // Compute the source box widths
     Array<R,d> wB;
     for( std::size_t j=0; j<d; ++j )
         wB[j] = sourceBox.widths[j] / N;
 
+    // Compute the center of the target box
     Array<R,d> x0;
     for( std::size_t j=0; j<d; ++j )
         x0[j] = targetBox.offsets[j] + 0.5*targetBox.widths[j];
@@ -79,7 +81,7 @@ InitializeWeights
     for( std::size_t s=0; s<numSources; ++s )
     {
         const Array<R,d>& p = mySources[s].p;
-        pPoints[s] = mySources[s].p;
+        pPoints[s] = p;
 
         // Determine which local box we're in (if any)
         Array<std::size_t,d> B;
@@ -136,6 +138,10 @@ InitializeWeights
             phiBuffer[s] *= TwoPi;
     }
     SinCosBatch( phiResults, sinResults, cosResults );
+
+    // Set the weightGrids equal to the potentials from the target boxes
+    std::memset
+    ( weightGridList.Buffer(), 0, weightGridList.Length()*2*q_to_d*sizeof(R) );
     {
         std::vector<R> realBeta( numSources );
         std::vector<R> imagBeta( numSources );
@@ -179,6 +185,7 @@ InitializeWeights
          ++sourceIndex, BWalker.Walk() ) 
     {
         const Array<std::size_t,d> B = BWalker.State();
+        WeightGrid<R,d,q>& weightGrid = weightGridList[sourceIndex];
 
         // Translate the local integer coordinates into the source center 
         Array<R,d> p0;
@@ -205,8 +212,8 @@ InitializeWeights
         }
         SinCosBatch( phiResults, sinResults, cosResults );
         {
-            R* realBuffer = weightGridList[sourceIndex].RealBuffer();
-            R* imagBuffer = weightGridList[sourceIndex].ImagBuffer();
+            R* realBuffer = weightGrid.RealBuffer();
+            R* imagBuffer = weightGrid.ImagBuffer();
             const R* cosBuffer = &cosResults[0];
             const R* sinBuffer = &sinResults[0];
             for( std::size_t t=0; t<q_to_d; ++t )

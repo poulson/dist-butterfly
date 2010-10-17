@@ -36,7 +36,8 @@ testdir = test
 bindir_base = bin
 bindir = $(bindir_base)/$(config)
 
-# Defining 'FUNDERSCORE' appends an underscore to BLAS routine names
+# Defining 'BLAS_UNDERSCORE' appends an underscore to BLAS routine names
+# Defining 'LAPACK_UNDERSCORE' appends an underscore to LAPACK routine names
 # Defining 'RELEASE' removes all unnecessary output and checks
 ifeq ($(config),ibm)
   # This is for ANL's Blue Gene/P
@@ -65,20 +66,20 @@ ifeq ($(config),intel)
             -lmkl_em64t -lmkl -lguide -lpthread
 endif
 ifeq ($(config),gnu)
-  # This is for a generic Linux machine with a BLAS library in /usr/lib
+  # This is for a generic Linux machine with a BLAS/LAPACK libraries in /usr/lib
   CXX = mpicxx 
-  CXXFLAGS = -DGNU -I$(incdir) -DFUNDERSCORE 
+  CXXFLAGS = -DGNU -I$(incdir) -DBLAS_UNDERSCORE  -DLAPACK_UNDERSCORE
   CXXFLAGS_DEBUG = -g -Wall $(CXXFLAGS)
   CXXFLAGS_RELEASE = -O3 -ffast-math -Wall -DRELEASE $(CXXFLAGS)
-  LDFLAGS = -L/usr/lib -lblas
+  LDFLAGS = -L/usr/lib -llapack -lblas
 endif
 ifeq ($(config),apple)
-  # This is for a Mac with a BLAS library in /usr/lib
+  # This is for a Mac with a BLAS/LAPACK libraries in /usr/lib
   CXX = mpicxx 
-  CXXFLAGS = -DGNU -I$(incdir) -DFUNDERSCORE 
+  CXXFLAGS = -DGNU -I$(incdir) -DBLAS_UNDERSCORE -DLAPACK_UNDERSCORE
   CXXFLAGS_DEBUG = -g -Wall $(CXXFLAGS)
   CXXFLAGS_RELEASE = -fast -ffast-math -Wall -DRELEASE $(CXXFLAGS)
-  LDFLAGS = -L/usr/lib -lblas
+  LDFLAGS = -L/usr/lib -llapack -lblas
 endif
 
 AR = ar
@@ -104,10 +105,17 @@ includefiles = bfio.hpp \
                bfio/lagrangian_nuft/dot_product.hpp \
                bfio/lagrangian_nuft/potential_field.hpp \
                bfio/lagrangian_nuft/switch_to_target_interp.hpp \
+               bfio/interpolative_nuft.hpp \
+               bfio/interpolative_nuft/context.hpp \
+               bfio/interpolative_nuft/form_check_potentials.hpp \
+               bfio/interpolative_nuft/form_equivalent_sources.hpp \
+               bfio/interpolative_nuft/initialize_check_potentials.hpp \
+               bfio/interpolative_nuft/potential_field.hpp \
                bfio/structures/array.hpp \
                bfio/structures/box.hpp \
                bfio/structures/constrained_htree_walker.hpp \
                bfio/structures/htree_walker.hpp \
+               bfio/structures/low_rank_potential.hpp \
                bfio/structures/plan.hpp \
                bfio/structures/point_grid.hpp \
                bfio/structures/source.hpp \
@@ -116,6 +124,7 @@ includefiles = bfio.hpp \
                bfio/tools/blas.hpp \
                bfio/tools/flatten_constrained_htree_index.hpp \
                bfio/tools/flatten_htree_index.hpp \
+               bfio/tools/lapack.hpp \
                bfio/tools/mpi.hpp \
                bfio/tools/special_functions.hpp \
                bfio/tools/twiddle.hpp \

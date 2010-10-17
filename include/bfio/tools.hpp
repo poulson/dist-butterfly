@@ -21,6 +21,7 @@
 #include "bfio/tools/blas.hpp"
 #include "bfio/tools/flatten_constrained_htree_index.hpp"
 #include "bfio/tools/flatten_htree_index.hpp"
+#include "bfio/tools/lapack.hpp"
 #include "bfio/tools/mpi.hpp"
 #include "bfio/tools/special_functions.hpp"
 #include "bfio/tools/twiddle.hpp"

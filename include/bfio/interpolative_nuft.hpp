@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_LAGRANGIAN_NUFT_HPP
-#define BFIO_LAGRANGIAN_NUFT_HPP 1
+#ifndef BFIO_INTERPOLATIVE_NUFT_HPP
+#define BFIO_INTERPOLATIVE_NUFT_HPP 1
 
 #include <iostream>
 #include <memory>
@@ -25,22 +25,18 @@
 #include "bfio/structures.hpp"
 #include "bfio/tools.hpp"
 
-#include "bfio/lagrangian_nuft/context.hpp"
-#include "bfio/lagrangian_nuft/dot_product.hpp"
-#include "bfio/lagrangian_nuft/potential_field.hpp"
-
-#include "bfio/general_fio/initialize_weights.hpp"
-#include "bfio/general_fio/source_weight_recursion.hpp"
-#include "bfio/general_fio/target_weight_recursion.hpp"
-
-#include "bfio/lagrangian_nuft/switch_to_target_interp.hpp"
+#include "bfio/interpolative_nuft/context.hpp"
+#include "bfio/interpolative_nuft/form_equivalent_sources.hpp"
+#include "bfio/interpolative_nuft/form_check_potentials.hpp"
+#include "bfio/interpolative_nuft/initialize_check_potentials.hpp"
+#include "bfio/interpolative_nuft/potential_field.hpp"
 
 namespace bfio {
 
 template<typename R,std::size_t d,std::size_t q>
-std::auto_ptr< const lagrangian_nuft::PotentialField<R,d,q> >
-LagrangianNUFT
-( const lagrangian_nuft::Context<R,d,q>& nuftContext,
+std::auto_ptr< const interpolative_nuft::PotentialField<R,d,q> >
+InterpolativeNUFT
+( const interpolative_nuft::Context<R,d,q>& context,
   const Plan<d>& plan,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
@@ -48,9 +44,6 @@ LagrangianNUFT
 {
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
-    const lagrangian_nuft::DotProduct<R,d> dotProduct;
-    const general_fio::Context<R,d,q>& generalContext = 
-        nuftContext.GetGeneralContext();
 
     // Extract our communicator and its size
     MPI_Comm comm = plan.GetComm();
@@ -93,23 +86,18 @@ LagrangianNUFT
         log2LocalSourceBoxes += log2LocalSourceBoxesPerDim[j];
     }
 
-    // Initialize the weights using Lagrangian interpolation on the 
-    // smooth component of the kernel.
     WeightGridList<R,d,q> weightGridList( 1<<log2LocalSourceBoxes );
-    general_fio::InitializeWeights
-    ( generalContext, plan, dotProduct, sourceBox, targetBox, mySourceBox, 
+    interpolative_nuft::InitializeCheckPotentials
+    ( context, plan, sourceBox, targetBox, mySourceBox, 
       log2LocalSourceBoxes, log2LocalSourceBoxesPerDim, mySources, 
+      weightGridList );
+    interpolative_nuft::FormEquivalentSources
+    ( context, plan, mySourceBox, myTargetBox,
+      log2LocalSourceBoxes, log2LocalTargetBoxes, 
+      log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim, 
       weightGridList );
 
     // Start the main recursion loop
-    if( log2N == 0 || log2N == 1 )
-    {
-        lagrangian_nuft::SwitchToTargetInterp
-        ( nuftContext, plan, sourceBox, targetBox, mySourceBox, 
-          myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
-          log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
-          weightGridList );
-    }
     for( std::size_t level=1; level<=log2N; ++level )
     {
         // Compute the width of the nodes at this level
@@ -169,35 +157,18 @@ LagrangianNUFT
                         ((targetIndex>>d)<<(log2LocalSourceBoxes+d)) + 
                         (sourceIndex<<d);
 
-                    if( level <= log2N/2 )
-                    {
-                        general_fio::SourceWeightRecursion
-                        ( generalContext, plan, dotProduct, level, x0A, p0B, wB,
-                          parentInteractionOffset, oldWeightGridList,
-                          weightGridList[interactionIndex] );
-                    }
-                    else
-                    {
-                        Array<R,d> x0Ap;
-                        Array<std::size_t,d> globalA;
-                        std::size_t ARelativeToAp = 0;
-                        for( std::size_t j=0; j<d; ++j )
-                        {
-                            globalA[j] = 
-                                (myTargetBoxCoords[j]<<
-                                 log2LocalTargetBoxesPerDim[j])+A[j];
-                            x0Ap[j] = targetBox.offsets[j] + 
-                                      (globalA[j]|1)*wA[j];
-                            ARelativeToAp |= (globalA[j]&1)<<j;
-                        }
-                        general_fio::TargetWeightRecursion
-                        ( generalContext, plan, dotProduct, level,
-                          ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
-                          parentInteractionOffset, oldWeightGridList, 
-                          weightGridList[interactionIndex] );
-                    }
+                    interpolative_nuft::FormCheckPotentials
+                    ( context, plan, level,
+                      x0A, p0B, wA, wB, parentInteractionOffset,
+                      oldWeightGridList, weightGridList[interactionIndex] );
                 }
             }
+            interpolative_nuft::FormEquivalentSources
+            ( context, plan, 
+              mySourceBox, myTargetBox,
+              log2LocalSourceBoxes, log2LocalTargetBoxes,
+              log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
+              weightGridList );
         }
         else 
         {
@@ -229,7 +200,7 @@ LagrangianNUFT
             // Compute the coordinates and center of this source box
             Array<R,d> p0B;
             for( std::size_t j=0; j<d; ++j )
-                p0B[j] = mySourceBox.offsets[j] + 0.5*wB[j];
+                p0B[j] = mySourceBox.offsets[j] + wB[j]/2;
 
             // Form the partial weights by looping over the boxes in the  
             // target domain.
@@ -251,32 +222,11 @@ LagrangianNUFT
                 // with the remaining local source boxes
                 const std::size_t parentInteractionOffset = 
                     ((targetIndex>>d)<<(d-log2NumMergingProcesses));
-                if( level <= log2N/2 )
-                {
-                    general_fio::SourceWeightRecursion
-                    ( generalContext, plan, dotProduct, level, x0A, p0B, wB,
-                      parentInteractionOffset, weightGridList,
-                      partialWeightGridList[targetIndex] );
-                }
-                else
-                {
-                    Array<R,d> x0Ap;
-                    Array<std::size_t,d> globalA;
-                    std::size_t ARelativeToAp = 0;
-                    for( std::size_t j=0; j<d; ++j )
-                    {
-                        globalA[j] = 
-                            (myTargetBoxCoords[j]<<
-                             log2LocalTargetBoxesPerDim[j])+A[j];
-                        x0Ap[j] = targetBox.offsets[j] + (globalA[j]|1)*wA[j];
-                        ARelativeToAp |= (globalA[j]&1)<<j;
-                    }
-                    general_fio::TargetWeightRecursion
-                    ( generalContext, plan, dotProduct, level,
-                      ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
-                      parentInteractionOffset, weightGridList, 
-                      partialWeightGridList[targetIndex] );
-                }
+
+                interpolative_nuft::FormCheckPotentials
+                ( context, plan, level,
+                  x0A, p0B, wA, wB, parentInteractionOffset,
+                  weightGridList, partialWeightGridList[targetIndex] );
             }
 
             // Scatter the summation of the weights
@@ -337,6 +287,7 @@ LagrangianNUFT
                   &recvCounts[0], clusterComm );
             }
 
+            // Adjust our local target box
             const std::vector<std::size_t>& targetDimsToCut = 
                 plan.GetTargetDimsToCut( level );
             const std::vector<bool>& rightSideOfCut = 
@@ -354,22 +305,21 @@ LagrangianNUFT
                 --log2LocalTargetBoxesPerDim[j];
                 --log2LocalTargetBoxes;
             }
-        }
-        if( level==log2N/2 )
-        {
-            lagrangian_nuft::SwitchToTargetInterp
-            ( nuftContext, plan, sourceBox, targetBox, mySourceBox, 
-              myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
+            
+            // Backtransform all of the potentials into equivalent sources
+            interpolative_nuft::FormEquivalentSources
+            ( context, plan, mySourceBox, myTargetBox,
+              log2LocalSourceBoxes, log2LocalTargetBoxes,
               log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
               weightGridList );
         }
     }
 
     // Construct the PotentialField
-    std::auto_ptr< const lagrangian_nuft::PotentialField<R,d,q> > 
-        potentialField( 
-            new lagrangian_nuft::PotentialField<R,d,q>
-                ( nuftContext, sourceBox, myTargetBox, 
+    std::auto_ptr< const interpolative_nuft::PotentialField<R,d,q> > 
+        potentialField(
+            new interpolative_nuft::PotentialField<R,d,q>
+                ( context, sourceBox, myTargetBox, 
                   log2LocalTargetBoxesPerDim, weightGridList )
         );
 
@@ -378,5 +328,5 @@ LagrangianNUFT
 
 } // bfio
 
-#endif // BFIO_LAGRANGIAN_NUFT_HPP
+#endif // BFIO_INTERPOLATIVE_NUFT_HPP
 
