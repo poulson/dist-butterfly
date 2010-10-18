@@ -239,17 +239,6 @@ main
     MPI_Comm_rank( comm, &rank );
     MPI_Comm_size( comm, &numProcesses );
 
-    if( !bfio::IsPowerOfTwo(numProcesses) )
-    {
-        if( rank == 0 )
-        {
-            std::cout << "Must run with a power of two number of cores." 
-                      << std::endl;
-        }
-        MPI_Finalize();
-        return 0;
-    }
-
     if( argc != 5 )
     {
         if( rank == 0 )
@@ -262,37 +251,40 @@ main
     const double T = atof(argv[3]);
     const std::size_t nT = atoi(argv[4]);
 
-    // Define the source and target boxes
-    bfio::Box<double,d> sourceBox, targetBox; 
-    for( std::size_t j=0; j<d; ++j )
-    {
-        sourceBox.offsets[j] = -0.5*N;
-        sourceBox.widths[j] = N;
-        targetBox.offsets[j] = 0;
-        targetBox.widths[j] = 1;
-    }
-
-    if( rank == 0 )
-    {
-        std::ostringstream msg;
-        msg << "Will distribute " << M << " random sources over the source "
-            << "domain, which will be split into " << N
-            << " boxes in each of the " << d << " dimensions and distributed "
-            << "amongst " << numProcesses << " processes. The simulation will "
-            << "be over " << T << " units of time with " << nT << " timesteps." 
-            << "\n" << std::endl;
-        std::cout << msg.str();
-    }
-
     try 
     {
-        // Compute the box that our process owns
+        // Define the source and target boxes
+        bfio::Box<double,d> sourceBox, targetBox; 
+        for( std::size_t j=0; j<d; ++j )
+        {
+            sourceBox.offsets[j] = -0.5*N;
+            sourceBox.widths[j] = N;
+            targetBox.offsets[j] = 0;
+            targetBox.widths[j] = 1;
+        }
+
+        // Set up the general strategy for the forward transform
         bfio::ForwardPlan<d> plan( comm, N );
         bfio::Box<double,d> mySourceBox = 
             plan.GetMyInitialSourceBox( sourceBox );
 
-        // Seed our process
-        long seed = time(0);
+        if( rank == 0 )
+        {
+            std::ostringstream msg;
+            msg << "Will distribute " << M << " random sources over the source "
+                << "domain, which will be split into " << N
+                << " boxes in each of the " << d << " dimensions and "
+                << "distributed amongst " << numProcesses << " processes. "
+                << "The simulation will be over " << T << " units of time with "
+                << nT << " timesteps.\n";
+            std::cout << msg.str() << std::endl;
+        }
+
+        // Consistently seed all of the processes' PRNGs
+        long seed;
+        if( rank == 0 )
+            seed = time(0);
+        MPI_Bcast( &seed, 1, MPI_LONG, 0, comm );
         srand( seed );
 
         // Now generate random sources in our frequency box

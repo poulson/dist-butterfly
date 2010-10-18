@@ -24,11 +24,11 @@
 void 
 Usage()
 {
-    std::cout << "GeneralizedRadon <N> <M> <testAccuracy?> <visualize?>\n" 
+    std::cout << "GeneralizedRadon <N> <M> <testAccuracy?> <store?>\n" 
               << "  N: power of 2, the source spread in each dimension\n" 
               << "  M: number of random sources to instantiate\n" 
               << "  testAccuracy?: tests accuracy iff 1\n" 
-              << "  visualize?: creates data files iff 1\n" 
+              << "  store?: creates data files iff 1\n" 
               << std::endl;
 }
 
@@ -39,10 +39,10 @@ static const std::size_t q = 8;
 // If we test the accuracy, define the number of tests to perform per box
 static const std::size_t numAccuracyTestsPerBox = 10;
 
-// If we visualize the results, define the number of samples per box per dim.
-static const std::size_t numVizSamplesPerBoxDim = 5;
-static const std::size_t numVizSamplesPerBox = 
-    bfio::Pow<numVizSamplesPerBoxDim,d>::val;
+// If we store the results, define the number of samples per box per dim.
+static const std::size_t numSamplesPerBoxDim = 5;
+static const std::size_t numSamplesPerBox = 
+    bfio::Pow<numSamplesPerBoxDim,d>::val;
 
 template<typename R>    
 class GenRadon : public bfio::PhaseFunctor<R,d>
@@ -165,17 +165,6 @@ main
     MPI_Comm_rank( comm, &rank );
     MPI_Comm_size( comm, &numProcesses );
 
-    if( !bfio::IsPowerOfTwo(numProcesses) )
-    {
-        if( rank == 0 )
-        {
-            std::cout << "Must run with a power of two number of cores." 
-                      << std::endl;
-        }
-        MPI_Finalize();
-        return 0;
-    }
-
     if( argc != 5 )
     {
         if( rank == 0 )
@@ -186,43 +175,36 @@ main
     const std::size_t N = atoi(argv[1]);
     const std::size_t M = atoi(argv[2]);
     const bool testAccuracy = atoi(argv[3]);
-    const bool visualize = atoi(argv[4]);
-
-    const std::size_t log2N = bfio::Log2( N );
-    const std::size_t log2NumProcesses = bfio::Log2( numProcesses );
-    if( log2NumProcesses > d*log2N )
-    {
-        if( rank == 0 )
-        {
-            std::cout << "Cannot run with more than N^d processes." 
-                      << std::endl;
-        }
-        MPI_Finalize();
-        return 0;
-    }
-
-    // Set our source and target boxes
-    bfio::Box<double,d> sourceBox, targetBox;
-    for( std::size_t j=0; j<d; ++j )
-    {
-        sourceBox.offsets[j] = -0.5*N;
-        sourceBox.widths[j] = N;
-        targetBox.offsets[j] = 0;
-        targetBox.widths[j] = 1;
-    }
-
-    if( rank == 0 )
-    {
-        std::ostringstream msg;
-        msg << "Will distribute " << M << " random sources over the "
-            << "source domain, which will be split into " << N 
-            << " boxes in each of the " << d << " dimensions and "
-            << "distributed amongst " << numProcesses << " processes.\n";
-        std::cout << msg.str() << std::endl;
-    }
+    const bool store = atoi(argv[4]);
 
     try 
     {
+        // Set our source and target boxes
+        bfio::Box<double,d> sourceBox, targetBox;
+        for( std::size_t j=0; j<d; ++j )
+        {
+            sourceBox.offsets[j] = -0.5*N;
+            sourceBox.widths[j] = N;
+            targetBox.offsets[j] = 0;
+            targetBox.widths[j] = 1;
+        }
+
+        // Set up the general strategy for the forward transform
+        bfio::ForwardPlan<d> plan( comm, N );
+        //bfio::AdjointPlan<d> plan( comm, N );
+        bfio::Box<double,d> mySourceBox = 
+            plan.GetMyInitialSourceBox( sourceBox );;
+
+        if( rank == 0 )
+        {
+            std::ostringstream msg;
+            msg << "Will distribute " << M << " random sources over the "
+                << "source domain, which will be split into " << N 
+                << " boxes in each of the " << d << " dimensions and "
+                << "distributed amongst " << numProcesses << " processes.\n";
+            std::cout << msg.str() << std::endl;
+        }
+
         // Consistently randomly seed all of the processes' PRNG.
         long seed;
         if( rank == 0 )
@@ -230,19 +212,12 @@ main
         MPI_Bcast( &seed, 1, MPI_LONG, 0, comm );
         srand( seed );
 
-        // Create our redistribution plan in order to compute our process's 
-        // initial source box
-        bfio::ForwardPlan<d> plan( comm, N );
-        //bfio::AdjointPlan<d> plan( comm, N );
-        bfio::Box<double,d> mySourceBox = 
-            plan.GetMyInitialSourceBox( sourceBox );;
-
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
         double L1Sources = 0;
         std::vector< bfio::Source<double,d> > mySources;
         std::vector< bfio::Source<double,d> > globalSources;
-        if( testAccuracy || visualize )
+        if( testAccuracy || store )
         {
             globalSources.resize( M );
             for( std::size_t i=0; i<M; ++i )
@@ -385,7 +360,7 @@ main
             }
         }
 
-        if( visualize )
+        if( store )
         {
             std::ostringstream basenameStream;
             basenameStream << "genRadon-N=" << N << "-q=" << q 
@@ -421,7 +396,7 @@ main
             const bfio::Array<std::size_t,d>& log2SubboxesPerDim = 
                 u->GetLog2SubboxesPerDim();
             const std::size_t numSubboxes = u->GetNumSubboxes();
-            const std::size_t numVizSamples = numVizSamplesPerBox*numSubboxes;
+            const std::size_t numSamples = numSamplesPerBox*numSubboxes;
 
             bfio::Array<std::size_t,d> numSamplesUpToDim;
             for( std::size_t j=0; j<d; ++j )
@@ -430,24 +405,24 @@ main
                 for( std::size_t i=0; i<j; ++i )
                 {
                     numSamplesUpToDim[j] *= 
-                        numVizSamplesPerBoxDim << log2SubboxesPerDim[i];
+                        numSamplesPerBoxDim << log2SubboxesPerDim[i];
                 }
             }
 
-            for( std::size_t k=0; k<numVizSamples; ++k )
+            for( std::size_t k=0; k<numSamples; ++k )
             {
                 // Extract our indices in each dimension
                 bfio::Array<std::size_t,d> coords;
                 for( std::size_t j=0; j<d; ++j )
                     coords[j] = (k/numSamplesUpToDim[j]) % 
-                                (numVizSamplesPerBoxDim<<log2SubboxesPerDim[j]);
+                                (numSamplesPerBoxDim<<log2SubboxesPerDim[j]);
 
                 // Compute the location of our sample
                 bfio::Array<double,d> x;
                 for( std::size_t j=0; j<d; ++j )
                 {
                     x[j] = myBox.offsets[j] + 
-                           coords[j]*wA[j]/numVizSamplesPerBoxDim;
+                           coords[j]*wA[j]/numSamplesPerBoxDim;
                 }
 
                 std::complex<double> truth(0,0);
