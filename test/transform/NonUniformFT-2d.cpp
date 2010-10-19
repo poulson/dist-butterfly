@@ -24,7 +24,7 @@
 void 
 Usage()
 {
-    std::cout << "NonUniformFT <N> <M> <testAccuracy?> <store?>\n" 
+    std::cout << "NonUniformFT-2d <N> <M> <testAccuracy?> <store?>\n" 
               << "  N: power of 2, the source spread in each dimension\n" 
               << "  M: number of random sources to instantiate\n" 
               << "  testAccuracy?: tests accuracy iff 1\n" 
@@ -340,7 +340,7 @@ main
         if( store )
         {
             std::ostringstream basenameStream;
-            basenameStream << "fourier-N=" << N << "-" << "q=" << q
+            basenameStream << "nuft2d-N=" << N << "-" << "q=" << q
                            << "-rank=" << rank;
             std::string basename = basenameStream.str();
 

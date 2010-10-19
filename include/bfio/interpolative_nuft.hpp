@@ -121,6 +121,15 @@ InterpolativeNUFT
             log2LocalTargetBoxes += d;
 
             // Loop over boxes in target domain. 
+            std::vector<R> prescalingArguments( q );
+            Array<std::vector<R>,d> realPrescalings;
+            Array<std::vector<R>,d> imagPrescalings;
+            for( std::size_t j=0; j<d; ++j )
+            {
+                realPrescalings[j].resize(q);
+                imagPrescalings[j].resize(q);
+            }
+            const std::vector<R>& chebyshevNodes = context.GetChebyshevNodes();
             ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
             WeightGridList<R,d,q> oldWeightGridList( weightGridList );
             for( std::size_t targetIndex=0; 
@@ -133,6 +142,17 @@ InterpolativeNUFT
                 Array<R,d> x0A;
                 for( std::size_t j=0; j<d; ++j )
                     x0A[j] = myTargetBox.offsets[j] + (A[j]+0.5)*wA[j];
+
+                // Store the prescaling factors for forming the check potentials
+                for( std::size_t j=0; j<d; ++j )
+                {
+                    for( std::size_t t=0; t<q; ++t )
+                        prescalingArguments[t] = 
+                            TwoPi*x0A[j]*chebyshevNodes[t]*wB[j]/2;
+                    SinCosBatch
+                    ( prescalingArguments, 
+                      imagPrescalings[j], realPrescalings[j] );
+                }
 
                 // Loop over the B boxes in source domain
                 ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
@@ -158,7 +178,7 @@ InterpolativeNUFT
                         (sourceIndex<<d);
 
                     interpolative_nuft::FormCheckPotentials
-                    ( context, plan, level,
+                    ( context, plan, level, realPrescalings, imagPrescalings,
                       x0A, p0B, wA, wB, parentInteractionOffset,
                       oldWeightGridList, weightGridList[interactionIndex] );
                 }
@@ -204,6 +224,15 @@ InterpolativeNUFT
 
             // Form the partial weights by looping over the boxes in the  
             // target domain.
+            std::vector<R> prescalingArguments( q );
+            Array<std::vector<R>,d> realPrescalings;
+            Array<std::vector<R>,d> imagPrescalings;
+            for( std::size_t j=0; j<d; ++j )
+            {
+                realPrescalings[j].resize(q);
+                imagPrescalings[j].resize(q);
+            }
+            const std::vector<R>& chebyshevNodes = context.GetChebyshevNodes();
             ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
             WeightGridList<R,d,q> partialWeightGridList
             ( 1<<log2LocalTargetBoxes );
@@ -218,13 +247,24 @@ InterpolativeNUFT
                 for( std::size_t j=0; j<d; ++j )
                     x0A[j] = myTargetBox.offsets[j] + (A[j]+0.5)*wA[j];
 
+                // Store the prescaling factors for forming the check potentials
+                for( std::size_t j=0; j<d; ++j )
+                {
+                    for( std::size_t t=0; t<q; ++t )
+                        prescalingArguments[t] =
+                            TwoPi*x0A[j]*chebyshevNodes[t]*wB[j]/2;
+                    SinCosBatch
+                    ( prescalingArguments, 
+                      imagPrescalings[j], realPrescalings[j] );
+                }
+
                 // Compute the interaction offset of A's parent interacting 
                 // with the remaining local source boxes
                 const std::size_t parentInteractionOffset = 
                     ((targetIndex>>d)<<(d-log2NumMergingProcesses));
 
                 interpolative_nuft::FormCheckPotentials
-                ( context, plan, level,
+                ( context, plan, level, realPrescalings, imagPrescalings,
                   x0A, p0B, wA, wB, parentInteractionOffset,
                   weightGridList, partialWeightGridList[targetIndex] );
             }

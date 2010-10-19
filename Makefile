@@ -141,7 +141,8 @@ bindir_release = $(bindir)/release
 tests = htree/ConstrainedHTreeWalker \
         htree/HTreeWalker \
         transform/GeneralizedRadon \
-        transform/NonUniformFT \
+        transform/NonUniformFT-2d \
+        transform/NonUniformFT-3d \
         transform/UpWave \
         transform/Random3DWaves \
         transform/VariableUpWave 

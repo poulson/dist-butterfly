@@ -66,6 +66,11 @@ FormEquivalentSources
     // structure
     std::vector<R> realTempWeights( q );
     std::vector<R> imagTempWeights( q );
+    std::vector<R> scalingArguments( q );
+    std::vector<R> realPrescalings( q );
+    std::vector<R> imagPrescalings( q );
+    std::vector<R> realPostscalings( q );
+    std::vector<R> imagPostscalings( q );
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
     for( std::size_t targetIndex=0;
          targetIndex<(1u<<log2LocalTargetBoxes);
@@ -82,11 +87,11 @@ FormEquivalentSources
         for( std::size_t t=0; t<q; ++t )
             xPoints[t][0] = x0[0] + chebyshevGrid[t][0]*wA[0];
 
-        std::vector<R> scalingArguments( q );
-        std::vector<R> realScalings( q );
-        std::vector<R> imagScalings( q );
-        std::vector<R> realTempWeights( q );
-        std::vector<R> imagTempWeights( q );
+        // Compute the postscalings for all of the pairs interacting with A
+        for( std::size_t t=0; t<q; ++t )
+            scalingArguments[t] = -TwoPi*x0[0]*chebyshevNodes[t]*wB[0];
+        SinCosBatch( scalingArguments, imagPostscalings, realPostscalings );
+
         ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
         for( std::size_t sourceIndex=0;
              sourceIndex<(1u<<log2LocalSourceBoxes);
@@ -108,12 +113,12 @@ FormEquivalentSources
             for( std::size_t t=0; t<q; ++t )
                 scalingArguments[t] = 
                     -TwoPi*(x0[0]+chebyshevNodes[t]*wA[0])*p0[0];
-            SinCosBatch( scalingArguments, imagScalings, realScalings );
+            SinCosBatch( scalingArguments, imagPrescalings, realPrescalings );
             {
                 R* realBuffer = weightGrid.RealBuffer();
                 R* imagBuffer = weightGrid.ImagBuffer();
-                const R* realScalingBuffer = &realScalings[0];
-                const R* imagScalingBuffer = &imagScalings[0];
+                const R* realScalingBuffer = &realPrescalings[0];
+                const R* imagScalingBuffer = &imagPrescalings[0];
                 for( std::size_t t=0; t<q; ++t )
                 {
                     const R realWeight = realBuffer[t];
@@ -156,16 +161,13 @@ FormEquivalentSources
                   (R)1, &imagTempWeights[0], 1 );
             }
             // Post scale
-            for( std::size_t t=0; t<q; ++t )
-                scalingArguments[t] = -TwoPi*x0[0]*chebyshevNodes[t]*wB[0];
-            SinCosBatch( scalingArguments, imagScalings, realScalings );
             {
                 R* realWriteBuffer = weightGrid.RealBuffer();
                 R* imagWriteBuffer = weightGrid.ImagBuffer();
                 const R* realReadBuffer = &realTempWeights[0];
                 const R* imagReadBuffer = &imagTempWeights[0];
-                const R* realScalingBuffer = &realScalings[0];
-                const R* imagScalingBuffer = &imagScalings[0];
+                const R* realScalingBuffer = &realPostscalings[0];
+                const R* imagScalingBuffer = &imagPostscalings[0];
                 for( std::size_t t=0; t<q; ++t )
                 {
                     const R realWeight = realReadBuffer[t];
@@ -211,11 +213,18 @@ FormEquivalentSources
 
     // Iterate over the box pairs, applying M^-1 using the tensor product 
     // structure
-    std::vector<R> scalingArguments( q );
-    std::vector<R> realScalings( q );
-    std::vector<R> imagScalings( q );
     std::vector<R> realTempWeights( q_to_d );
     std::vector<R> imagTempWeights( q_to_d );
+    std::vector<R> scalingArguments( q );
+    std::vector<R> realPrescalings( q );
+    std::vector<R> imagPrescalings( q );
+    Array<std::vector<R>,d> realPostscalings;
+    Array<std::vector<R>,d> imagPostscalings;
+    for( std::size_t j=0; j<d; ++j )
+    {
+        realPostscalings[j].resize(q);
+        imagPostscalings[j].resize(q);
+    }
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
     for( std::size_t targetIndex=0;
          targetIndex<(1u<<log2LocalTargetBoxes);
@@ -233,6 +242,15 @@ FormEquivalentSources
         for( std::size_t t=0; t<q_to_d; ++t )
             for( std::size_t j=0; j<d; ++j )
                 xPoints[t][j] = x0[j] + chebyshevGrid[t][j]*wA[j];
+
+        // Store the postscalings for all interactions with A
+        for( std::size_t j=0; j<d; ++j )
+        {
+            for( std::size_t t=0; t<q; ++t )
+                scalingArguments[t] = -TwoPi*x0[j]*chebyshevNodes[t]*wB[j];
+            SinCosBatch
+            ( scalingArguments, imagPostscalings[j], realPostscalings[j] );
+        }
 
         ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
         for( std::size_t sourceIndex=0;
@@ -256,12 +274,12 @@ FormEquivalentSources
             for( std::size_t t=0; t<q; ++t )
                 scalingArguments[t] = 
                     -TwoPi*(x0[0]+chebyshevNodes[t]*wA[0])*p0[0];
-            SinCosBatch( scalingArguments, imagScalings, realScalings );
+            SinCosBatch( scalingArguments, imagPrescalings, realPrescalings );
             {
                 R* realBuffer = weightGrid.RealBuffer();
                 R* imagBuffer = weightGrid.ImagBuffer();
-                const R* realScalingBuffer = &realScalings[0];
-                const R* imagScalingBuffer = &imagScalings[0];
+                const R* realScalingBuffer = &realPrescalings[0];
+                const R* imagScalingBuffer = &imagPrescalings[0];
                 for( std::size_t t=0; t<q; ++t )
                 {
                     for( std::size_t tPrime=0; tPrime<q; ++tPrime )
@@ -307,14 +325,11 @@ FormEquivalentSources
                  (R)1, &imagTempWeights[0], q );
             }
             // Post scale
-            for( std::size_t t=0; t<q; ++t )
-                scalingArguments[t] = -TwoPi*x0[0]*chebyshevNodes[t]*wB[0];
-            SinCosBatch( scalingArguments, imagScalings, realScalings );
             {
                 R* realBuffer = &realTempWeights[0];
                 R* imagBuffer = &imagTempWeights[0];
-                const R* realScalingBuffer = &realScalings[0];
-                const R* imagScalingBuffer = &imagScalings[0];
+                const R* realScalingBuffer = &realPostscalings[0][0];
+                const R* imagScalingBuffer = &imagPostscalings[0][0];
                 for( std::size_t t=0; t<q; ++t )
                 {
                     for( std::size_t tPrime=0; tPrime<q; ++tPrime )
@@ -338,12 +353,12 @@ FormEquivalentSources
             for( std::size_t t=0; t<q; ++t )
                 scalingArguments[t] = 
                     -TwoPi*(x0[1]+chebyshevNodes[t]*wA[1])*p0[1];
-            SinCosBatch( scalingArguments, imagScalings, realScalings );
+            SinCosBatch( scalingArguments, imagPrescalings, realPrescalings );
             {
                 R* realBuffer = &realTempWeights[0];
                 R* imagBuffer = &imagTempWeights[0];
-                const R* realScalingBuffer = &realScalings[0];
-                const R* imagScalingBuffer = &imagScalings[0];
+                const R* realScalingBuffer = &realPrescalings[0];
+                const R* imagScalingBuffer = &imagPrescalings[0];
                 for( std::size_t w=0; w<q; ++w )
                 {
                     for( std::size_t t=0; t<q; ++t )
@@ -389,14 +404,11 @@ FormEquivalentSources
                   (R)1, weightGrid.ImagBuffer(), q );
             }
             // Postscale
-            for( std::size_t t=0; t<q; ++t )
-                scalingArguments[t] = -TwoPi*x0[1]*chebyshevNodes[t]*wB[1];
-            SinCosBatch( scalingArguments, imagScalings, realScalings );
             {
                 R* realBuffer = weightGrid.RealBuffer();
                 R* imagBuffer = weightGrid.ImagBuffer();
-                const R* realScalingBuffer = &realScalings[0];
-                const R* imagScalingBuffer = &imagScalings[0];
+                const R* realScalingBuffer = &realPostscalings[1][0];
+                const R* imagScalingBuffer = &imagPostscalings[1][0];
                 for( std::size_t w=0; w<q; ++w )
                 {
                     for( std::size_t t=0; t<q; ++t )
@@ -445,8 +457,15 @@ FormEquivalentSources
     // Iterate over the box pairs, applying M^-1 using the tensor product 
     // structure
     std::vector<R> scalingArguments( q );
-    std::vector<R> realScalings( q );
-    std::vector<R> imagScalings( q );
+    std::vector<R> realPrescalings( q );
+    std::vector<R> imagPrescalings( q );
+    Array<std::vector<R>,d> realPostscalings;
+    Array<std::vector<R>,d> imagPostscalings;
+    for( std::size_t j=0; j<d; ++j )
+    {
+        realPostscalings[j].resize(q);
+        imagPostscalings[j].resize(q);
+    }
     std::vector<R> realTempWeights0( q_to_d );
     std::vector<R> imagTempWeights0( q_to_d );
     std::vector<R> realTempWeights1( q_to_d );
@@ -468,6 +487,15 @@ FormEquivalentSources
         for( std::size_t t=0; t<q_to_d; ++t )
             for( std::size_t j=0; j<d; ++j )
                 xPoints[t][j] = x0[j] + chebyshevGrid[t][j]*wA[j];
+
+        // Store the postscalings for all interactions with A
+        for( std::size_t j=0; j<d; ++j )
+        {
+            for( std::size_t t=0; t<q; ++t )
+                scalingArguments[t] = -TwoPi*x0[j]*chebyshevNodes[t]*wB[j];
+            SinCosBatch
+            ( scalingArguments, imagPostscalings[j], realPostscalings[j] );
+        }
 
         ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
         for( std::size_t sourceIndex=0;
@@ -491,12 +519,12 @@ FormEquivalentSources
             for( std::size_t t=0; t<q; ++t )
                 scalingArguments[t] = 
                     -TwoPi*(x0[0]+chebyshevNodes[t]*wA[0])*p0[0];
-            SinCosBatch( scalingArguments, imagScalings, realScalings );
+            SinCosBatch( scalingArguments, imagPrescalings, realPrescalings );
             {
                 R* realBuffer = weightGrid.RealBuffer();
                 R* imagBuffer = weightGrid.ImagBuffer();
-                const R* realScalingBuffer = &realScalings[0];
-                const R* imagScalingBuffer = &imagScalings[0];
+                const R* realScalingBuffer = &realPrescalings[0];
+                const R* imagScalingBuffer = &imagPrescalings[0];
                 for( std::size_t t=0; t<Pow<q,d-1>::val; ++t )
                 {
                     for( std::size_t tPrime=0; tPrime<q; ++tPrime )
@@ -542,14 +570,11 @@ FormEquivalentSources
                  (R)1, &imagTempWeights0[0], q );
             }
             // Post scale
-            for( std::size_t t=0; t<q; ++t )
-                scalingArguments[t] = -TwoPi*x0[0]*chebyshevNodes[t]*wB[0];
-            SinCosBatch( scalingArguments, imagScalings, realScalings );
             {
                 R* realBuffer = &realTempWeights0[0];
                 R* imagBuffer = &imagTempWeights0[0];
-                const R* realScalingBuffer = &realScalings[0];
-                const R* imagScalingBuffer = &imagScalings[0];
+                const R* realScalingBuffer = &realPostscalings[0][0];
+                const R* imagScalingBuffer = &imagPostscalings[0][0];
                 for( std::size_t t=0; t<Pow<q,d-1>::val; ++t )
                 {
                     for( std::size_t tPrime=0; tPrime<q; ++tPrime )
@@ -573,14 +598,14 @@ FormEquivalentSources
             for( std::size_t t=0; t<q; ++t )
                 scalingArguments[t] = 
                     -TwoPi*(x0[1]+chebyshevNodes[t]*wA[1])*p0[1];
-            SinCosBatch( scalingArguments, imagScalings, realScalings );
+            SinCosBatch( scalingArguments, imagPrescalings, realPrescalings );
             for( std::size_t p=0; p<Pow<q,d-2>::val; ++p )
             {
                 const std::size_t offset = p*q*q;
                 R* offsetRealBuffer = &realTempWeights0[offset];
                 R* offsetImagBuffer = &imagTempWeights0[offset];
-                const R* realScalingBuffer = &realScalings[0];
-                const R* imagScalingBuffer = &imagScalings[0];
+                const R* realScalingBuffer = &realPrescalings[0];
+                const R* imagScalingBuffer = &imagPrescalings[0];
                 for( std::size_t w=0; w<q; ++w )
                 {
                     for( std::size_t t=0; t<q; ++t )
@@ -630,16 +655,13 @@ FormEquivalentSources
                 }
             }
             // Postscale
-            for( std::size_t t=0; t<q; ++t )
-                scalingArguments[t] = -TwoPi*x0[1]*chebyshevNodes[t]*wB[1];
-            SinCosBatch( scalingArguments, imagScalings, realScalings );
             for( std::size_t p=0; p<Pow<q,d-2>::val; ++p )
             {
                 const std::size_t offset = p*q*q;
                 R* offsetRealBuffer = &realTempWeights1[offset];
                 R* offsetImagBuffer = &imagTempWeights1[offset];
-                const R* realScalingBuffer = &realScalings[0];
-                const R* imagScalingBuffer = &imagScalings[0];
+                const R* realScalingBuffer = &realPostscalings[1][0];
+                const R* imagScalingBuffer = &imagPostscalings[1][0];
                 for( std::size_t w=0; w<q; ++w )
                 {
                     for( std::size_t t=0; t<q; ++t )
@@ -688,20 +710,11 @@ FormEquivalentSources
                 std::memset( imagWriteBuffer, 0, q_to_d*sizeof(R) );
 
                 // Prescale, transform, and postscale
-                std::vector<R> realPrescalings( q );
-                std::vector<R> imagPrescalings( q );
-                std::vector<R> realPostscalings( q );
-                std::vector<R> imagPostscalings( q );
                 for( std::size_t t=0; t<q; ++t )
                     scalingArguments[t] = 
                         -TwoPi*(x0[j]+chebyshevNodes[t]*wA[j])*p0[j];
                 SinCosBatch
                 ( scalingArguments, imagPrescalings, realPrescalings );
-                for( std::size_t t=0; t<q; ++t )
-                    scalingArguments[t] = 
-                        -TwoPi*x0[j]*chebyshevNodes[t]*wB[j];
-                SinCosBatch
-                ( scalingArguments, imagPostscalings, realPostscalings );
                 for( std::size_t p=0; p<q_to_d/(q_to_j*q); ++p )
                 {
                     const std::size_t offset = p*(q_to_j*q);
@@ -711,8 +724,8 @@ FormEquivalentSources
                     R* offsetImagWriteBuffer = &imagWriteBuffer[offset];
                     const R* realPrescalingBuffer = &realPrescalings[0];
                     const R* imagPrescalingBuffer = &imagPrescalings[0];
-                    const R* realPostscalingBuffer = &realPostscalings[0];
-                    const R* imagPostscalingBuffer = &imagPostscalings[0];
+                    const R* realPostscalingBuffer = &realPostscalings[j][0];
+                    const R* imagPostscalingBuffer = &imagPostscalings[j][0];
                     for( std::size_t w=0; w<q_to_j; ++w )
                     {
                         // Prescale

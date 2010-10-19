@@ -42,6 +42,8 @@ FormCheckPotentials
 ( const interpolative_nuft::Context<R,1,q>& context,
   const Plan<1>& plan,
   const std::size_t level,
+  const Array<std::vector<R>,1>& realPrescalings,
+  const Array<std::vector<R>,1>& imagPrescalings,
   const Array<R,1>& x0A,
   const Array<R,1>& p0B,
   const Array<R,1>& wA,
@@ -61,9 +63,9 @@ FormCheckPotentials
     std::vector<R> imagTempWeights0( q );
     std::vector<R> realTempWeights1( q );
     std::vector<R> imagTempWeights1( q );
-    std::vector<R> scalingArguments( q );
-    std::vector<R> realScalings( q );
-    std::vector<R> imagScalings( q );
+    std::vector<R> postscalingArguments( q );
+    std::vector<R> realPostscalings( q );
+    std::vector<R> imagPostscalings( q );
     for( std::size_t cLocal=0;
          cLocal<(1u<<(1-log2NumMergingProcesses));
          ++cLocal )
@@ -78,16 +80,13 @@ FormCheckPotentials
         p0Bc[0] = p0B[0] + ( c&1 ? wB[0]/4 : -wB[0]/4 );
 
         // Prescaling
-        for( std::size_t t=0; t<q; ++t )
-            scalingArguments[t] = TwoPi*x0A[0]*chebyshevNodes[t]*wB[0]/2;
-        SinCosBatch( scalingArguments, imagScalings, realScalings );
         {
             R* realWriteBuffer = &realTempWeights0[0];
             R* imagWriteBuffer = &imagTempWeights0[0];
             const R* realReadBuffer = oldWeightGrid.RealBuffer();
             const R* imagReadBuffer = oldWeightGrid.ImagBuffer();
-            const R* realScalingBuffer = &realScalings[0];
-            const R* imagScalingBuffer = &imagScalings[0];
+            const R* realScalingBuffer = &realPrescalings[0][0];
+            const R* imagScalingBuffer = &imagPrescalings[0][0];
             for( std::size_t t=0; t<q; ++t )
             {
                 const R realWeight = realReadBuffer[t];
@@ -131,16 +130,16 @@ FormCheckPotentials
         }
         // Postscaling
         for( std::size_t t=0; t<q; ++t )
-            scalingArguments[t] = 
+            postscalingArguments[t] = 
                 -TwoPi*(x0A[0]+chebyshevNodes[t]*wA[0])*p0Bc[0];
-        SinCosBatch( scalingArguments, imagScalings, realScalings );
+        SinCosBatch( postscalingArguments, imagPostscalings, realPostscalings );
         {
             R* realWriteBuffer = weightGrid.RealBuffer();
             R* imagWriteBuffer = weightGrid.ImagBuffer();
             const R* realReadBuffer = &realTempWeights1[0];
             const R* imagReadBuffer = &imagTempWeights1[0];
-            const R* realScalingBuffer = &realScalings[0];
-            const R* imagScalingBuffer = &imagScalings[0];
+            const R* realScalingBuffer = &realPostscalings[0];
+            const R* imagScalingBuffer = &imagPostscalings[0];
             for( std::size_t t=0; t<q; ++t )
             {
                 const R realWeight = realReadBuffer[t];
@@ -163,6 +162,8 @@ FormCheckPotentials
 ( const interpolative_nuft::Context<R,2,q>& context,
   const Plan<2>& plan,
   const std::size_t level,
+  const Array<std::vector<R>,2>& realPrescalings,
+  const Array<std::vector<R>,2>& imagPrescalings,
   const Array<R,2>& x0A,
   const Array<R,2>& p0B,
   const Array<R,2>& wA,
@@ -183,9 +184,9 @@ FormCheckPotentials
     std::vector<R> imagTempWeights0( q_to_d );
     std::vector<R> realTempWeights1( q_to_d );
     std::vector<R> imagTempWeights1( q_to_d );
-    std::vector<R> scalingArguments( q );
-    std::vector<R> realScalings( q );
-    std::vector<R> imagScalings( q );
+    std::vector<R> postscalingArguments( q );
+    std::vector<R> realPostscalings( q );
+    std::vector<R> imagPostscalings( q );
     for( std::size_t cLocal=0; 
          cLocal<(1u<<(2-log2NumMergingProcesses));
          ++cLocal )
@@ -204,16 +205,13 @@ FormCheckPotentials
         // Transform the first dimension                                      //
         //--------------------------------------------------------------------//
         // Prescale
-        for( std::size_t t=0; t<q; ++t )
-            scalingArguments[t] = TwoPi*x0A[0]*chebyshevNodes[t]*wB[0]/2;
-        SinCosBatch( scalingArguments, imagScalings, realScalings );
         {
             R* realWriteBuffer = &realTempWeights0[0];
             R* imagWriteBuffer = &imagTempWeights0[0];
             const R* realReadBuffer = oldWeightGrid.RealBuffer();
             const R* imagReadBuffer = oldWeightGrid.ImagBuffer();
-            const R* realScalingBuffer = &realScalings[0];
-            const R* imagScalingBuffer = &imagScalings[0];
+            const R* realScalingBuffer = &realPrescalings[0][0];
+            const R* imagScalingBuffer = &imagPrescalings[0][0];
             for( std::size_t t=0; t<q; ++t )
             {
                 for( std::size_t tPrime=0; tPrime<q; ++tPrime )
@@ -260,14 +258,14 @@ FormCheckPotentials
         }
         // Postscale
         for( std::size_t t=0; t<q; ++t )
-            scalingArguments[t] = 
+            postscalingArguments[t] = 
                 TwoPi*(x0A[0]+chebyshevNodes[t]*wA[0])*p0Bc[0];
-        SinCosBatch( scalingArguments, imagScalings, realScalings );
+        SinCosBatch( postscalingArguments, imagPostscalings, realPostscalings );
         {
             R* realBuffer = &realTempWeights1[0];
             R* imagBuffer = &imagTempWeights1[0];
-            const R* realScalingBuffer = &realScalings[0];
-            const R* imagScalingBuffer = &imagScalings[0];
+            const R* realScalingBuffer = &realPostscalings[0];
+            const R* imagScalingBuffer = &imagPostscalings[0];
             for( std::size_t t=0; t<q; ++t )
             {
                 for( std::size_t tPrime=0; tPrime<q; ++tPrime )
@@ -288,14 +286,11 @@ FormCheckPotentials
         // Transform the second dimension                                     //
         //--------------------------------------------------------------------//
         // Prescale
-        for( std::size_t t=0; t<q; ++t )
-            scalingArguments[t] = TwoPi*x0A[1]*chebyshevNodes[t]*wB[1]/2;
-        SinCosBatch( scalingArguments, imagScalings, realScalings );
         {
             R* realBuffer = &realTempWeights1[0];
             R* imagBuffer = &imagTempWeights1[0];
-            const R* realScalingBuffer = &realScalings[0];
-            const R* imagScalingBuffer = &imagScalings[0];
+            const R* realScalingBuffer = &realPrescalings[1][0];
+            const R* imagScalingBuffer = &imagPrescalings[1][0];
             for( std::size_t w=0; w<q; ++w )
             {
                 for( std::size_t t=0; t<q; ++t )
@@ -342,16 +337,16 @@ FormCheckPotentials
         }
         // Postscale
         for( std::size_t t=0; t<q; ++t )
-            scalingArguments[t] = 
+            postscalingArguments[t] = 
                 TwoPi*(x0A[1]+chebyshevNodes[t]*wA[1])*p0Bc[1];
-        SinCosBatch( scalingArguments, imagScalings, realScalings );
+        SinCosBatch( postscalingArguments, imagPostscalings, realPostscalings );
         {
             R* realWriteBuffer = weightGrid.RealBuffer();
             R* imagWriteBuffer = weightGrid.ImagBuffer();
             const R* realReadBuffer = &realTempWeights0[0];
             const R* imagReadBuffer = &imagTempWeights0[0];
-            const R* realScalingBuffer = &realScalings[0];
-            const R* imagScalingBuffer = &imagScalings[0];
+            const R* realScalingBuffer = &realPostscalings[0];
+            const R* imagScalingBuffer = &imagPostscalings[0];
             for( std::size_t w=0; w<q; ++w )
             {
                 for( std::size_t t=0; t<q; ++t )
@@ -377,6 +372,8 @@ FormCheckPotentials
 ( const interpolative_nuft::Context<R,d,q>& context,
   const Plan<d>& plan,
   const std::size_t level,
+  const Array<std::vector<R>,d>& realPrescalings,
+  const Array<std::vector<R>,d>& imagPrescalings,
   const Array<R,d>& x0A,
   const Array<R,d>& p0B,
   const Array<R,d>& wA,
@@ -396,9 +393,9 @@ FormCheckPotentials
     std::vector<R> imagTempWeights0( q_to_d );
     std::vector<R> realTempWeights1( q_to_d );
     std::vector<R> imagTempWeights1( q_to_d );
-    std::vector<R> scalingArguments( q );
-    std::vector<R> realScalings( q );
-    std::vector<R> imagScalings( q );
+    std::vector<R> postscalingArguments( q );
+    std::vector<R> realPostscalings( q );
+    std::vector<R> imagPostscalings( q );
     for( std::size_t cLocal=0;
          cLocal<(1u<<(d-log2NumMergingProcesses));
          ++cLocal )
@@ -417,16 +414,13 @@ FormCheckPotentials
         // Transform the first dimension                                      //
         //--------------------------------------------------------------------//
         // Prescale
-        for( std::size_t t=0; t<q; ++t )
-            scalingArguments[t] = TwoPi*x0A[0]*chebyshevNodes[t]*wB[0]/2;
-        SinCosBatch( scalingArguments, imagScalings, realScalings );
         {
             R* realWriteBuffer = &realTempWeights0[0];
             R* imagWriteBuffer = &imagTempWeights0[0];
             const R* realReadBuffer = oldWeightGrid.RealBuffer();
             const R* imagReadBuffer = oldWeightGrid.ImagBuffer();
-            const R* realScalingBuffer = &realScalings[0];
-            const R* imagScalingBuffer = &imagScalings[0];
+            const R* realScalingBuffer = &realPrescalings[0][0];
+            const R* imagScalingBuffer = &imagPrescalings[0][0];
             for( std::size_t t=0; t<Pow<q,d-1>::val; ++t )
             {
                 for( std::size_t tPrime=0; tPrime<q; ++tPrime )
@@ -473,14 +467,14 @@ FormCheckPotentials
         }
         // Postscale
         for( std::size_t t=0; t<q; ++t )
-            scalingArguments[t] = 
+            postscalingArguments[t] = 
                 TwoPi*(x0A[0]+chebyshevNodes[t]*wA[0])*p0Bc[0];
-        SinCosBatch( scalingArguments, imagScalings, realScalings );
+        SinCosBatch( postscalingArguments, imagPostscalings, realPostscalings );
         {
             R* realBuffer = &realTempWeights1[0];
             R* imagBuffer = &imagTempWeights1[0];
-            const R* realScalingBuffer = &realScalings[0];
-            const R* imagScalingBuffer = &imagScalings[0];
+            const R* realScalingBuffer = &realPostscalings[0];
+            const R* imagScalingBuffer = &imagPostscalings[0];
             for( std::size_t t=0; t<Pow<q,d-1>::val; ++t )
             {
                 for( std::size_t tPrime=0; tPrime<q; ++tPrime )
@@ -501,16 +495,13 @@ FormCheckPotentials
         // Transform the second dimension                                     //
         //--------------------------------------------------------------------//
         // Prescale
-        for( std::size_t t=0; t<q; ++t )
-            scalingArguments[t] = TwoPi*x0A[1]*chebyshevNodes[t]*wB[1]/2;
-        SinCosBatch( scalingArguments, imagScalings, realScalings );
         for( std::size_t p=0; p<Pow<q,d-2>::val; ++p )
         {
             const std::size_t offset = p*q*q; 
             R* offsetRealBuffer = &realTempWeights1[offset];
             R* offsetImagBuffer = &imagTempWeights1[offset];
-            const R* realScalingBuffer = &realScalings[0];
-            const R* imagScalingBuffer = &imagScalings[0];
+            const R* realScalingBuffer = &realPrescalings[1][0];
+            const R* imagScalingBuffer = &imagPrescalings[1][0];
             for( std::size_t w=0; w<q; ++w )
             {
                 for( std::size_t t=0; t<q; ++t )
@@ -560,16 +551,16 @@ FormCheckPotentials
         }
         // Postscale
         for( std::size_t t=0; t<q; ++t )
-            scalingArguments[t] =
+            postscalingArguments[t] =
                 TwoPi*(x0A[1]+chebyshevNodes[t]*wA[1])*p0Bc[1];
-        SinCosBatch( scalingArguments, imagScalings, realScalings );
+        SinCosBatch( postscalingArguments, imagPostscalings, realPostscalings );
         for( std::size_t p=0; p<Pow<q,d-2>::val; ++p )
         {
             const std::size_t offset = p*q*q;
             R* offsetRealBuffer = &realTempWeights0[offset];
             R* offsetImagBuffer = &imagTempWeights0[offset];
-            const R* realScalingBuffer = &realScalings[0];
-            const R* imagScalingBuffer = &imagScalings[0];
+            const R* realScalingBuffer = &realPostscalings[0];
+            const R* imagScalingBuffer = &imagPostscalings[0];
             for( std::size_t w=0; w<q; ++w )
             {
                 for( std::size_t t=0; t<q; ++t )
@@ -623,19 +614,11 @@ FormCheckPotentials
             // Prescale, apply the forward map, and then postscale
             std::vector<R> realTempWeightStrip( q );
             std::vector<R> imagTempWeightStrip( q );
-            std::vector<R> realPrescalings( q );
-            std::vector<R> imagPrescalings( q );
-            std::vector<R> realPostscalings( q );
-            std::vector<R> imagPostscalings( q );
             for( std::size_t t=0; t<q; ++t )
-                scalingArguments[t] = TwoPi*x0A[j]*chebyshevNodes[t]*wB[j]/2;
-            SinCosBatch
-            ( scalingArguments, imagPrescalings, realPrescalings );
-            for( std::size_t t=0; t<q; ++t )
-                scalingArguments[t] = 
+                postscalingArguments[t] = 
                     TwoPi*(x0A[j]+chebyshevNodes[t]*wA[j])*p0Bc[j];
             SinCosBatch
-            ( scalingArguments, imagPostscalings, realPostscalings );
+            ( postscalingArguments, imagPostscalings, realPostscalings );
             for( std::size_t p=0; p<q_to_d/(q_to_j*q); ++p )        
             {
                 const std::size_t offset = p*(q_to_j*q);
@@ -643,8 +626,8 @@ FormCheckPotentials
                 R* offsetImagReadBuffer = &imagReadBuffer[offset];
                 R* offsetRealWriteBuffer = &realWriteBuffer[offset];
                 R* offsetImagWriteBuffer = &imagWriteBuffer[offset];
-                const R* realPrescalingBuffer = &realPrescalings[0];
-                const R* imagPrescalingBuffer = &imagPrescalings[0];
+                const R* realPrescalingBuffer = &realPrescalings[j][0];
+                const R* imagPrescalingBuffer = &imagPrescalings[j][0];
                 const R* realPostscalingBuffer = &realPostscalings[0];
                 const R* imagPostscalingBuffer = &imagPostscalings[0];
                 for( std::size_t w=0; w<q_to_j; ++w )
