@@ -201,27 +201,26 @@ main
             }
         }
 
-        // Set up our phase functor
-        Fourier<double> fourier;
-
-        // Create a general context 
+        // Create a context for Interpolative NUFTs
         if( rank == 0 )
-            std::cout << "Creating GeneralFIO context..." << std::endl;
-        bfio::general_fio::Context<double,d,q> generalContext;
+            std::cout << "Creating InterpolativeNUFT context..." << std::endl;
+        bfio::interpolative_nuft::Context<double,d,q> 
+            interpolativeNuftContext( N, sourceBox, targetBox );
 
-        // Run the algorithm
-        std::auto_ptr< const bfio::general_fio::PotentialField<double,d,q> > w;
+        // Run with the interpolative NUFT
+        std::auto_ptr< 
+            const bfio::interpolative_nuft::PotentialField<double,d,q> > u;
         if( rank == 0 )
-            std::cout << "Starting GeneralFIO transform..." << std::endl;
+            std::cout << "Starting InterpolativeNUFT..." << std::endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        w = bfio::GeneralFIO
-        ( generalContext, plan, fourier, sourceBox, targetBox, mySources );
+        u = bfio::InterpolativeNUFT
+        ( interpolativeNuftContext, plan, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
         if( rank == 0 )
         {
-            std::cout << "Runtime: " << stopTime-startTime << " seconds.\n" 
+            std::cout << "Runtime: " << stopTime-startTime << " seconds.\n"
                       << std::endl;
         }
 
@@ -231,7 +230,7 @@ main
         bfio::lagrangian_nuft::Context<double,d,q> 
             lagrangianNuftContext( N, sourceBox, targetBox );
 
-        // Run again with the version specialized for NUFT
+        // Run with the Lagrangian NUFT
         std::auto_ptr< const bfio::lagrangian_nuft::PotentialField<double,d,q> >
             v;
         if( rank == 0 )
@@ -248,26 +247,27 @@ main
                       << std::endl;
         }
 
-        // Create a context for Interpolative NUFTs
-        if( rank == 0 )
-            std::cout << "Creating InterpolativeNUFT context..." << std::endl;
-        bfio::interpolative_nuft::Context<double,d,q> 
-            interpolativeNuftContext( N, sourceBox, targetBox );
+        // Set up our phase functor
+        Fourier<double> fourier;
 
-        // Run a third time with the interpolative NUFT
-        std::auto_ptr< 
-            const bfio::interpolative_nuft::PotentialField<double,d,q> > u;
+        // Create a general context 
         if( rank == 0 )
-            std::cout << "Starting InterpolativeNUFT..." << std::endl;
+            std::cout << "Creating GeneralFIO context..." << std::endl;
+        bfio::general_fio::Context<double,d,q> generalContext;
+
+        // Run the general algorithm
+        std::auto_ptr< const bfio::general_fio::PotentialField<double,d,q> > w;
+        if( rank == 0 )
+            std::cout << "Starting GeneralFIO transform..." << std::endl;
         MPI_Barrier( comm );
         startTime = MPI_Wtime();
-        u = bfio::InterpolativeNUFT
-        ( interpolativeNuftContext, plan, sourceBox, targetBox, mySources );
+        w = bfio::GeneralFIO
+        ( generalContext, plan, fourier, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         stopTime = MPI_Wtime();
         if( rank == 0 )
         {
-            std::cout << "Runtime: " << stopTime-startTime << " seconds.\n"
+            std::cout << "Runtime: " << stopTime-startTime << " seconds.\n" 
                       << std::endl;
         }
 
