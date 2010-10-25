@@ -28,6 +28,9 @@
 
 #include "bfio/tools/twiddle.hpp"
 #include "mpi.h"
+#ifdef BGP
+# include "mpix.h"
+#endif
 
 namespace bfio {
 

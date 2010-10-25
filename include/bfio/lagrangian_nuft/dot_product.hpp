@@ -27,7 +27,11 @@ template<typename R,std::size_t d>
 class DotProduct : public PhaseFunctor<R,d>
 {
 public:
-    // This is the only routine that must be implemented
+    // Default constructors are required to initialize const classes.
+    DotProduct();
+
+    // This is the only routine that must be implemented if the object will not
+    // be const.
     virtual R
     operator()
     ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const;
@@ -42,6 +46,10 @@ public:
 } // lagrangian_nuft
 
 // Implementations
+
+template<typename R,std::size_t d>
+lagrangian_nuft::DotProduct<R,d>::DotProduct()
+{ }
 
 template<typename R,std::size_t d>
 inline R
