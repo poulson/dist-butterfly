@@ -34,7 +34,7 @@ Usage()
 
 // Define the dimension of the problem and the order of interpolation
 static const std::size_t d = 3;
-static const std::size_t q = 7;
+static const std::size_t q = 5;
 
 // If we test the accuracy, define the number of tests to perform per box
 static const std::size_t numAccuracyTestsPerBox = 10;

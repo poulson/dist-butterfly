@@ -21,10 +21,10 @@
 #include <math.h>
 #include <vector>
 
-#if defined(IBM)
+#if defined(MASS)
 # include "mass.h"
 # include "massv.h"
-#elif defined(INTEL)
+#elif defined(MKL)
 # include "mkl_vml.h"
 #endif
 
@@ -67,10 +67,10 @@ SinBatch
         std::vector<float>& sinResults )
 {
     sinResults.resize( a.size() );
-#if defined(IBM)
+#if defined(MASS)
     int n = a.size(); 
     vssin( const_cast<float*>(&a[0]), &sinResults[0], &n );
-#elif defined(INTEL)
+#elif defined(MKL)
     vsSin( a.size(), &a[0], &sinResults[0] );
 #else
     {
@@ -89,10 +89,10 @@ SinBatch
         std::vector<double>& sinResults )
 {
     sinResults.resize( a.size() );
-#if defined(IBM)
+#if defined(MASS)
     int n = a.size();
     vsin( const_cast<double*>(&a[0]), &sinResults[0], &n );
-#elif defined(INTEL)
+#elif defined(MKL)
     vdSin( a.size(), &a[0], &sinResults[0] );
 #else
     {
@@ -118,10 +118,10 @@ CosBatch
         std::vector<float>& cosResults )
 {
     cosResults.resize( a.size() );
-#if defined(IBM)
+#if defined(MASS)
     int n = a.size(); 
     vscos( const_cast<float*>(&a[0]), &cosResults[0], &n );
-#elif defined(INTEL)
+#elif defined(MKL)
     vsCos( a.size(), &a[0], &cosResults[0] );
 #else
     {
@@ -140,10 +140,10 @@ CosBatch
         std::vector<double>& cosResults )
 {
     cosResults.resize( a.size() );
-#if defined(IBM)
+#if defined(MASS)
     int n = a.size();
     vcos( const_cast<double*>(&a[0]), &cosResults[0], &n );
-#elif defined(INTEL)
+#elif defined(MKL)
     vdCos( a.size(), &a[0], &cosResults[0] );
 #else
     {
@@ -172,10 +172,10 @@ SinCosBatch
 {
     sinResults.resize( a.size() );
     cosResults.resize( a.size() );
-#if defined(IBM)
+#if defined(MASS)
     int n = a.size(); 
     vssincos( const_cast<float*>(&a[0]), &sinResults[0], &cosResults[0], &n );
-#elif defined(INTEL)
+#elif defined(MKL)
     vsSinCos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
 #else
     {
@@ -200,10 +200,10 @@ SinCosBatch
 {
     sinResults.resize( a.size() );
     cosResults.resize( a.size() );
-#if defined(IBM)
+#if defined(MASS)
     int n = a.size();
     vsincos( const_cast<double*>(&a[0]), &sinResults[0], &cosResults[0], &n );
-#elif defined(INTEL)
+#elif defined(MKL)
     vdSinCos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
 #else
     {
@@ -233,10 +233,10 @@ SqrtBatch
         std::vector<float>& sqrtResults )
 {
     sqrtResults.resize( a.size() );
-#if defined(IBM)
+#if defined(MASS)
     int n = a.size(); 
     vssqrt( const_cast<float*>(&a[0]), &sqrtResults[0], &n );
-#elif defined(INTEL)
+#elif defined(MKL)
     vsSqrt( a.size(), &a[0], &sqrtResults[0] );
 #else
     {
@@ -255,10 +255,10 @@ SqrtBatch
         std::vector<double>& sqrtResults )
 {
     sqrtResults.resize( a.size() );
-#if defined(IBM)
+#if defined(MASS)
     int n = a.size();
     vsqrt( const_cast<double*>(&a[0]), &sqrtResults[0], &n );
-#elif defined(INTEL)
+#elif defined(MKL)
     vdSqrt( a.size(), &a[0], &sqrtResults[0] );
 #else
     {

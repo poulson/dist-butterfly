@@ -17,11 +17,12 @@
 #
 
 # The GNU configuration is fairly portable, but the Intel configuration has 
-# only been tested on TACC's Ranger, and the IBM one has only been tested on 
-# a Blue Gene/P. The apple implementation has been tested on my laptop; its 
-# only difference from gnu is the additional '-fast' compilation flag.
-config = apple
-ifneq ($(config),ibm)
+# only been tested on TACC's Ranger, and the BG/P configuration has only been 
+# tested on ANL's Blue Gene/P. The apple implementation has been tested on a 
+# Macbook Pro and iMac; its only difference from gnu is the additional '-fast'
+# compilation flag.
+config = gnu
+ifneq ($(config),bgp)
   ifneq ($(config),intel)
     ifneq ($(config),gnu)
       ifneq ($(config),apple)
@@ -36,10 +37,14 @@ testdir = test
 bindir_base = bin
 bindir = $(bindir_base)/$(config)
 
+# Defining 'BGP' exposes BG/P's MPIDO interface for ReduceScatter
+# Defining 'BGP_MPIDO_USE_REDUCESCATTER' forces the MPICH algorithm on BG/P
+# Defining 'MASS' causes usage of the MASS/MASSV libraries for (vector) sin/cos
+# Defining 'MKL' causes usage of the MKL libraries for (vector) sin/cos
 # Defining 'BLAS_UNDERSCORE' appends an underscore to BLAS routine names
 # Defining 'LAPACK_UNDERSCORE' appends an underscore to LAPACK routine names
 # Defining 'RELEASE' removes all unnecessary output and checks
-ifeq ($(config),ibm)
+ifeq ($(config),bgp)
   # This is for ANL's Blue Gene/P
   CXX = mpixlcxx_r
   ESSL_INC = /soft/apps/ESSL-4.3.1-1/include
@@ -48,7 +53,7 @@ ifeq ($(config),ibm)
   XLSMP_LIB = /soft/apps/ibmcmp-aug2010/xlsmp/bg/1.7/bglib
   XLMASS_INC = /soft/apps/ibmcmp-aug2010/xlmass/bg/4.4/include
   XLMASS_LIB = /soft/apps/ibmcmp-aug2010/xlmass/bg/4.4/bglib
-  CXXFLAGS = -DIBM -I$(incdir) -I$(XLMASS_INC)
+  CXXFLAGS = -DBGP -DMASS -I$(incdir) -I$(XLMASS_INC)
   CXXFLAGS_DEBUG = -g $(CXXFLAGS)
   CXXFLAGS_RELEASE = -O4 -DRELEASE $(CXXFLAGS)
   LDFLAGS = -L$(ESSL_LIB) -L$(XLF_LIB) -L$(XLSMP_LIB) -L$(XLMASS_LIB) \
@@ -59,7 +64,7 @@ ifeq ($(config),intel)
   CXX = mpicxx 
   MKL_INC = /opt/apps/intel/mkl/10.0.1.014/include
   MKL_LIB = /opt/apps/intel/mkl/10.0.1.014/lib/em64t
-  CXXFLAGS = -DINTEL -I$(incdir) -I$(MKL_INC)
+  CXXFLAGS = -DMKL -I$(incdir) -I$(MKL_INC)
   CXXFLAGS_DEBUG = -g $(CXXFLAGS)
   CXXFLAGS_RELEASE = -O3 -DRELEASE $(CXXFLAGS)
   LDFLAGS = -Wl,-rpath,$(MKL_LIB) -L$(MKL_LIB) \
@@ -68,7 +73,7 @@ endif
 ifeq ($(config),gnu)
   # This is for a generic Linux machine with a BLAS/LAPACK libraries in /usr/lib
   CXX = mpicxx 
-  CXXFLAGS = -DGNU -I$(incdir) -DBLAS_UNDERSCORE  -DLAPACK_UNDERSCORE
+  CXXFLAGS = -I$(incdir) -DBLAS_UNDERSCORE  -DLAPACK_UNDERSCORE
   CXXFLAGS_DEBUG = -g -Wall $(CXXFLAGS)
   CXXFLAGS_RELEASE = -O3 -ffast-math -Wall -DRELEASE $(CXXFLAGS)
   LDFLAGS = -L/usr/lib -llapack -lblas
@@ -76,7 +81,7 @@ endif
 ifeq ($(config),apple)
   # This is for a Mac with a BLAS/LAPACK libraries in /usr/lib
   CXX = mpicxx 
-  CXXFLAGS = -DGNU -I$(incdir) -DBLAS_UNDERSCORE -DLAPACK_UNDERSCORE
+  CXXFLAGS = -I$(incdir) -DBLAS_UNDERSCORE -DLAPACK_UNDERSCORE
   CXXFLAGS_DEBUG = -g -Wall $(CXXFLAGS)
   CXXFLAGS_RELEASE = -fast -ffast-math -Wall -DRELEASE $(CXXFLAGS)
   LDFLAGS = -L/usr/lib -llapack -lblas
