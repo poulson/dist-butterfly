@@ -368,6 +368,9 @@ transform
             }
 
             // Scatter the summation of the weights
+#ifdef TIMING
+            general_fio::sumScatterTimer.Start();
+#endif
             std::vector<int> recvCounts( numMergingProcesses );
             for( std::size_t j=0; j<numMergingProcesses; ++j )
                 recvCounts[j] = 2*weightGridList.Length()*q_to_d;
@@ -383,15 +386,9 @@ transform
             if( log2SubclusterSize == 0 )
             {
                 MPI_Comm clusterComm = plan.GetClusterComm( level );
-#ifdef TIMING
-		general_fio::sumScatterTimer.Start();
-#endif
                 SumScatter    
                 ( partialWeightGridList.Buffer(), weightGridList.Buffer(),
                   &recvCounts[0], clusterComm );
-#ifdef TIMING
-		general_fio::sumScatterTimer.Stop();
-#endif
             }
             else
             {
@@ -426,16 +423,13 @@ transform
                     }
                 }
                 MPI_Comm clusterComm = plan.GetClusterComm( level );
-#ifdef TIMING
-		general_fio::sumScatterTimer.Start();
-#endif
                 SumScatter
                 ( &sendBuffer[0], weightGridList.Buffer(), 
                   &recvCounts[0], clusterComm );
-#ifdef TIMING
-		general_fio::sumScatterTimer.Stop();
-#endif
             }
+#ifdef TIMING
+            general_fio::sumScatterTimer.Stop();
+#endif
 
             const std::vector<std::size_t>& targetDimsToCut = 
                 plan.GetTargetDimsToCut( level );

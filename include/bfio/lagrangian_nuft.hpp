@@ -59,16 +59,16 @@ PrintTimings()
     std::cout << "LagrangianNUFT timings:\n"
               << "------------------------------------------\n" 
 	      << "InitializeWeights:     " 
-	      << initializeWeightsTimer.TotalTime() << "seconds.\n"
+	      << initializeWeightsTimer.TotalTime() << " seconds.\n"
 	      << "SourceWeightRecursion: " 
-	      << sourceWeightRecursionTimer.TotalTime() << "seconds.\n"
+	      << sourceWeightRecursionTimer.TotalTime() << " seconds.\n"
 	      << "SwitchToTargetInterp:  "
-	      << switchToTargetInterpTimer.TotalTime() << "seconds.\n"
+	      << switchToTargetInterpTimer.TotalTime() << " seconds.\n"
 	      << "TargetWeightRecursion: "
-	      << targetWeightRecursionTimer.TotalTime() << "seconds.\n"
+	      << targetWeightRecursionTimer.TotalTime() << " seconds.\n"
 	      << "SumScatter:            "
-	      << sumScatterTimer.TotalTime() << "seconds.\n"
-	      << "Total: " << timer.TotalTime() << "seconds.\n" << std::endl;
+	      << sumScatterTimer.TotalTime() << " seconds.\n"
+	      << "Total: " << timer.TotalTime() << " seconds.\n" << std::endl;
 }
 
 } // lagrangian_nuft
@@ -370,6 +370,9 @@ LagrangianNUFT
             }
 
             // Scatter the summation of the weights
+#ifdef TIMING
+            lagrangian_nuft::sumScatterTimer.Start();
+#endif
             std::vector<int> recvCounts( numMergingProcesses );
             for( std::size_t j=0; j<numMergingProcesses; ++j )
                 recvCounts[j] = 2*weightGridList.Length()*q_to_d;
@@ -385,15 +388,9 @@ LagrangianNUFT
             if( log2SubclusterSize == 0 )
             {
                 MPI_Comm clusterComm = plan.GetClusterComm( level );
-#ifdef TIMING
-		lagrangian_nuft::sumScatterTimer.Start();
-#endif
                 SumScatter    
                 ( partialWeightGridList.Buffer(), weightGridList.Buffer(),
                   &recvCounts[0], clusterComm );
-#ifdef TIMING
-		lagrangian_nuft::sumScatterTimer.Stop();
-#endif
             }
             else
             {
@@ -428,16 +425,13 @@ LagrangianNUFT
                     }
                 }
                 MPI_Comm clusterComm = plan.GetClusterComm( level );
-#ifdef TIMING
-		lagrangian_nuft::sumScatterTimer.Start();
-#endif
                 SumScatter
                 ( &sendBuffer[0], weightGridList.Buffer(), 
                   &recvCounts[0], clusterComm );
-#ifdef TIMING
-		lagrangian_nuft::sumScatterTimer.Stop();
-#endif
             }
+#ifdef TIMING
+            lagrangian_nuft::sumScatterTimer.Stop();
+#endif
 
             const std::vector<std::size_t>& targetDimsToCut = 
                 plan.GetTargetDimsToCut( level );

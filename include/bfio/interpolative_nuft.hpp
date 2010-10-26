@@ -348,6 +348,9 @@ InterpolativeNUFT
             }
 
             // Scatter the summation of the weights
+#ifdef TIMING
+            interpolative_nuft::sumScatterTimer.Start();
+#endif
             std::vector<int> recvCounts( numMergingProcesses );
             for( std::size_t j=0; j<numMergingProcesses; ++j )
                 recvCounts[j] = 2*weightGridList.Length()*q_to_d;
@@ -363,15 +366,9 @@ InterpolativeNUFT
             if( log2SubclusterSize == 0 )
             {
                 MPI_Comm clusterComm = plan.GetClusterComm( level );
-#ifdef TIMING
-		interpolative_nuft::sumScatterTimer.Start();
-#endif
                 SumScatter    
                 ( partialWeightGridList.Buffer(), weightGridList.Buffer(),
                   &recvCounts[0], clusterComm );
-#ifdef TIMING
-		interpolative_nuft::sumScatterTimer.Stop();
-#endif
             }
             else
             {
@@ -406,16 +403,13 @@ InterpolativeNUFT
                     }
                 }
                 MPI_Comm clusterComm = plan.GetClusterComm( level );
-#ifdef TIMING
-		interpolative_nuft::sumScatterTimer.Start();
-#endif
                 SumScatter
                 ( &sendBuffer[0], weightGridList.Buffer(), 
                   &recvCounts[0], clusterComm );
-#ifdef TIMING
-		interpolative_nuft::sumScatterTimer.Stop();
-#endif
             }
+#ifdef TIMING
+            interpolative_nuft::sumScatterTimer.Stop();
+#endif
 
             // Adjust our local target box
             const std::vector<std::size_t>& targetDimsToCut = 
