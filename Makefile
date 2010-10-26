@@ -21,7 +21,7 @@
 # tested on ANL's Blue Gene/P. The apple implementation has been tested on a 
 # Macbook Pro and an iMac; its only difference from gnu is the additional 
 # '-fast' compilation flag.
-config = bgp
+config = gnu
 ifneq ($(config),bgp)
   ifneq ($(config),intel)
     ifneq ($(config),gnu)
@@ -56,7 +56,7 @@ ifeq ($(config),bgp)
   XLMASS_LIB = /soft/apps/ibmcmp-aug2010/xlmass/bg/4.4/bglib
   CXXFLAGS = -DBGP -DMASS -I$(incdir) -I$(XLMASS_INC)
   CXXFLAGS_DEBUG = -g $(CXXFLAGS)
-  CXXFLAGS_RELEASE = -O4 -DRELEASE $(CXXFLAGS)
+  CXXFLAGS_RELEASE = -O4 -DRELEASE -DTIMING $(CXXFLAGS)
   LDFLAGS = -L$(ESSL_LIB) -L$(XLF_LIB) -L$(XLSMP_LIB) -L$(XLMASS_LIB) \
             -lesslbg -lxlfmath -lxlf90_r -lxlomp_ser -lmassv -lmass
 endif
@@ -67,7 +67,7 @@ ifeq ($(config),intel)
   MKL_LIB = /opt/apps/intel/mkl/10.0.1.014/lib/em64t
   CXXFLAGS = -DMKL -I$(incdir) -I$(MKL_INC)
   CXXFLAGS_DEBUG = -g $(CXXFLAGS)
-  CXXFLAGS_RELEASE = -O3 -DRELEASE $(CXXFLAGS)
+  CXXFLAGS_RELEASE = -O3 -DRELEASE -DTIMING $(CXXFLAGS)
   LDFLAGS = -Wl,-rpath,$(MKL_LIB) -L$(MKL_LIB) \
             -lmkl_em64t -lmkl -lguide -lpthread
 endif
@@ -76,15 +76,15 @@ ifeq ($(config),gnu)
   CXX = mpicxx 
   CXXFLAGS = -I$(incdir) -DBLAS_UNDERSCORE  -DLAPACK_UNDERSCORE
   CXXFLAGS_DEBUG = -g -Wall $(CXXFLAGS)
-  CXXFLAGS_RELEASE = -O3 -ffast-math -Wall -DRELEASE $(CXXFLAGS)
+  CXXFLAGS_RELEASE = -O3 -ffast-math -Wall -DRELEASE -DTIMING $(CXXFLAGS)
   LDFLAGS = -L/usr/lib -llapack -lblas
 endif
 ifeq ($(config),apple)
   # This is for a Mac with a BLAS/LAPACK libraries in /usr/lib
   CXX = mpicxx 
-  CXXFLAGS = -I$(incdir) -DBLAS_UNDERSCORE -DLAPACK_UNDERSCORE
+  CXXFLAGS = -I$(incdir) -DBLAS_UNDERSCORE -DLAPACK_UNDERSCORE 
   CXXFLAGS_DEBUG = -g -Wall $(CXXFLAGS)
-  CXXFLAGS_RELEASE = -fast -ffast-math -Wall -DRELEASE $(CXXFLAGS)
+  CXXFLAGS_RELEASE = -fast -ffast-math -Wall -DRELEASE -DTIMING $(CXXFLAGS)
   LDFLAGS = -L/usr/lib -llapack -lblas
 endif
 

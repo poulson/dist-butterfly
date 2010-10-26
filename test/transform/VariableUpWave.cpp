@@ -342,6 +342,10 @@ main
             std::cout << "Runtime: " << stopTime-startTime << " seconds.\n" 
                       << std::endl;
         }
+#ifdef TIMING
+        if( rank == 0 )
+            bfio::general_fio::PrintTimings();
+#endif
 
         if( testAccuracy )
         {

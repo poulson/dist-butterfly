@@ -331,19 +331,28 @@ main
             }
             u = bfio::GeneralFIO
             ( context, plan, upWave, sourceBox, targetBox, mySources );
+            if( rank == 0 )
+                std::cout << "done" << std::endl;
+#ifdef TIMING
+            if( rank == 0 )
+                bfio::general_fio::PrintTimings();
+#endif
 
             std::auto_ptr
             < const bfio::general_fio::PotentialField<double,d,q> > v;
             if( rank == 0 )
             {
-                std::cout << "done" << "\n"
-                          << "  Starting downWave transform...";
+                std::cout << "  Starting downWave transform...";
                 std::cout.flush();
             }
             v = bfio::GeneralFIO
             ( context, plan, downWave, sourceBox, targetBox, mySources );
             if( rank == 0 )
                 std::cout << "done" << std::endl;
+#ifdef TIMING
+            if( rank == 0 )
+                bfio::general_fio::PrintTimings();
+#endif
 
             // TODO: Gather potentials and then dump to VTK file
         }

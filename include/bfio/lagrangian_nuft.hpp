@@ -38,7 +38,7 @@ static bfio::Timer switchToTargetInterpTimer;
 static bfio::Timer targetWeightRecursionTimer;
 static bfio::Timer sumScatterTimer;
 
-static void 
+static inline void 
 ResetTimers()
 {
     timer.Reset();
@@ -49,7 +49,7 @@ ResetTimers()
     sumScatterTimer.Reset();
 }
 
-static void 
+static inline void 
 PrintTimings()
 {
 #ifndef RELEASE

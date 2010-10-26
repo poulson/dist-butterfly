@@ -37,7 +37,7 @@ static bfio::Timer formCheckPotentialsTimer;
 static bfio::Timer formEquivalentSourcesTimer;
 static bfio::Timer sumScatterTimer;
 
-static void
+static inline void
 ResetTimers()
 {
     timer.Reset();
@@ -47,7 +47,7 @@ ResetTimers()
     sumScatterTimer.Reset();
 }
 
-static void
+static inline void
 PrintTimings()
 {
 #ifndef RELEASE
