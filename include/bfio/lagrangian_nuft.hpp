@@ -25,6 +25,56 @@
 #include "bfio/structures.hpp"
 #include "bfio/tools.hpp"
 
+#ifdef TIMING
+namespace bfio {
+namespace lagrangian_nuft {
+
+static bool alreadyTimed = false;
+
+static bfio::Timer timer;
+static bfio::Timer initializeWeightsTimer;
+static bfio::Timer sourceWeightRecursionTimer;
+static bfio::Timer switchToTargetInterpTimer;
+static bfio::Timer targetWeightRecursionTimer;
+static bfio::Timer sumScatterTimer;
+
+static void 
+ResetTimers()
+{
+    timer.Reset();
+    initializeWeightsTimer.Reset();
+    sourceWeightRecursionTimer.Reset();
+    switchToTargetInterpTimer.Reset();
+    targetWeightRecursionTimer.Reset();
+    sumScatterTimer.Reset();
+}
+
+static void 
+PrintTimings()
+{
+#ifndef RELEASE
+    if( !alreadyTimed )
+	throw std::logic_error("You have not yet run LagrangianNUFT.");
+#endif
+    std::cout << "LagrangianNUFT timings:\n"
+              << "------------------------------------------\n" 
+	      << "InitializeWeights:     " 
+	      << initializeWeightsTimer.TotalTime() << "seconds.\n"
+	      << "SourceWeightRecursion: " 
+	      << sourceWeightRecursionTimer.TotalTime() << "seconds.\n"
+	      << "SwitchToTargetInterp:  "
+	      << switchToTargetInterpTimer.TotalTime() << "seconds.\n"
+	      << "TargetWeightRecursion: "
+	      << targetWeightRecursionTimer.TotalTime() << "seconds.\n"
+	      << "SumScatter:            "
+	      << sumScatterTimer.TotalTime() << "seconds.\n"
+	      << "Total: " << timer.TotalTime() << "seconds.\n" << std::endl;
+}
+
+} // lagrangian_nuft
+} // bfio
+#endif
+
 #include "bfio/lagrangian_nuft/context.hpp"
 #include "bfio/lagrangian_nuft/dot_product.hpp"
 #include "bfio/lagrangian_nuft/potential_field.hpp"
@@ -46,6 +96,10 @@ LagrangianNUFT
   const Box<R,d>& targetBox,
   const std::vector< Source<R,d> >& mySources )
 {
+#ifdef TIMING
+    lagrangian_nuft::ResetTimers();
+    lagrangian_nuft::timer.Start();
+#endif
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
     const lagrangian_nuft::DotProduct<R,d> dotProduct;
@@ -96,19 +150,31 @@ LagrangianNUFT
     // Initialize the weights using Lagrangian interpolation on the 
     // smooth component of the kernel.
     WeightGridList<R,d,q> weightGridList( 1<<log2LocalSourceBoxes );
+#ifdef TIMING
+    lagrangian_nuft::initializeWeightsTimer.Start();
+#endif
     general_fio::InitializeWeights
     ( generalContext, plan, dotProduct, sourceBox, targetBox, mySourceBox, 
       log2LocalSourceBoxes, log2LocalSourceBoxesPerDim, mySources, 
       weightGridList );
+#ifdef TIMING
+    lagrangian_nuft::initializeWeightsTimer.Stop();
+#endif
 
     // Start the main recursion loop
     if( log2N == 0 || log2N == 1 )
     {
+#ifdef TIMING
+	lagrangian_nuft::switchToTargetInterpTimer.Start();
+#endif
         lagrangian_nuft::SwitchToTargetInterp
         ( nuftContext, plan, sourceBox, targetBox, mySourceBox, 
           myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
           log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
           weightGridList );
+#ifdef TIMING
+	lagrangian_nuft::switchToTargetInterpTimer.Stop();
+#endif
     }
     for( std::size_t level=1; level<=log2N; ++level )
     {
@@ -171,10 +237,16 @@ LagrangianNUFT
 
                     if( level <= log2N/2 )
                     {
+#ifdef TIMING
+			lagrangian_nuft::sourceWeightRecursionTimer.Start();
+#endif
                         general_fio::SourceWeightRecursion
                         ( generalContext, plan, dotProduct, level, x0A, p0B, wB,
                           parentInteractionOffset, oldWeightGridList,
                           weightGridList[interactionIndex] );
+#ifdef TIMING
+			lagrangian_nuft::sourceWeightRecursionTimer.Stop();
+#endif
                     }
                     else
                     {
@@ -190,11 +262,17 @@ LagrangianNUFT
                                       (globalA[j]|1)*wA[j];
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
+#ifdef TIMING
+			lagrangian_nuft::targetWeightRecursionTimer.Start();
+#endif
                         general_fio::TargetWeightRecursion
                         ( generalContext, plan, dotProduct, level,
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentInteractionOffset, oldWeightGridList, 
                           weightGridList[interactionIndex] );
+#ifdef TIMING
+			lagrangian_nuft::targetWeightRecursionTimer.Stop();
+#endif
                     }
                 }
             }
@@ -253,10 +331,16 @@ LagrangianNUFT
                     ((targetIndex>>d)<<(d-log2NumMergingProcesses));
                 if( level <= log2N/2 )
                 {
+#ifdef TIMING
+		    lagrangian_nuft::sourceWeightRecursionTimer.Start();
+#endif
                     general_fio::SourceWeightRecursion
                     ( generalContext, plan, dotProduct, level, x0A, p0B, wB,
                       parentInteractionOffset, weightGridList,
                       partialWeightGridList[targetIndex] );
+#ifdef TIMING
+		    lagrangian_nuft::sourceWeightRecursionTimer.Stop();
+#endif
                 }
                 else
                 {
@@ -271,11 +355,17 @@ LagrangianNUFT
                         x0Ap[j] = targetBox.offsets[j] + (globalA[j]|1)*wA[j];
                         ARelativeToAp |= (globalA[j]&1)<<j;
                     }
+#ifdef TIMING
+		    lagrangian_nuft::targetWeightRecursionTimer.Start();
+#endif
                     general_fio::TargetWeightRecursion
                     ( generalContext, plan, dotProduct, level,
                       ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                       parentInteractionOffset, weightGridList, 
                       partialWeightGridList[targetIndex] );
+#ifdef TIMING
+		    lagrangian_nuft::targetWeightRecursionTimer.Stop();
+#endif
                 }
             }
 
@@ -295,9 +385,15 @@ LagrangianNUFT
             if( log2SubclusterSize == 0 )
             {
                 MPI_Comm clusterComm = plan.GetClusterComm( level );
+#ifdef TIMING
+		lagrangian_nuft::sumScatterTimer.Start();
+#endif
                 SumScatter    
                 ( partialWeightGridList.Buffer(), weightGridList.Buffer(),
                   &recvCounts[0], clusterComm );
+#ifdef TIMING
+		lagrangian_nuft::sumScatterTimer.Stop();
+#endif
             }
             else
             {
@@ -332,9 +428,15 @@ LagrangianNUFT
                     }
                 }
                 MPI_Comm clusterComm = plan.GetClusterComm( level );
+#ifdef TIMING
+		lagrangian_nuft::sumScatterTimer.Start();
+#endif
                 SumScatter
                 ( &sendBuffer[0], weightGridList.Buffer(), 
                   &recvCounts[0], clusterComm );
+#ifdef TIMING
+		lagrangian_nuft::sumScatterTimer.Stop();
+#endif
             }
 
             const std::vector<std::size_t>& targetDimsToCut = 
@@ -357,11 +459,17 @@ LagrangianNUFT
         }
         if( level==log2N/2 )
         {
+#ifdef TIMING
+	    lagrangian_nuft::switchToTargetInterpTimer.Start();
+#endif
             lagrangian_nuft::SwitchToTargetInterp
             ( nuftContext, plan, sourceBox, targetBox, mySourceBox, 
               myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
               log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
               weightGridList );
+#ifdef TIMING
+	    lagrangian_nuft::switchToTargetInterpTimer.Stop();
+#endif
         }
     }
 
@@ -373,6 +481,10 @@ LagrangianNUFT
                   log2LocalTargetBoxesPerDim, weightGridList )
         );
 
+#ifdef TIMING
+    lagrangian_nuft::timer.Stop();
+    lagrangian_nuft::alreadyTimed = true;
+#endif
     return potentialField;
 }
 

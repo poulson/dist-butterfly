@@ -19,9 +19,9 @@
 # The GNU configuration is fairly portable, but the Intel configuration has 
 # only been tested on TACC's Ranger, and the BG/P configuration has only been 
 # tested on ANL's Blue Gene/P. The apple implementation has been tested on a 
-# Macbook Pro and iMac; its only difference from gnu is the additional '-fast'
-# compilation flag.
-config = gnu
+# Macbook Pro and an iMac; its only difference from gnu is the additional 
+# '-fast' compilation flag.
+config = bgp
 ifneq ($(config),bgp)
   ifneq ($(config),intel)
     ifneq ($(config),gnu)
@@ -44,6 +44,7 @@ bindir = $(bindir_base)/$(config)
 # Defining 'BLAS_UNDERSCORE' appends an underscore to BLAS routine names
 # Defining 'LAPACK_UNDERSCORE' appends an underscore to LAPACK routine names
 # Defining 'RELEASE' removes all unnecessary output and checks
+# Defining 'TIMING' accumulates detailed timing data
 ifeq ($(config),bgp)
   # This is for ANL's Blue Gene/P
   CXX = mpixlcxx_r

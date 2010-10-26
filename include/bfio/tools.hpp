@@ -24,6 +24,7 @@
 #include "bfio/tools/lapack.hpp"
 #include "bfio/tools/mpi.hpp"
 #include "bfio/tools/special_functions.hpp"
+#include "bfio/tools/timer.hpp"
 #include "bfio/tools/twiddle.hpp"
 #include "bfio/tools/uniform.hpp"
 

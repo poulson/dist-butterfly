@@ -223,6 +223,10 @@ main
             std::cout << "Runtime: " << stopTime-startTime << " seconds.\n"
                       << std::endl;
         }
+#ifdef TIMING
+	if( rank == 0 )
+	    bfio::interpolative_nuft::PrintTimings();
+#endif
 
         // Create a context for NUFTs with Lagrangian interpolation
         if( rank == 0 )
@@ -246,6 +250,10 @@ main
             std::cout << "Runtime: " << stopTime-startTime << " seconds.\n"
                       << std::endl;
         }
+#ifdef TIMING
+	if( rank == 0 )
+	    bfio::lagrangian_nuft::PrintTimings();
+#endif
 
         // Set up our phase functor
         Fourier<double> fourier;
@@ -270,6 +278,10 @@ main
             std::cout << "Runtime: " << stopTime-startTime << " seconds.\n" 
                       << std::endl;
         }
+#ifdef TIMING
+	if( rank == 0 )
+	    bfio::general_fio::PrintTimings();
+#endif
 
         if( testAccuracy )
         {

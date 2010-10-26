@@ -25,6 +25,56 @@
 #include "bfio/structures.hpp"
 #include "bfio/tools.hpp"
 
+#ifdef TIMING
+namespace bfio {
+namespace general_fio {
+
+static bool alreadyTimed = false;
+
+static bfio::Timer timer;
+static bfio::Timer initializeWeightsTimer;
+static bfio::Timer sourceWeightRecursionTimer;
+static bfio::Timer switchToTargetInterpTimer;
+static bfio::Timer targetWeightRecursionTimer;
+static bfio::Timer sumScatterTimer;
+
+static void
+ResetTimers()
+{
+    timer.Reset();
+    initializeWeightsTimer.Reset();
+    sourceWeightRecursionTimer.Reset();
+    switchToTargetInterpTimer.Reset();
+    targetWeightRecursionTimer.Reset();
+    sumScatterTimer.Reset();
+}
+
+static void
+PrintTimings()
+{
+#ifndef RELEASE
+    if( !alreadyTimed )
+	throw std::logic_error("You have not yet run GeneralFIO.");
+#endif
+    std::cout << "GeneralFIO timings:\n"
+	      << "--------------------------------------------\n"
+              << "InitializeWeights:     "
+              << initializeWeightsTimer.TotalTime() << " seconds.\n"
+              << "SourceWeightRecursion: "
+              << sourceWeightRecursionTimer.TotalTime() << " seconds.\n"
+              << "SwitchToTargetInterp:  "
+              << switchToTargetInterpTimer.TotalTime() << " seconds.\n"
+              << "TargetWeightRecursion: "
+              << targetWeightRecursionTimer.TotalTime() << " seconds.\n"
+              << "SumScatter:            "
+              << sumScatterTimer.TotalTime() << " seconds.\n"
+              << "Total: " << timer.TotalTime() << " seconds.\n" << std::endl;
+}
+
+} // general_fio
+} // bfio
+#endif
+
 #include "bfio/general_fio/context.hpp"
 #include "bfio/general_fio/potential_field.hpp"
 
@@ -47,6 +97,10 @@ transform
   const Box<R,d>& targetBox,
   const std::vector< Source<R,d> >& mySources )
 {
+#ifdef TIMING
+    general_fio::ResetTimers();
+    general_fio::timer.Start();
+#endif
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
 
@@ -94,19 +148,31 @@ transform
     // Initialize the weights using Lagrangian interpolation on the 
     // smooth component of the kernel.
     WeightGridList<R,d,q> weightGridList( 1<<log2LocalSourceBoxes );
+#ifdef TIMING
+    general_fio::initializeWeightsTimer.Start();
+#endif
     general_fio::InitializeWeights
     ( context, plan, Phi, sourceBox, targetBox, mySourceBox, 
       log2LocalSourceBoxes, log2LocalSourceBoxesPerDim, mySources, 
       weightGridList );
+#ifdef TIMING
+    general_fio::initializeWeightsTimer.Stop();
+#endif
 
     // Start the main recursion loop
     if( log2N == 0 || log2N == 1 )
     {
+#ifdef TIMING
+	general_fio::switchToTargetInterpTimer.Start();
+#endif
         general_fio::SwitchToTargetInterp
         ( context, plan, Amp, Phi, sourceBox, targetBox, mySourceBox, 
           myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
           log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
           weightGridList );
+#ifdef TIMING
+	general_fio::switchToTargetInterpTimer.Stop();
+#endif
     }
     for( std::size_t level=1; level<=log2N; ++level )
     {
@@ -169,10 +235,16 @@ transform
 
                     if( level <= log2N/2 )
                     {
+#ifdef TIMING
+			general_fio::sourceWeightRecursionTimer.Start();
+#endif
                         general_fio::SourceWeightRecursion
                         ( context, plan, Phi, level, x0A, p0B, wB, 
                           parentInteractionOffset, oldWeightGridList,
                           weightGridList[interactionIndex] );
+#ifdef TIMING
+			general_fio::sourceWeightRecursionTimer.Stop();
+#endif
                     }
                     else
                     {
@@ -188,11 +260,17 @@ transform
                                       (globalA[j]|1)*wA[j];
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
+#ifdef TIMING
+			general_fio::targetWeightRecursionTimer.Start();
+#endif
                         general_fio::TargetWeightRecursion
                         ( context, plan, Phi, level,
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentInteractionOffset, oldWeightGridList, 
                           weightGridList[interactionIndex] );
+#ifdef TIMING
+			general_fio::targetWeightRecursionTimer.Stop();
+#endif
                     }
                 }
             }
@@ -251,10 +329,16 @@ transform
                     ((targetIndex>>d)<<(d-log2NumMergingProcesses));
                 if( level <= log2N/2 )
                 {
+#ifdef TIMING
+		    general_fio::sourceWeightRecursionTimer.Start();
+#endif
                     general_fio::SourceWeightRecursion
                     ( context, plan, Phi, level, x0A, p0B, wB,
                       parentInteractionOffset, weightGridList,
                       partialWeightGridList[targetIndex] );
+#ifdef TIMING
+		    general_fio::sourceWeightRecursionTimer.Stop();
+#endif
                 }
                 else
                 {
@@ -269,11 +353,17 @@ transform
                         x0Ap[j] = targetBox.offsets[j] + (globalA[j]|1)*wA[j];
                         ARelativeToAp |= (globalA[j]&1)<<j;
                     }
+#ifdef TIMING
+		    general_fio::targetWeightRecursionTimer.Start();
+#endif
                     general_fio::TargetWeightRecursion
                     ( context, plan, Phi, level,
                       ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                       parentInteractionOffset, weightGridList, 
                       partialWeightGridList[targetIndex] );
+#ifdef TIMING
+		    general_fio::targetWeightRecursionTimer.Stop();
+#endif
                 }
             }
 
@@ -293,9 +383,15 @@ transform
             if( log2SubclusterSize == 0 )
             {
                 MPI_Comm clusterComm = plan.GetClusterComm( level );
+#ifdef TIMING
+		general_fio::sumScatterTimer.Start();
+#endif
                 SumScatter    
                 ( partialWeightGridList.Buffer(), weightGridList.Buffer(),
                   &recvCounts[0], clusterComm );
+#ifdef TIMING
+		general_fio::sumScatterTimer.Stop();
+#endif
             }
             else
             {
@@ -330,9 +426,15 @@ transform
                     }
                 }
                 MPI_Comm clusterComm = plan.GetClusterComm( level );
+#ifdef TIMING
+		general_fio::sumScatterTimer.Start();
+#endif
                 SumScatter
                 ( &sendBuffer[0], weightGridList.Buffer(), 
                   &recvCounts[0], clusterComm );
+#ifdef TIMING
+		general_fio::sumScatterTimer.Stop();
+#endif
             }
 
             const std::vector<std::size_t>& targetDimsToCut = 
@@ -355,11 +457,17 @@ transform
         }
         if( level==log2N/2 )
         {
+#ifdef TIMING
+	    general_fio::switchToTargetInterpTimer.Start();
+#endif
             general_fio::SwitchToTargetInterp
             ( context, plan, Amp, Phi, sourceBox, targetBox, mySourceBox, 
               myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
               log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
               weightGridList );
+#ifdef TIMING
+	    general_fio::switchToTargetInterpTimer.Stop();
+#endif
         }
     }
 
@@ -370,6 +478,10 @@ transform
               weightGridList )
     );
 
+#ifdef TIMING
+    general_fio::timer.Stop();
+    general_fio::alreadyTimed = true;
+#endif
     return potentialField;
 }
 

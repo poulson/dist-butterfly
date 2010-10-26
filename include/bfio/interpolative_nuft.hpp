@@ -25,6 +25,52 @@
 #include "bfio/structures.hpp"
 #include "bfio/tools.hpp"
 
+#ifdef TIMING
+namespace bfio {
+namespace interpolative_nuft {
+
+static bool alreadyTimed = false;
+
+static bfio::Timer timer;
+static bfio::Timer initializeCheckPotentialsTimer;
+static bfio::Timer formCheckPotentialsTimer;
+static bfio::Timer formEquivalentSourcesTimer;
+static bfio::Timer sumScatterTimer;
+
+static void
+ResetTimers()
+{
+    timer.Reset();
+    initializeCheckPotentialsTimer.Reset();
+    formCheckPotentialsTimer.Reset();
+    formEquivalentSourcesTimer.Reset();
+    sumScatterTimer.Reset();
+}
+
+static void
+PrintTimings()
+{
+#ifndef RELEASE
+    if( !alreadyTimed )
+        throw std::logic_error("You have not yet run InterpolativeNUFT.");
+#endif
+    std::cout << "InterpolativeNUFT timings:\n"
+              << "------------------------------------------\n"
+              << "InitializeCheckPotentials: "
+              << initializeCheckPotentialsTimer.TotalTime() << " seconds.\n"
+              << "FormCheckPotentials:       "
+              << formCheckPotentialsTimer.TotalTime() << " seconds.\n"
+              << "FormEquivalentSources:     "
+              << formEquivalentSourcesTimer.TotalTime() << " seconds.\n"
+              << "SumScatter:                "
+              << sumScatterTimer.TotalTime() << " seconds.\n"
+              << "Total: " << timer.TotalTime() << " seconds.\n" << std::endl;
+}
+
+} // interpolative_nuft
+} // bfio
+#endif
+
 #include "bfio/interpolative_nuft/context.hpp"
 #include "bfio/interpolative_nuft/form_equivalent_sources.hpp"
 #include "bfio/interpolative_nuft/form_check_potentials.hpp"
@@ -42,6 +88,10 @@ InterpolativeNUFT
   const Box<R,d>& targetBox,
   const std::vector< Source<R,d> >& mySources )
 {
+#ifdef TIMING
+    interpolative_nuft::ResetTimers();
+    interpolative_nuft::timer.Start();
+#endif
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
 
@@ -87,15 +137,25 @@ InterpolativeNUFT
     }
 
     WeightGridList<R,d,q> weightGridList( 1<<log2LocalSourceBoxes );
+#ifdef TIMING
+    interpolative_nuft::initializeCheckPotentialsTimer.Start();
+#endif
     interpolative_nuft::InitializeCheckPotentials
     ( context, plan, sourceBox, targetBox, mySourceBox, 
       log2LocalSourceBoxes, log2LocalSourceBoxesPerDim, mySources, 
       weightGridList );
+#ifdef TIMING
+    interpolative_nuft::initializeCheckPotentialsTimer.Stop();
+    interpolative_nuft::formEquivalentSourcesTimer.Start();
+#endif
     interpolative_nuft::FormEquivalentSources
     ( context, plan, mySourceBox, myTargetBox,
       log2LocalSourceBoxes, log2LocalTargetBoxes, 
       log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim, 
       weightGridList );
+#ifdef TIMING
+    interpolative_nuft::formEquivalentSourcesTimer.Stop();
+#endif
 
     // Start the main recursion loop
     for( std::size_t level=1; level<=log2N; ++level )
@@ -177,18 +237,30 @@ InterpolativeNUFT
                         ((targetIndex>>d)<<(log2LocalSourceBoxes+d)) + 
                         (sourceIndex<<d);
 
+#ifdef TIMING
+		    interpolative_nuft::formCheckPotentialsTimer.Start();
+#endif
                     interpolative_nuft::FormCheckPotentials
                     ( context, plan, level, realPrescalings, imagPrescalings,
                       x0A, p0B, wA, wB, parentInteractionOffset,
                       oldWeightGridList, weightGridList[interactionIndex] );
+#ifdef TIMING
+		    interpolative_nuft::formCheckPotentialsTimer.Stop();
+#endif
                 }
             }
+#ifdef TIMING
+	    interpolative_nuft::formEquivalentSourcesTimer.Start();
+#endif
             interpolative_nuft::FormEquivalentSources
             ( context, plan, 
               mySourceBox, myTargetBox,
               log2LocalSourceBoxes, log2LocalTargetBoxes,
               log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
               weightGridList );
+#ifdef TIMING
+	    interpolative_nuft::formEquivalentSourcesTimer.Stop();
+#endif
         }
         else 
         {
@@ -263,10 +335,16 @@ InterpolativeNUFT
                 const std::size_t parentInteractionOffset = 
                     ((targetIndex>>d)<<(d-log2NumMergingProcesses));
 
+#ifdef TIMING
+		interpolative_nuft::formCheckPotentialsTimer.Start();
+#endif
                 interpolative_nuft::FormCheckPotentials
                 ( context, plan, level, realPrescalings, imagPrescalings,
                   x0A, p0B, wA, wB, parentInteractionOffset,
                   weightGridList, partialWeightGridList[targetIndex] );
+#ifdef TIMING
+		interpolative_nuft::formCheckPotentialsTimer.Stop();
+#endif
             }
 
             // Scatter the summation of the weights
@@ -285,9 +363,15 @@ InterpolativeNUFT
             if( log2SubclusterSize == 0 )
             {
                 MPI_Comm clusterComm = plan.GetClusterComm( level );
+#ifdef TIMING
+		interpolative_nuft::sumScatterTimer.Start();
+#endif
                 SumScatter    
                 ( partialWeightGridList.Buffer(), weightGridList.Buffer(),
                   &recvCounts[0], clusterComm );
+#ifdef TIMING
+		interpolative_nuft::sumScatterTimer.Stop();
+#endif
             }
             else
             {
@@ -322,9 +406,15 @@ InterpolativeNUFT
                     }
                 }
                 MPI_Comm clusterComm = plan.GetClusterComm( level );
+#ifdef TIMING
+		interpolative_nuft::sumScatterTimer.Start();
+#endif
                 SumScatter
                 ( &sendBuffer[0], weightGridList.Buffer(), 
                   &recvCounts[0], clusterComm );
+#ifdef TIMING
+		interpolative_nuft::sumScatterTimer.Stop();
+#endif
             }
 
             // Adjust our local target box
@@ -347,11 +437,17 @@ InterpolativeNUFT
             }
             
             // Backtransform all of the potentials into equivalent sources
+#ifdef TIMING
+	    interpolative_nuft::formEquivalentSourcesTimer.Start();
+#endif
             interpolative_nuft::FormEquivalentSources
             ( context, plan, mySourceBox, myTargetBox,
               log2LocalSourceBoxes, log2LocalTargetBoxes,
               log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
               weightGridList );
+#ifdef TIMING
+	    interpolative_nuft::formEquivalentSourcesTimer.Stop();
+#endif
         }
     }
 
@@ -363,6 +459,10 @@ InterpolativeNUFT
                   log2LocalTargetBoxesPerDim, weightGridList )
         );
 
+#ifdef TIMING
+    interpolative_nuft::timer.Stop();
+    interpolative_nuft::alreadyTimed = true;
+#endif
     return potentialField;
 }
 
