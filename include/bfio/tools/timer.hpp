@@ -38,7 +38,7 @@ public:
     void Reset();
 
     const std::string& Name() const;
-    const double TotalTime() const;
+    double TotalTime() const;
 };
 
 } // bfio
@@ -82,7 +82,7 @@ inline const std::string&
 bfio::Timer::Name() const
 { return _name; }
 
-inline const double 
+inline double 
 bfio::Timer::TotalTime() const
 { 
 #ifndef RELEASE
