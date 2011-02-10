@@ -25,6 +25,7 @@ Usage()
     std::cout << "Random3DWaves <N> <M> <T> <nT>\n" 
               << "  N: power of 2, the source spread in each dimension\n" 
               << "  M: number of random sources to instantiate\n" 
+              << "  bootstrapSkip: level to bootstrap to\n"
               << "  T: time to simulate to\n" 
               << "  nT: number of timesteps\n" 
               << std::endl;
@@ -239,7 +240,7 @@ main
     MPI_Comm_rank( comm, &rank );
     MPI_Comm_size( comm, &numProcesses );
 
-    if( argc != 5 )
+    if( argc != 6 )
     {
         if( rank == 0 )
             Usage();
@@ -248,8 +249,9 @@ main
     }
     const std::size_t N = atoi(argv[1]);
     const std::size_t M = atoi(argv[2]);
-    const double T = atof(argv[3]);
-    const std::size_t nT = atoi(argv[4]);
+    const std::size_t bootstrapSkip = atoi(argv[3]);
+    const double T = atof(argv[4]);
+    const std::size_t nT = atoi(argv[5]);
 
     try 
     {
@@ -264,7 +266,7 @@ main
         }
 
         // Set up the general strategy for the forward transform
-        bfio::ForwardPlan<d> plan( comm, N );
+        bfio::ForwardPlan<d> plan( comm, N, bootstrapSkip );
         bfio::Box<double,d> mySourceBox = 
             plan.GetMyInitialSourceBox( sourceBox );
 

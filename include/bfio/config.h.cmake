@@ -15,21 +15,18 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_HPP
-#define BFIO_HPP 1
+#ifndef BFIO_CONFIG_HPP
+#define BFIO_CONFIG_HPP 1
 
-// Include the configuration-specific preprocessor definitions
-#include "bfio/config.h"
+#define BFIO_VERSION_MAJOR @BFIO_VERSION_MAJOR@
+#define BFIO_VERSION_MINOR @BFIO_VERSION_MINOR@
+#cmakedefine RELEASE
+#cmakedefine TIMING
+#cmakedefine BLAS_POST
+#cmakedefine LAPACK_POST
+#cmakedefine AVOID_COMPLEX_MPI
+#cmakedefine MKL
+#cmakedefine ESSL
+#cmakedefine BGP
 
-// One could probably speed up compile time by including everything in a 
-// dependency-aware order
-#include "bfio/constants.hpp"
-#include "bfio/structures.hpp"
-#include "bfio/tools.hpp"
-#include "bfio/functors.hpp"
-
-#include "bfio/general_fio.hpp"
-#include "bfio/lagrangian_nuft.hpp"
-#include "bfio/interpolative_nuft.hpp"
-
-#endif // BFIO_HPP 
+#endif /* BFIO_CONFIG_HPP */

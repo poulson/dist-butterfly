@@ -20,10 +20,10 @@
 
 #include <complex>
 
-#ifdef BLAS_UNDERSCORE
-#define BLAS( name ) name ## _
+#if defined(BLAS_POST)
+#define BLAS(name) name ## _
 #else
-#define BLAS( name ) name
+#define BLAS(name) name
 #endif
 
 namespace bfio {

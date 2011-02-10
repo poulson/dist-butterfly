@@ -133,21 +133,31 @@ transform
     Box<R,d> myTargetBox;
     myTargetBox = targetBox;
 
-    // Compute the number of leaf-level boxes in the source domain that 
-    // our process is responsible for initializing the weights in. 
+    const std::size_t bootstrapSkip = plan.GetBootstrapSkip();
+
+    // Compute the number of source and target boxes that our process is 
+    // responsible for initializing weights in
+    std::size_t log2WeightGridSize = 0;
     std::size_t log2LocalSourceBoxes = 0;
     std::size_t log2LocalTargetBoxes = 0;
     Array<std::size_t,d> log2LocalSourceBoxesPerDim;
     Array<std::size_t,d> log2LocalTargetBoxesPerDim(0);
     for( std::size_t j=0; j<d; ++j )
     {
-        log2LocalSourceBoxesPerDim[j] = log2N-log2SourceBoxesPerDim[j];
+        if( log2N-log2SourceBoxesPerDim[j] >= bootstrapSkip )
+            log2LocalSourceBoxesPerDim[j] = 
+                (log2N-log2SourceBoxesPerDim[j]) - bootstrapSkip;
+        else
+            log2LocalSourceBoxesPerDim[j] = 0;
+        log2LocalTargetBoxesPerDim[j] = bootstrapSkip;
         log2LocalSourceBoxes += log2LocalSourceBoxesPerDim[j];
+        log2LocalTargetBoxes += log2LocalTargetBoxesPerDim[j];
+        log2WeightGridSize += log2N-log2SourceBoxesPerDim[j];
     }
 
     // Initialize the weights using Lagrangian interpolation on the 
     // smooth component of the kernel.
-    WeightGridList<R,d,q> weightGridList( 1<<log2LocalSourceBoxes );
+    WeightGridList<R,d,q> weightGridList( 1u<<log2WeightGridSize );
 #ifdef TIMING
     general_fio::initializeWeightsTimer.Start();
 #endif
@@ -159,8 +169,20 @@ transform
     general_fio::initializeWeightsTimer.Stop();
 #endif
 
+    // Now cut the target domain if necessary
+    for( std::size_t j=0; j<d; ++j )
+    {
+        if( log2LocalSourceBoxesPerDim[j] == 0 )
+        {
+            log2LocalTargetBoxesPerDim[j] -= 
+                bootstrapSkip - (log2N-log2SourceBoxesPerDim[j]);
+            log2LocalTargetBoxes -=
+                bootstrapSkip - (log2N-log2SourceBoxesPerDim[j]);
+        }
+    }
+
     // Start the main recursion loop
-    if( log2N == 0 || log2N == 1 )
+    if( bootstrapSkip == log2N/2 )
     {
 #ifdef TIMING
 	general_fio::switchToTargetInterpTimer.Start();
@@ -174,7 +196,7 @@ transform
 	general_fio::switchToTargetInterpTimer.Stop();
 #endif
     }
-    for( std::size_t level=1; level<=log2N; ++level )
+    for( std::size_t level=bootstrapSkip+1; level<=log2N; ++level )
     {
         // Compute the width of the nodes at this level
         Array<R,d> wA;

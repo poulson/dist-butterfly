@@ -20,10 +20,10 @@
 
 #include <complex>
 
-#ifdef LAPACK_UNDERSCORE
-#define LAPACK( name ) name ## _
+#if defined(LAPACK_POST)
+#define LAPACK(name) name ## _
 #else
-#define LAPACK( name ) name
+#define LAPACK(name) name
 #endif
 
 namespace bfio {

@@ -15,7 +15,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <algorithm>
 #include <ctime>
 #include <fstream>
 #include <memory>
@@ -27,6 +26,7 @@ Usage()
     std::cout << "VariableUpWave <N> <M> <Amp Alg> <testAccuracy?> <store?>\n" 
               << "  N: power of 2, the source spread in each dimension\n" 
               << "  M: number of random sources to instantiate\n" 
+              << "  bootstrap: level to bootstrap to\n"
               << "  testAccuracy?: test accuracy iff 1\n" 
               << "  store?: create data files iff 1\n" 
               << std::endl;
@@ -220,7 +220,7 @@ main
     MPI_Comm_rank( comm, &rank );
     MPI_Comm_size( comm, &numProcesses );
 
-    if( argc != 5 )
+    if( argc != 6 )
     {
         if( rank == 0 )
             Usage();
@@ -229,8 +229,9 @@ main
     }
     const std::size_t N = atoi(argv[1]);
     const std::size_t M = atoi(argv[2]);
-    const bool testAccuracy = atoi(argv[3]);
-    const bool store = atoi(argv[4]);
+    const std::size_t bootstrapSkip = atoi(argv[3]);
+    const bool testAccuracy = atoi(argv[4]);
+    const bool store = atoi(argv[5]);
 
     try
     {
@@ -245,7 +246,7 @@ main
         }
 
         // Set up the general strategy for the forward transform
-        bfio::ForwardPlan<d> plan( comm, N );
+        bfio::ForwardPlan<d> plan( comm, N, bootstrapSkip );
         bfio::Box<double,d> mySourceBox = 
             plan.GetMyInitialSourceBox( sourceBox );
 
