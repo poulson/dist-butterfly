@@ -75,9 +75,9 @@ Fourier<R>::BatchEvaluate
     const std::size_t pSize = pPoints.size();
     results.resize( xSize*pSize );
 
-    R* resultsBuffer = &results[0];
-    const R* xPointsBuffer = &(xPoints[0][0]);
-    const R* pPointsBuffer = &(pPoints[0][0]);
+    R* RESTRICT resultsBuffer = &results[0];
+    const R* RESTRICT xPointsBuffer = &(xPoints[0][0]);
+    const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
     for( std::size_t i=0; i<xSize; ++i )
         for( std::size_t j=0; j<pSize; ++j )
             resultsBuffer[i*pSize+j] = 
@@ -280,7 +280,7 @@ main
 
         if( testAccuracy )
         {
-            const bfio::Box<double,d>& myBox = u->GetBox();
+            const bfio::Box<double,d>& myTargetBox = u->GetMyTargetBox();
             const std::size_t numSubboxes = u->GetNumSubboxes();
             const std::size_t numTests = numSubboxes*numAccuracyTestsPerBox;
 
@@ -299,8 +299,8 @@ main
                 // Compute a random point in our process's target box
                 bfio::Array<double,d> x;
                 for( std::size_t j=0; j<d; ++j )
-                    x[j] = myBox.offsets[j] + 
-                           bfio::Uniform<double>()*myBox.widths[j];
+                    x[j] = myTargetBox.offsets[j] + 
+                           bfio::Uniform<double>()*myTargetBox.widths[j];
 
                 // Evaluate our potential field at x and compare against truth
                 std::complex<double> approx = u->Evaluate( x );
@@ -346,7 +346,10 @@ main
         }
 
         if( store )
-            bfio::lagrangian_nuft::WriteVtkXmlPImageData( comm, N, *v, "nuft2d" );
+        {
+            bfio::lagrangian_nuft::WriteVtkXmlPImageData
+            ( comm, N, targetBox, *v, "nuft2d" );
+        }
     }
     catch( const std::exception& e )
     {

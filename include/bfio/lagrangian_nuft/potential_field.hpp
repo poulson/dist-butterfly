@@ -35,7 +35,7 @@ public:
     PotentialField
     ( const lagrangian_nuft::Context<R,d,q>& context,
       const Box<R,d>& sourceBox,
-      const Box<R,d>& targetBox,
+      const Box<R,d>& myTargetBox,
       const Array<std::size_t,d>& myTargetBoxCoords,
       const Array<std::size_t,d>& log2TargetSubboxesPerDim,
       const WeightGridList<R,d,q>& weightGridList );
@@ -43,7 +43,7 @@ public:
     // This is the point of the potential field
     std::complex<R> Evaluate( const Array<R,d>& x ) const;
 
-    const Box<R,d>& GetBox() const;
+    const Box<R,d>& GetMyTargetBox() const;
     std::size_t GetNumSubboxes() const;
     const Array<R,d>& GetSubboxWidths() const;
     const Array<std::size_t,d>& GetMyTargetBoxCoords() const;
@@ -56,6 +56,7 @@ template<typename R,std::size_t d,std::size_t q>
 void WriteVtkXmlPImageData
 ( MPI_Comm comm, 
   const std::size_t N,
+  const Box<R,d>& targetBox,
   const PotentialField<R,d,q>& u,
   const std::string& basename );
 
@@ -90,8 +91,8 @@ lagrangian_nuft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Box<R,d>&
-lagrangian_nuft::PotentialField<R,d,q>::GetBox() const
-{ return _generalPotential.GetBox(); }
+lagrangian_nuft::PotentialField<R,d,q>::GetMyTargetBox() const
+{ return _generalPotential.GetMyTargetBox(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline std::size_t
@@ -128,11 +129,12 @@ inline void
 lagrangian_nuft::WriteVtkXmlPImageData
 ( MPI_Comm comm, 
   const std::size_t N,
+  const Box<R,d>& targetBox,
   const lagrangian_nuft::PotentialField<R,d,q>& u,
   const std::string& basename )
 {
     general_fio::WriteVtkXmlPImageData
-    ( comm, N, u.GetGeneralPotentialField(), basename );
+    ( comm, N, targetBox, u.GetGeneralPotentialField(), basename );
 }
 
 } // bfio

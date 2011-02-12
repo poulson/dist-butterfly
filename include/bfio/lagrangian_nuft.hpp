@@ -469,12 +469,12 @@ LagrangianNUFT
 
     // Construct the PotentialField
     std::auto_ptr< const lagrangian_nuft::PotentialField<R,d,q> > 
-        potentialField( 
-            new lagrangian_nuft::PotentialField<R,d,q>
-                ( nuftContext, sourceBox, myTargetBox, 
-                  myTargetBoxCoords, log2LocalTargetBoxesPerDim, 
-                  weightGridList )
-        );
+    potentialField( 
+        new lagrangian_nuft::PotentialField<R,d,q>
+            ( nuftContext, sourceBox, myTargetBox, 
+              myTargetBoxCoords, log2LocalTargetBoxesPerDim, 
+              weightGridList )
+    );
 
 #ifdef TIMING
     lagrangian_nuft::timer.Stop();

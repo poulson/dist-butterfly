@@ -45,7 +45,7 @@ class PotentialField
     const general_fio::Context<R,d,q>& _context;
     const PhaseFunctor<R,d>& _Phi;
     const Box<R,d> _sourceBox;
-    const Box<R,d> _targetBox;
+    const Box<R,d> _myTargetBox;
     const Array<std::size_t,d> _myTargetBoxCoords;
     const Array<std::size_t,d> _log2TargetSubboxesPerDim;
 
@@ -59,14 +59,14 @@ public:
     ( const general_fio::Context<R,d,q>& context,
       const PhaseFunctor<R,d>& Phi,
       const Box<R,d>& sourceBox,
-      const Box<R,d>& targetBox,
+      const Box<R,d>& myTargetBox,
       const Array<std::size_t,d>& myTargetBoxCoords,
       const Array<std::size_t,d>& log2TargetSubboxesPerDim,
       const WeightGridList<R,d,q>& weightGridList );
 
     std::complex<R> Evaluate( const Array<R,d>& x ) const;
 
-    const Box<R,d>& GetBox() const;
+    const Box<R,d>& GetMyTargetBox() const;
     std::size_t GetNumSubboxes() const;
     const Array<R,d>& GetSubboxWidths() const;
     const Array<std::size_t,d>& GetMyTargetBoxCoords() const;
@@ -78,6 +78,7 @@ template<typename R,std::size_t d,std::size_t q>
 void WriteVtkXmlPImageData
 ( MPI_Comm comm, 
   const std::size_t N,
+  const Box<R,d>& targetBox,
   const PotentialField<R,d,q>& u,
   const std::string& basename );
 
@@ -90,18 +91,18 @@ general_fio::PotentialField<R,d,q>::PotentialField
 ( const general_fio::Context<R,d,q>& context,
   const PhaseFunctor<R,d>& Phi,
   const Box<R,d>& sourceBox,
-  const Box<R,d>& targetBox,
+  const Box<R,d>& myTargetBox,
   const Array<std::size_t,d>& myTargetBoxCoords,
   const Array<std::size_t,d>& log2TargetSubboxesPerDim,
   const WeightGridList<R,d,q>& weightGridList )
 : _context(context), _Phi(Phi), 
-  _sourceBox(sourceBox), _targetBox(targetBox),
+  _sourceBox(sourceBox), _myTargetBox(myTargetBox),
   _myTargetBoxCoords(myTargetBoxCoords),
   _log2TargetSubboxesPerDim(log2TargetSubboxesPerDim)
 { 
     // Compute the widths of the target subboxes and the source center
     for( std::size_t j=0; j<d; ++j )
-        _wA[j] = targetBox.widths[j] / (1<<log2TargetSubboxesPerDim[j]);
+        _wA[j] = myTargetBox.widths[j] / (1<<log2TargetSubboxesPerDim[j]);
     for( std::size_t j=0; j<d; ++j )
         _p0[j] = sourceBox.offsets[j] + sourceBox.widths[j]/2;
 
@@ -136,7 +137,7 @@ general_fio::PotentialField<R,d,q>::PotentialField
 
         // Now fill the k'th LRP index
         for( std::size_t j=0; j<d; ++j )
-            _LRPs[k].x0[j] = targetBox.offsets[j] + (A[j]+0.5)*_wA[j];
+            _LRPs[k].x0[j] = myTargetBox.offsets[j] + (A[j]+0.5)*_wA[j];
         _LRPs[k].weightGrid = weightGridList[targetIndex];
     }
 }
@@ -150,8 +151,8 @@ general_fio::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 #ifndef RELEASE
     for( std::size_t j=0; j<d; ++j )
     {
-        if( x[j] < _targetBox.offsets[j] || 
-            x[j] > _targetBox.offsets[j]+_targetBox.widths[j] )
+        if( x[j] < _myTargetBox.offsets[j] || 
+            x[j] > _myTargetBox.offsets[j]+_myTargetBox.widths[j] )
         {
             throw std::runtime_error
                   ( "Tried to evaluate outside of potential range." );
@@ -164,7 +165,7 @@ general_fio::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
     for( std::size_t j=0; j<d; ++j )
     {
         std::size_t owningIndex = 
-            static_cast<std::size_t>((x[j]-_targetBox.offsets[j])/_wA[j]);
+            static_cast<std::size_t>((x[j]-_myTargetBox.offsets[j])/_wA[j]);
         k += owningIndex << _log2TargetSubboxesUpToDim[j];
     }
 
@@ -202,8 +203,8 @@ general_fio::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Box<R,d>&
-general_fio::PotentialField<R,d,q>::GetBox() const
-{ return _targetBox; }
+general_fio::PotentialField<R,d,q>::GetMyTargetBox() const
+{ return _myTargetBox; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline std::size_t
@@ -235,6 +236,7 @@ inline void
 general_fio::WriteVtkXmlPImageData
 ( MPI_Comm comm,
   const std::size_t N,
+  const Box<R,d>& targetBox,
   const general_fio::PotentialField<R,d,q>& u,
   const std::string& basename )
 {
@@ -249,16 +251,15 @@ general_fio::WriteVtkXmlPImageData
 
     if( d <= 3 )
     {
-        const bfio::Box<R,d>& myBox = u.GetBox();
-        const bfio::Array<R,d>& wA = u.GetSubboxWidths();
-        const bfio::Array<size_t,d>& log2SubboxesPerDim = 
-            u.GetLog2SubboxesPerDim();
+        const Box<R,d>& myTargetBox = u.GetMyTargetBox();
+        const Array<R,d>& wA = u.GetSubboxWidths();
+        const Array<size_t,d>& log2SubboxesPerDim = u.GetLog2SubboxesPerDim();
         const size_t numSubboxes = u.GetNumSubboxes();
         const size_t numSamples = numSamplesPerBox*numSubboxes;
 
         // Gather the target box coordinates to the root to write the 
         // Piece Extent data.
-        bfio::Array<size_t,d> myCoordsArray = u.GetMyTargetBoxCoords();
+        Array<size_t,d> myCoordsArray = u.GetMyTargetBoxCoords();
         vector<int> myCoords(d);
         for( size_t j=0; j<d; ++j )
             myCoords[j] = myCoordsArray[j]; // convert size_t -> int
@@ -286,12 +287,21 @@ general_fio::WriteVtkXmlPImageData
             os << "<?xml version=\"1.0\"?>\n"
                << "<VTKFile type=\"PImageData\" version=\"0.1\">\n"
                << " <PImageData WholeExtent=\"";
-            // Make the box [0,N]^d x [0,1]^(3-d)
             for( size_t j=0; j<d; ++j )
-                os << "0 " << N*numSamplesPerBoxDim << " "; 
+                os << "0 " << N*numSamplesPerBoxDim << " ";
             for( size_t j=d; j<3; ++j )
                 os << "0 1 ";
-            os << "\" Origin=\"0 0 0\" Spacing=\"1 1 1\" GhostLevel=\"0\">\n"
+            os << "\" Origin=\"";
+            for( size_t j=0; j<d; ++j )
+                os << targetBox.offsets[j] << " ";
+            for( size_t j=d; j<3; ++j )
+                os << "0 ";
+            os << "\" Spacing=\"";
+            for( size_t j=0; j<d; ++j )
+                os << targetBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
+            for( size_t j=d; j<3; ++j )
+                os << "1 ";
+            os << "\" GhostLevel=\"0\">\n"
                << "  <PCellData Scalars=\"cell_scalars\">\n"
                << "   <PDataArray type=\"Float32\" Name=\"cell_scalars\"/>\n"
                << "  </PCellData>\n";
@@ -302,7 +312,7 @@ general_fio::WriteVtkXmlPImageData
                 {
                     size_t width = 
                         numSamplesPerBoxDim << log2SubboxesPerDim[j];
-                    os << coords[i*d+j]*width << " " 
+                    os << coords[i*d+j]*width << " "
                        << (coords[i*d+j]+1)*width << " ";
                 }
                 for( size_t j=d; j<3; ++j )
@@ -348,11 +358,22 @@ general_fio::WriteVtkXmlPImageData
             os << "0 " << N*numSamplesPerBoxDim << " ";
         for( size_t j=d; j<3; ++j )
             os << "0 1 ";
-        os << "\" Origin=\"0 0 0\" Spacing=\"1 1 1\">\n"
+        os << "\" Origin=\"";
+        for( size_t j=0; j<d; ++j )
+            os << targetBox.offsets[j] << " ";
+        for( size_t j=d; j<3; ++j )
+            os << "0 ";
+        os << "\" Spacing=\"";
+        for( size_t j=0; j<d; ++j )
+            os << targetBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
+        for( size_t j=d; j<3; ++j )
+            os << "1 ";
+        os << "\">\n"
            << "  <Piece Extent=\"";
         for( size_t j=0; j<d; ++j )
         {
-            size_t width = numSamplesPerBoxDim << log2SubboxesPerDim[j];
+            size_t width =
+                numSamplesPerBoxDim << log2SubboxesPerDim[j];
             os << myCoords[j]*width << " " << (myCoords[j]+1)*width << " ";
         }
         for( size_t j=d; j<3; ++j )
@@ -365,7 +386,7 @@ general_fio::WriteVtkXmlPImageData
         imagFile << os.str();
         os.clear();
         os.str("");
-        bfio::Array<size_t,d> numSamplesUpToDim;
+        Array<size_t,d> numSamplesUpToDim;
         for( size_t j=0; j<d; ++j )
         {
             numSamplesUpToDim[j] = 1;
@@ -378,15 +399,15 @@ general_fio::WriteVtkXmlPImageData
         for( size_t k=0; k<numSamples; ++k )
         {
             // Extract our indices in each dimension
-            bfio::Array<size_t,d> coords;
+            Array<size_t,d> coords;
             for( size_t j=0; j<d; ++j )
                 coords[j] = (k/numSamplesUpToDim[j]) %
                             (numSamplesPerBoxDim<<log2SubboxesPerDim[j]);
 
             // Compute the location of our sample
-            bfio::Array<R,d> x;
+            Array<R,d> x;
             for( size_t j=0; j<d; ++j )
-                x[j] = myBox.offsets[j] +
+                x[j] = myTargetBox.offsets[j] +
                        coords[j]*wA[j]/numSamplesPerBoxDim;
             complex<R> approx = u.Evaluate( x );
             realFile << (float)real(approx) << " ";

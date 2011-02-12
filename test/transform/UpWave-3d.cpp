@@ -23,7 +23,7 @@
 void 
 Usage()
 {
-    std::cout << "UpWave <N> <M> <testAccuracy?> <store?>\n" 
+    std::cout << "UpWave-3d <N> <M> <testAccuracy?> <store?>\n" 
               << "  N: power of 2, the source spread in each dimension\n" 
               << "  M: number of random sources to instantiate\n" 
               << "  bootstrap: level to bootstrap to\n"
@@ -78,8 +78,8 @@ UpWave<R>::BatchEvaluate
     // Set up the square root arguments 
     std::vector<R> sqrtArguments( pSize );
     {
-        R* sqrtArgBuffer = &sqrtArguments[0];
-        const R* pPointsBuffer = &(pPoints[0][0]);
+        R* RESTRICT sqrtArgBuffer = &sqrtArguments[0];
+        const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
         for( std::size_t j=0; j<pSize; ++j )
             sqrtArgBuffer[j] = pPointsBuffer[j*d+0]*pPointsBuffer[j*d+0] +
                                pPointsBuffer[j*d+1]*pPointsBuffer[j*d+1] +
@@ -100,10 +100,10 @@ UpWave<R>::BatchEvaluate
     // Form the final results
     results.resize( xSize*pSize );
     {
-        R* resultsBuffer = &results[0];
-        const R* sqrtBuffer = &sqrtResults[0];
-        const R* xPointsBuffer = &(xPoints[0][0]);
-        const R* pPointsBuffer = &(pPoints[0][0]);
+        R* RESTRICT resultsBuffer = &results[0];
+        const R* RESTRICT sqrtBuffer = &sqrtResults[0];
+        const R* RESTRICT xPointsBuffer = &(xPoints[0][0]);
+        const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
         for( std::size_t i=0; i<xSize; ++i )
             for( std::size_t j=0; j<pSize; ++j )
                 resultsBuffer[i*pSize+j] = 
@@ -254,7 +254,7 @@ main
 
         if( testAccuracy )
         {
-            const bfio::Box<double,d>& myBox = u->GetBox();
+            const bfio::Box<double,d>& myTargetBox = u->GetMyTargetBox();
             const std::size_t numSubboxes = u->GetNumSubboxes();
             const std::size_t numTests = numSubboxes*numAccuracyTestsPerBox;
 
@@ -273,8 +273,8 @@ main
                 // Compute a random point in our process's target box
                 bfio::Array<double,d> x;
                 for( std::size_t j=0; j<d; ++j )
-                    x[j] = myBox.offsets[j] + 
-                           bfio::Uniform<double>()*myBox.widths[j];
+                    x[j] = myTargetBox.offsets[j] + 
+                           bfio::Uniform<double>()*myTargetBox.widths[j];
 
                 // Evaluate our potential field at x and compare against truth
                 std::complex<double> approx = u->Evaluate( x );
@@ -318,7 +318,10 @@ main
         }
 
         if( store )
-            bfio::general_fio::WriteVtkXmlPImageData( comm, N, *u, "upWave" );
+        {
+            bfio::general_fio::WriteVtkXmlPImageData
+            ( comm, N, targetBox, *u, "upWave3d" );
+        }
     }
     catch( const std::exception& e )
     {

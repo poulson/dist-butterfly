@@ -144,8 +144,8 @@ UpWave<R>::BatchEvaluate
     // Set up the square root arguments
     std::vector<R> sqrtArguments( pSize );
     {
-        R* sqrtArgBuffer = &sqrtArguments[0];
-        const R* pPointsBuffer = &(pPoints[0][0]);
+        R* RESTRICT sqrtArgBuffer = &sqrtArguments[0];
+        const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
         for( std::size_t j=0; j<pSize; ++j )
             sqrtArgBuffer[j] = pPointsBuffer[j*d+0]*pPointsBuffer[j*d+0] +
                                pPointsBuffer[j*d+1]*pPointsBuffer[j*d+1] +
@@ -166,10 +166,10 @@ UpWave<R>::BatchEvaluate
     // Form the final results
     results.resize( xSize*pSize );
     {
-        R* resultsBuffer = &results[0];
-        const R* sqrtBuffer = &sqrtResults[0];
-        const R* xPointsBuffer = &(xPoints[0][0]);
-        const R* pPointsBuffer = &(pPoints[0][0]);
+        R* RESTRICT resultsBuffer = &results[0];
+        const R* RESTRICT sqrtBuffer = &sqrtResults[0];
+        const R* RESTRICT xPointsBuffer = &(xPoints[0][0]);
+        const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
         for( std::size_t i=0; i<xSize; ++i )
             for( std::size_t j=0; j<pSize; ++j )
                 resultsBuffer[i*pSize+j] = 

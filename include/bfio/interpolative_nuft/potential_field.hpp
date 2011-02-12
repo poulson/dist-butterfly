@@ -41,7 +41,7 @@ class PotentialField
 {
     const interpolative_nuft::Context<R,d,q>& _context;
     const Box<R,d> _sourceBox;
-    const Box<R,d> _targetBox;
+    const Box<R,d> _myTargetBox;
     const Array<std::size_t,d> _log2TargetSubboxesPerDim;
 
     Array<R,d> _wA;
@@ -53,13 +53,13 @@ public:
     PotentialField
     ( const interpolative_nuft::Context<R,d,q>& context,
       const Box<R,d>& sourceBox,
-      const Box<R,d>& targetBox,
+      const Box<R,d>& myTargetBox,
       const Array<std::size_t,d>& log2TargetSubboxesPerDim,
       const WeightGridList<R,d,q>& weightGridList );
 
     std::complex<R> Evaluate( const Array<R,d>& x ) const;
 
-    const Box<R,d>& GetBox() const;
+    const Box<R,d>& GetMyTargetBox() const;
     std::size_t GetNumSubboxes() const;
     const Array<R,d>& GetSubboxWidths() const;
     const Array<std::size_t,d>& GetLog2SubboxesPerDim() const;
@@ -83,15 +83,15 @@ template<typename R,std::size_t d,std::size_t q>
 interpolative_nuft::PotentialField<R,d,q>::PotentialField
 ( const interpolative_nuft::Context<R,d,q>& context,
   const Box<R,d>& sourceBox,
-  const Box<R,d>& targetBox,
+  const Box<R,d>& myTargetBox,
   const Array<std::size_t,d>& log2TargetSubboxesPerDim,
   const WeightGridList<R,d,q>& weightGridList )
-: _context(context), _sourceBox(sourceBox), _targetBox(targetBox),
+: _context(context), _sourceBox(sourceBox), _myTargetBox(myTargetBox),
   _log2TargetSubboxesPerDim(log2TargetSubboxesPerDim)
 { 
     // Compute the widths of the target subboxes
     for( std::size_t j=0; j<d; ++j )
-        _wA[j] = targetBox.widths[j] / (1<<log2TargetSubboxesPerDim[j]);
+        _wA[j] = myTargetBox.widths[j] / (1<<log2TargetSubboxesPerDim[j]);
 
     // Compute the array of the partial sums
     _log2TargetSubboxesUpToDim[0] = 0;
@@ -124,7 +124,7 @@ interpolative_nuft::PotentialField<R,d,q>::PotentialField
 
         // Now fill the k'th LRP index
         for( std::size_t j=0; j<d; ++j )
-            _LRPs[k].x0[j] = targetBox.offsets[j] + (A[j]+0.5)*_wA[j];
+            _LRPs[k].x0[j] = myTargetBox.offsets[j] + (A[j]+0.5)*_wA[j];
         _LRPs[k].weightGrid = weightGridList[targetIndex];
     }
 
@@ -151,8 +151,8 @@ interpolative_nuft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 #ifndef RELEASE
     for( std::size_t j=0; j<d; ++j )
     {
-        if( x[j] < _targetBox.offsets[j] ||
-            x[j] > _targetBox.offsets[j] + _targetBox.widths[j] )
+        if( x[j] < _myTargetBox.offsets[j] ||
+            x[j] > _myTargetBox.offsets[j] + _myTargetBox.widths[j] )
         {
             throw std::runtime_error
                   ( "Tried to evaluate outside of potential range." );
@@ -165,7 +165,7 @@ interpolative_nuft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
     for( std::size_t j=0; j<d; ++j ) 
     {
         std::size_t owningIndex = 
-            static_cast<std::size_t>((x[j]-_targetBox.offsets[j])/_wA[j]);
+            static_cast<std::size_t>((x[j]-_myTargetBox.offsets[j])/_wA[j]);
         k += owningIndex << _log2TargetSubboxesUpToDim[j];
     }
     const LRP<R,d,q>& lrp = _LRPs[k];
@@ -188,8 +188,8 @@ interpolative_nuft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Box<R,d>&
-interpolative_nuft::PotentialField<R,d,q>::GetBox() const
-{ return _targetBox; }
+interpolative_nuft::PotentialField<R,d,q>::GetMyTargetBox() const
+{ return _myTargetBox; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline std::size_t

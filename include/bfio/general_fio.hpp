@@ -488,7 +488,8 @@ transform
     }
 
     // Construct the general FIO PotentialField
-    std::auto_ptr< const general_fio::PotentialField<R,d,q> > potentialField( 
+    std::auto_ptr< const general_fio::PotentialField<R,d,q> > 
+    potentialField( 
         new general_fio::PotentialField<R,d,q>
             ( context, Phi, sourceBox, myTargetBox, myTargetBoxCoords, 
               log2LocalTargetBoxesPerDim, weightGridList )

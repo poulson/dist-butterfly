@@ -23,7 +23,8 @@
 void 
 Usage()
 {
-    std::cout << "VariableUpWave <N> <M> <Amp Alg> <testAccuracy?> <store?>\n" 
+    std::cout << "VariableUpWave-2d <N> <M> <Amp Alg> <testAccuracy?> "
+              << "<store?>\n" 
               << "  N: power of 2, the source spread in each dimension\n" 
               << "  M: number of random sources to instantiate\n" 
               << "  bootstrap: level to bootstrap to\n"
@@ -95,8 +96,8 @@ Oscillatory<R>::BatchEvaluate
     // Set up the sin and cos arguments
     std::vector<R> sinArguments( d*xSize );
     {
-        R* sinArgBuffer = &sinArguments[0];
-        const R* xPointsBuffer = &(xPoints[0][0]);
+        R* RESTRICT sinArgBuffer = &sinArguments[0];
+        const R* RESTRICT xPointsBuffer = &(xPoints[0][0]);
         for( std::size_t i=0; i<xSize; ++i )
         {
             sinArgBuffer[i*d+0] =   bfio::Pi*xPointsBuffer[i*d+0];
@@ -105,8 +106,8 @@ Oscillatory<R>::BatchEvaluate
     }
     std::vector<R> cosArguments( d*pPoints.size() );
     {
-        R* cosArgBuffer = &cosArguments[0];
-        const R* pPointsBuffer = &(pPoints[0][0]);
+        R* RESTRICT cosArgBuffer = &cosArguments[0];
+        const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
         for( std::size_t j=0; j<pSize; ++j )
         {
             cosArgBuffer[j*d+0] = 3*bfio::Pi*pPointsBuffer[j*d+0];
@@ -124,14 +125,14 @@ Oscillatory<R>::BatchEvaluate
     std::vector<R> xCoefficients( xSize ); 
     std::vector<R> pCoefficients( pSize );
     {
-        R* xCoefficientsBuffer = &xCoefficients[0];
-        const R* sinBuffer = &sinResults[0];
+        R* RESTRICT xCoefficientsBuffer = &xCoefficients[0];
+        const R* RESTRICT sinBuffer = &sinResults[0];
         for( std::size_t i=0; i<xSize; ++i )
             xCoefficientsBuffer[i] = 0.5*sinBuffer[i*d]*sinBuffer[i*d+1];
     }
     {
-        R* pCoefficientsBuffer = &pCoefficients[0];
-        const R* cosBuffer = &cosResults[0];
+        R* RESTRICT pCoefficientsBuffer = &pCoefficients[0];
+        const R* RESTRICT cosBuffer = &cosResults[0];
         for( std::size_t j=0; j<pSize; ++j )
             pCoefficientsBuffer[j] = cosBuffer[j*d]*cosBuffer[j*d+1];
     }
@@ -139,9 +140,9 @@ Oscillatory<R>::BatchEvaluate
     // Form the answer
     results.resize( xSize*pSize );
     {
-        std::complex<R>* resultsBuffer = &results[0];
-        const R* xCoefficientsBuffer = &xCoefficients[0];
-        const R* pCoefficientsBuffer = &pCoefficients[0];
+        std::complex<R>* RESTRICT resultsBuffer = &results[0];
+        const R* RESTRICT xCoefficientsBuffer = &xCoefficients[0];
+        const R* RESTRICT pCoefficientsBuffer = &pCoefficients[0];
         for( std::size_t i=0; i<xSize; ++i )
             for( std::size_t j=0; j<pSize; ++j )
                 resultsBuffer[i*pSize+j] = 
@@ -345,7 +346,7 @@ main
 
         if( testAccuracy )
         {
-            const bfio::Box<double,d>& myBox = u->GetBox();
+            const bfio::Box<double,d>& myTargetBox = u->GetMyTargetBox();
             const std::size_t numSubboxes = u->GetNumSubboxes();
             const std::size_t numTests = numSubboxes*numAccuracyTestsPerBox;
 
@@ -364,8 +365,8 @@ main
                 // Compute a random point in our process's target box
                 bfio::Array<double,d> x;
                 for( std::size_t j=0; j<d; ++j )
-                    x[j] = myBox.offsets[j] + 
-                           bfio::Uniform<double>()*myBox.widths[j];
+                    x[j] = myTargetBox.offsets[j] + 
+                           bfio::Uniform<double>()*myTargetBox.widths[j];
 
                 // Evaluate our potential field at x and compare against truth
                 std::complex<double> approx = u->Evaluate( x );
@@ -410,8 +411,10 @@ main
         }
 
         if( store )
+        {
             bfio::general_fio::WriteVtkXmlPImageData
-            ( comm, N, *u, "varUpWave" );
+            ( comm, N, targetBox, *u, "varUpWave2d" );
+        }
     }
     catch( const std::exception& e )
     {

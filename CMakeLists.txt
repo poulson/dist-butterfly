@@ -220,7 +220,7 @@ if(BUILD_TESTS)
 
   set(TRANSFORM_TEST_DIR ${PROJECT_SOURCE_DIR}/test/transform)
   set(TRANSFORM_TESTS GenRadon-2d GenRadon-3d NonUniformFT-2d NonUniformFT-3d 
-                      Random3DWaves UpWave VariableUpWave)
+                      Random3DWaves UpWave-3d VariableUpWave-2d)
 endif(BUILD_TESTS)
 
 # Create a dummy library in order to be able to force the math libraries

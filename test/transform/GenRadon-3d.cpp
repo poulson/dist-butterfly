@@ -297,7 +297,7 @@ main
 
         if( testAccuracy )
         {
-            const bfio::Box<double,d>& myBox = u->GetBox();
+            const bfio::Box<double,d>& myTargetBox = u->GetMyTargetBox();
             const size_t numSubboxes = u->GetNumSubboxes();
             const size_t numTests = numSubboxes*numAccuracyTestsPerBox;
 
@@ -313,8 +313,8 @@ main
                 // Compute a random point in our process's target box
                 bfio::Array<double,d> x;
                 for( size_t j=0; j<d; ++j )
-                    x[j] = myBox.offsets[j] + 
-                           bfio::Uniform<double>()*myBox.widths[j];
+                    x[j] = myTargetBox.offsets[j] + 
+                           bfio::Uniform<double>()*myTargetBox.widths[j];
 
                 // Evaluate our potential field at x and compare against truth
                 complex<double> approx = u->Evaluate( x );
@@ -359,7 +359,10 @@ main
         }
 
         if( store )
-            bfio::general_fio::WriteVtkXmlPImageData( comm, N, *u, "genRadon3d" );
+        {
+            bfio::general_fio::WriteVtkXmlPImageData
+            ( comm, N, targetBox, *u, "genRadon3d" );
+        }
     }
     catch( const exception& e )
     {
