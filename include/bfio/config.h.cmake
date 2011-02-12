@@ -1,6 +1,6 @@
 /*
    ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
-   Copyright (C) 2010 Jack Poulson <jack.poulson@gmail.com>
+   Copyright (C) 2010-2011 Jack Poulson <jack.poulson@gmail.com>
  
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 
 #define BFIO_VERSION_MAJOR @BFIO_VERSION_MAJOR@
 #define BFIO_VERSION_MINOR @BFIO_VERSION_MINOR@
+#define RESTRICT @RESTRICT@
 #cmakedefine RELEASE
 #cmakedefine TIMING
 #cmakedefine BLAS_POST

@@ -1,6 +1,6 @@
 /*
    ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
-   Copyright (C) 2010 Jack Poulson <jack.poulson@gmail.com>
+   Copyright (C) 2010-2011 Jack Poulson <jack.poulson@gmail.com>
  
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 
 #include <stdexcept>
 #include <complex>
+#include <fstream>
 #include <vector>
 
 #include "bfio/structures/array.hpp"
@@ -45,6 +46,7 @@ class PotentialField
     const PhaseFunctor<R,d>& _Phi;
     const Box<R,d> _sourceBox;
     const Box<R,d> _targetBox;
+    const Array<std::size_t,d> _myTargetBoxCoords;
     const Array<std::size_t,d> _log2TargetSubboxesPerDim;
 
     Array<R,d> _wA;
@@ -58,6 +60,7 @@ public:
       const PhaseFunctor<R,d>& Phi,
       const Box<R,d>& sourceBox,
       const Box<R,d>& targetBox,
+      const Array<std::size_t,d>& myTargetBoxCoords,
       const Array<std::size_t,d>& log2TargetSubboxesPerDim,
       const WeightGridList<R,d,q>& weightGridList );
 
@@ -66,9 +69,18 @@ public:
     const Box<R,d>& GetBox() const;
     std::size_t GetNumSubboxes() const;
     const Array<R,d>& GetSubboxWidths() const;
+    const Array<std::size_t,d>& GetMyTargetBoxCoords() const;
     const Array<std::size_t,d>& GetLog2SubboxesPerDim() const;
     const Array<std::size_t,d>& GetLog2SubboxesUpToDim() const;
 };
+
+template<std::size_t d,std::size_t q>
+void WriteVtkXmlPImageData
+( MPI_Comm comm, 
+  const std::size_t N,
+  const PotentialField<double,d,q>& u,
+  const std::string& basename );
+
 } // general_fio
 
 // Implementations
@@ -79,9 +91,12 @@ general_fio::PotentialField<R,d,q>::PotentialField
   const PhaseFunctor<R,d>& Phi,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
+  const Array<std::size_t,d>& myTargetBoxCoords,
   const Array<std::size_t,d>& log2TargetSubboxesPerDim,
   const WeightGridList<R,d,q>& weightGridList )
-: _context(context), _Phi(Phi), _sourceBox(sourceBox), _targetBox(targetBox),
+: _context(context), _Phi(Phi), 
+  _sourceBox(sourceBox), _targetBox(targetBox),
+  _myTargetBoxCoords(myTargetBoxCoords),
   _log2TargetSubboxesPerDim(log2TargetSubboxesPerDim)
 { 
     // Compute the widths of the target subboxes and the source center
@@ -202,6 +217,11 @@ general_fio::PotentialField<R,d,q>::GetSubboxWidths() const
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
+general_fio::PotentialField<R,d,q>::GetMyTargetBoxCoords() const
+{ return _myTargetBoxCoords; }
+
+template<typename R,std::size_t d,std::size_t q>
+inline const Array<std::size_t,d>&
 general_fio::PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
 { return _log2TargetSubboxesPerDim; }
 
@@ -209,6 +229,160 @@ template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
 general_fio::PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
 { return _log2TargetSubboxesUpToDim; }
+
+template<std::size_t d,std::size_t q>
+inline void
+general_fio::WriteVtkXmlPImageData
+( MPI_Comm comm,
+  const std::size_t N,
+  const general_fio::PotentialField<double,d,q>& u,
+  const std::string& basename )
+{
+    using namespace std;
+
+    const std::size_t numSamplesPerBoxDim = 4;
+    const std::size_t numSamplesPerBox = Pow<numSamplesPerBoxDim,d>::val;
+
+    int rank, numProcesses;
+    MPI_Comm_rank( comm, &rank );
+    MPI_Comm_size( comm, &numProcesses );
+
+    if( d <= 3 )
+    {
+        const bfio::Box<double,d>& myBox = u.GetBox();
+        const bfio::Array<double,d>& wA = u.GetSubboxWidths();
+        const bfio::Array<size_t,d>& log2SubboxesPerDim = 
+            u.GetLog2SubboxesPerDim();
+        const size_t numSubboxes = u.GetNumSubboxes();
+        const size_t numSamples = numSamplesPerBox*numSubboxes;
+
+        // Gather the target box coordinates to the root to write the 
+        // Piece Extent data.
+        bfio::Array<size_t,d> myCoordsArray = u.GetMyTargetBoxCoords();
+        vector<int> myCoords(d);
+        for( size_t j=0; j<d; ++j )
+            myCoords[j] = myCoordsArray[j]; // convert size_t -> int
+        vector<int> coords(1);
+        if( rank == 0 )
+            coords.resize(d*numProcesses);
+        MPI_Gather
+        ( &myCoords[0], d, MPI_INT, &coords[0], d, MPI_INT, 0, comm );
+
+        // Have the root create the parallel file
+        if( rank == 0 )
+        {
+            ostringstream parallelStream;
+            parallelStream << basename << ".pvti";
+            cout << "Creating parallel file " << parallelStream.str() << "...";
+            cout.flush();
+            ofstream file;
+            file.open( parallelStream.str().c_str() );
+            file << "<?xml version=\"1.0\"?>\n"
+                 << "<VTKFile type=\"PImageData\" version=\"0.1\">\n"
+                 << " <PImageData WholeExtent=\"";
+            // Make the box [0,N]^d x [0,1]^(3-d)
+            for( size_t j=0; j<d; ++j )
+                file << "0 " << N*numSamplesPerBoxDim << " "; 
+            for( size_t j=d; j<3; ++j )
+                file << "0 1 ";
+            file << "\" Origin=\"0 0 0\" Spacing=\"1 1 1\" GhostLevel=\"0\">\n"
+                 << "  <PCellData Scalars=\"cell_scalars\">\n"
+                 << "   <PDataArray type=\"Float64\" Name=\"cell_scalars\"/>\n"
+                 << "  </PCellData>\n";
+            for( size_t i=0; i<numProcesses; ++i )
+            {
+                file << "  <Piece Extent=\"";
+                for( size_t j=0; j<d; ++j )
+                {
+                    size_t width = 
+                        numSamplesPerBoxDim << log2SubboxesPerDim[j];
+                    file << coords[i*d+j]*width << " " 
+                         << (coords[i*d+j]+1)*width << " ";
+                }
+                for( size_t j=d; j<3; ++j )
+                    file << "0 1 ";
+                ostringstream sourceStream;
+                sourceStream << basename << "_" << i << ".vti";
+                file << "\" Source=\"" << sourceStream.str() << "\"/>\n";
+            }
+            file << " </PImageData>\n"
+                 << "</VTKFile>" << endl;
+            file.close();
+            cout << "done" << endl;
+        }
+
+        // Have each process write its serial image data
+        if( rank == 0 )
+        {
+            cout << "Creating serial vti files...";
+            cout.flush();
+        }
+        ostringstream sourceStream;
+        sourceStream << basename << "_" << rank << ".vti";
+        ofstream file;
+        file.open( sourceStream.str().c_str() );
+        file << "<?xml version=\"1.0\"?>\n"
+             << "<VTKFile type=\"ImageData\" version=\"0.1\">\n"
+             << " <ImageData WholeExtent=\"";
+        for( size_t j=0; j<d; ++j )
+            file << "0 " << N*numSamplesPerBoxDim << " ";
+        for( size_t j=d; j<3; ++j )
+            file << "0 1 ";
+        file << "\" Origin=\"0 0 0\" Spacing=\"1 1 1\">\n"
+             << "  <Piece Extent=\"";
+        for( size_t j=0; j<d; ++j )
+        {
+            size_t width = numSamplesPerBoxDim << log2SubboxesPerDim[j];
+            file << myCoords[j]*width << " " << (myCoords[j]+1)*width << " ";
+        }
+        for( size_t j=d; j<3; ++j )
+            file << "0 1 ";
+        file << "\">\n"
+             << "   <CellData Scalars=\"cell_scalars\">\n"
+             << "    <DataArray type=\"Float64\" Name=\"cell_scalars\""
+             << " format=\"ascii\">\n";
+        bfio::Array<size_t,d> numSamplesUpToDim;
+        for( size_t j=0; j<d; ++j )
+        {
+            numSamplesUpToDim[j] = 1;
+            for( size_t i=0; i<j; ++i )
+            {
+                numSamplesUpToDim[j] *=
+                    numSamplesPerBoxDim << log2SubboxesPerDim[i];
+            }
+        }
+        for( size_t k=0; k<numSamples; ++k )
+        {
+            // Extract our indices in each dimension
+            bfio::Array<size_t,d> coords;
+            for( size_t j=0; j<d; ++j )
+                coords[j] = (k/numSamplesUpToDim[j]) %
+                            (numSamplesPerBoxDim<<log2SubboxesPerDim[j]);
+
+            // Compute the location of our sample
+            bfio::Array<double,d> x;
+            for( size_t j=0; j<d; ++j )
+                x[j] = myBox.offsets[j] +
+                       coords[j]*wA[j]/numSamplesPerBoxDim;
+            complex<double> approx = u.Evaluate( x );
+            file << real(approx) << " ";
+            if( numSamples % numSamplesPerBox == 0 )
+                file << "\n";
+        }
+        file << "\n    </DataArray>\n"
+             << "   </CellData>\n"
+             << "  </Piece>\n"
+             << " </ImageData>\n"
+             << "</VTKFile>" << endl;
+        file.close();
+        if( rank == 0 )
+            cout << "done" << endl;
+    }
+    else
+    {
+        throw logic_error("VTK only supports visualizing up to 3d.");
+    }
+}
 
 } // bfio
 

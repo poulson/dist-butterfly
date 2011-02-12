@@ -1,6 +1,6 @@
 /*
    ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
-   Copyright (C) 2010 Jack Poulson <jack.poulson@gmail.com>
+   Copyright (C) 2010-2011 Jack Poulson <jack.poulson@gmail.com>
  
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -490,8 +490,8 @@ transform
     // Construct the general FIO PotentialField
     std::auto_ptr< const general_fio::PotentialField<R,d,q> > potentialField( 
         new general_fio::PotentialField<R,d,q>
-            ( context, Phi, sourceBox, myTargetBox, log2LocalTargetBoxesPerDim,
-              weightGridList )
+            ( context, Phi, sourceBox, myTargetBox, myTargetBoxCoords, 
+              log2LocalTargetBoxesPerDim, weightGridList )
     );
 
 #ifdef TIMING

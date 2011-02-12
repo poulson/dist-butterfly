@@ -1,6 +1,6 @@
 /*
    ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
-   Copyright (C) 2010 Jack Poulson <jack.poulson@gmail.com>
+   Copyright (C) 2010-2011 Jack Poulson <jack.poulson@gmail.com>
  
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -138,15 +138,15 @@ UpWave<R>::BatchEvaluate
   const std::vector< bfio::Array<R,d> >& pPoints,
         std::vector< R                >& results ) const
 {
-    const std::size_t nxPoints = xPoints.size();
-    const std::size_t npPoints = pPoints.size();
+    const std::size_t xSize = xPoints.size();
+    const std::size_t pSize = pPoints.size();
 
     // Set up the square root arguments
-    std::vector<R> sqrtArguments( npPoints );
+    std::vector<R> sqrtArguments( pSize );
     {
         R* sqrtArgBuffer = &sqrtArguments[0];
         const R* pPointsBuffer = &(pPoints[0][0]);
-        for( std::size_t j=0; j<npPoints; ++j )
+        for( std::size_t j=0; j<pSize; ++j )
             sqrtArgBuffer[j] = pPointsBuffer[j*d+0]*pPointsBuffer[j*d+0] +
                                pPointsBuffer[j*d+1]*pPointsBuffer[j*d+1] +
                                pPointsBuffer[j*d+2]*pPointsBuffer[j*d+2];
@@ -159,20 +159,20 @@ UpWave<R>::BatchEvaluate
     // Scale the square roots by _t
     {
         R* sqrtBuffer = &sqrtResults[0];
-        for( std::size_t j=0; j<npPoints; ++j )
+        for( std::size_t j=0; j<pSize; ++j )
             sqrtBuffer[j] *= _t;
     }
 
     // Form the final results
-    results.resize( nxPoints*npPoints );
+    results.resize( xSize*pSize );
     {
         R* resultsBuffer = &results[0];
         const R* sqrtBuffer = &sqrtResults[0];
         const R* xPointsBuffer = &(xPoints[0][0]);
         const R* pPointsBuffer = &(pPoints[0][0]);
-        for( std::size_t i=0; i<nxPoints; ++i )
-            for( std::size_t j=0; j<npPoints; ++j )
-                resultsBuffer[i*npPoints+j] = 
+        for( std::size_t i=0; i<xSize; ++i )
+            for( std::size_t j=0; j<pSize; ++j )
+                resultsBuffer[i*pSize+j] = 
                     xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
                     xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] +
                     xPointsBuffer[i*d+2]*pPointsBuffer[j*d+2] +
@@ -187,15 +187,15 @@ DownWave<R>::BatchEvaluate
   const std::vector< bfio::Array<R,d> >& pPoints,
         std::vector< R                >& results ) const
 {
-    const std::size_t nxPoints = xPoints.size();
-    const std::size_t npPoints = pPoints.size();
+    const std::size_t xSize = xPoints.size();
+    const std::size_t pSize = pPoints.size();
 
     // Set up the square root arguments
-    std::vector<R> sqrtArguments( npPoints );
+    std::vector<R> sqrtArguments( pSize );
     {
         R* sqrtArgBuffer = &sqrtArguments[0];
         const R* pPointsBuffer = &(pPoints[0][0]);
-        for( std::size_t j=0; j<npPoints; ++j )
+        for( std::size_t j=0; j<pSize; ++j )
             sqrtArgBuffer[j] = pPointsBuffer[j*d+0]*pPointsBuffer[j*d+0] +
                                pPointsBuffer[j*d+1]*pPointsBuffer[j*d+1] +
                                pPointsBuffer[j*d+2]*pPointsBuffer[j*d+2];
@@ -208,20 +208,20 @@ DownWave<R>::BatchEvaluate
     // Scale the square roots by _t
     {
         R* sqrtBuffer = &sqrtResults[0];
-        for( std::size_t j=0; j<npPoints; ++j )
+        for( std::size_t j=0; j<pSize; ++j )
             sqrtBuffer[j] *= _t;
     }
 
     // Form the final results
-    results.resize( nxPoints*npPoints );
+    results.resize( xSize*pSize );
     {
         R* resultsBuffer = &results[0];
         const R* sqrtBuffer = &sqrtResults[0];
         const R* xPointsBuffer = &(xPoints[0][0]);
         const R* pPointsBuffer = &(pPoints[0][0]);
-        for( std::size_t i=0; i<nxPoints; ++i )
-            for( std::size_t j=0; j<npPoints; ++j )
-                resultsBuffer[i*npPoints+j] = 
+        for( std::size_t i=0; i<xSize; ++i )
+            for( std::size_t j=0; j<pSize; ++j )
+                resultsBuffer[i*pSize+j] = 
                     xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
                     xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] +
                     xPointsBuffer[i*d+2]*pPointsBuffer[j*d+2] -

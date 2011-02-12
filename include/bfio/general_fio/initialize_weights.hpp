@@ -1,6 +1,6 @@
 /*
    ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
-   Copyright (C) 2010 Jack Poulson <jack.poulson@gmail.com>
+   Copyright (C) 2010-2011 Jack Poulson <jack.poulson@gmail.com>
  
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -57,11 +57,13 @@ InitializeWeights
     const std::size_t N = plan.GetN();
     const std::size_t q_to_d = Pow<q,d>::val;
 
+#ifdef TIMING
     bfio::Timer computeTimer;
     bfio::Timer setToPotentialTimer;
     bfio::Timer preprocessTimer;
     bfio::Timer lagrangeTimer;
     bfio::Timer axpyTimer;
+#endif // TIMING
 
     MPI_Comm comm = plan.GetComm();
     int rank;
@@ -157,15 +159,25 @@ InitializeWeights
         ( weightGridList.Buffer(), 0, 
           weightGridList.Length()*2*q_to_d*sizeof(R) );
 
+#ifdef TIMING
         computeTimer.Start();
+#endif // TIMING
         // Set all of the weights to the potentials in the target boxes. 
         // We take care to avoid redundant Lagrangian interpolation; it was 
         // previously the bottleneck.
+#ifdef TIMING
         setToPotentialTimer.Start();
+#endif // TIMING
         for( std::size_t t=0; t<q_to_d; ++t )
         {
             std::vector<R> lagrangeResults;
+#ifdef TIMING
+            lagrangeTimer.Start();
+#endif // TIMING
             context.LagrangeBatch( t, pRefPoints, lagrangeResults );
+#ifdef TIMING
+            lagrangeTimer.Stop();
+#endif // TIMING
 
             HTreeWalker<d> AWalker;
             for( std::size_t targetIndex=0;
@@ -181,7 +193,9 @@ InitializeWeights
 
                 const std::vector< Array<R,d> > xPoint( 1, x0A );
 
+#ifdef TIMING
                 preprocessTimer.Start();
+#endif // TIMING
                 Phi.BatchEvaluate( xPoint, pPoints, phiResults );
                 {
                     R* phiBuffer = &phiResults[0];
@@ -189,15 +203,17 @@ InitializeWeights
                         phiBuffer[s] *= TwoPi;
                 }
                 SinCosBatch( phiResults, sinResults, cosResults );
+#ifdef TIMING
                 preprocessTimer.Stop();
+#endif // TIMING
 
                 {
                     std::vector<R> realBeta( numSources );
                     std::vector<R> imagBeta( numSources );
-                    R* realBetaBuffer = &realBeta[0];
-                    R* imagBetaBuffer = &imagBeta[0];
-                    const R* cosBuffer = &cosResults[0];
-                    const R* sinBuffer = &sinResults[0];
+                    R* RESTRICT realBetaBuffer = &realBeta[0];
+                    R* RESTRICT imagBetaBuffer = &imagBeta[0];
+                    const R* RESTRICT cosBuffer = &cosResults[0];
+                    const R* RESTRICT sinBuffer = &sinResults[0];
                     for( std::size_t s=0; s<numSources; ++s )
                     {
                         const R realPhase = cosBuffer[s];
@@ -210,8 +226,10 @@ InitializeWeights
                             imagPhase*realMagnitude+realPhase*imagMagnitude;
                     }
 
+#ifdef TIMING
                     axpyTimer.Start();
-                    const R* lagrangeBuffer = &lagrangeResults[0];
+#endif // TIMING
+                    const R* RESTRICT lagrangeBuffer = &lagrangeResults[0];
                     for( std::size_t s=0; s<numSources; ++s )
                     {
                         const std::size_t sourceIndex = 
@@ -224,11 +242,15 @@ InitializeWeights
                         weightGridList[interactionIndex].ImagWeight(t) +=
                             imagBetaBuffer[s]*lagrangeBuffer[s];
                     }
+#ifdef TIMING
                     axpyTimer.Stop();
+#endif // TIMING
                 }
             }
         }
+#ifdef TIMING
         setToPotentialTimer.Stop();
+#endif // TIMING
 
         HTreeWalker<d> AWalker;
         for( std::size_t targetIndex=0;
@@ -270,10 +292,10 @@ InitializeWeights
                 // Compute the prefactors given this p0 and multiply it by 
                 // the corresponding weights
                 {
-                    R* chebyshevPointsBuffer = &(chebyshevPoints[0][0]);
-                    const R* p0Buffer = &p0[0];
-                    const R* wBBuffer = &wB[0];
-                    const R* chebyshevBuffer = &(chebyshevGrid[0][0]);
+                    R* RESTRICT chebyshevPointsBuffer = &(chebyshevPoints[0][0]);
+                    const R* RESTRICT p0Buffer = &p0[0];
+                    const R* RESTRICT wBBuffer = &wB[0];
+                    const R* RESTRICT chebyshevBuffer = &(chebyshevGrid[0][0]);
                     for( std::size_t t=0; t<q_to_d; ++t )
                         for( std::size_t j=0; j<d; ++j )
                             chebyshevPointsBuffer[t*d+j] = 
@@ -288,10 +310,10 @@ InitializeWeights
                 }
                 SinCosBatch( phiResults, sinResults, cosResults );
                 {
-                    R* realBuffer = weightGrid.RealBuffer();
-                    R* imagBuffer = weightGrid.ImagBuffer();
-                    const R* cosBuffer = &cosResults[0];
-                    const R* sinBuffer = &sinResults[0];
+                    R* RESTRICT realBuffer = weightGrid.RealBuffer();
+                    R* RESTRICT imagBuffer = weightGrid.ImagBuffer();
+                    const R* RESTRICT cosBuffer = &cosResults[0];
+                    const R* RESTRICT sinBuffer = &sinResults[0];
                     for( std::size_t t=0; t<q_to_d; ++t )
                     {
                         const R realPhase = cosBuffer[t];
@@ -306,14 +328,9 @@ InitializeWeights
                 }
             }
         }
+#ifdef TIMING
         computeTimer.Stop();
-
-        std::cout << "Compute time: " << computeTimer.TotalTime() << std::endl;
-        std::cout << "SetToPotential time: " 
-                  << setToPotentialTimer.TotalTime() << std::endl;
-        std::cout << "Preprocess time: " << preprocessTimer.TotalTime() << "\n"
-                  << "Lagrange time: " << lagrangeTimer.TotalTime() << "\n"
-                  << "Axpy time: " << axpyTimer.TotalTime() << std::endl;
+#endif // TIMING
     }
     else
     {

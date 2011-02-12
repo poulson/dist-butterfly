@@ -1,6 +1,6 @@
 /*
    ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
-   Copyright (C) 2010 Jack Poulson <jack.poulson@gmail.com>
+   Copyright (C) 2010-2011 Jack Poulson <jack.poulson@gmail.com>
  
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -472,7 +472,8 @@ LagrangianNUFT
         potentialField( 
             new lagrangian_nuft::PotentialField<R,d,q>
                 ( nuftContext, sourceBox, myTargetBox, 
-                  log2LocalTargetBoxesPerDim, weightGridList )
+                  myTargetBoxCoords, log2LocalTargetBoxesPerDim, 
+                  weightGridList )
         );
 
 #ifdef TIMING

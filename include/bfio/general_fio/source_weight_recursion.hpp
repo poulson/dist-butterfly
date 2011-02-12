@@ -1,6 +1,6 @@
 /*
    ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
-   Copyright (C) 2010 Jack Poulson <jack.poulson@gmail.com>
+   Copyright (C) 2010-2011 Jack Poulson <jack.poulson@gmail.com>
  
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -78,8 +78,8 @@ SourceWeightRecursion
 
         // Form the set of p points to evaluate
         {
-            R* pPointsBuffer = &(pPoints[0][0]);
-            const R* sourceChildBuffer = &(sourceChildGrids[c*q][0]);
+            R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
+            const R* RESTRICT sourceChildBuffer = &(sourceChildGrids[c*q][0]);
             for( std::size_t tPrime=0; tPrime<q; ++tPrime )
                 pPointsBuffer[tPrime] = 
                     p0B[0] + wB[0]*sourceChildBuffer[tPrime];
@@ -88,7 +88,7 @@ SourceWeightRecursion
         // Form the phase factors
         Phi.BatchEvaluate( xPoint, pPoints, phiResults );
         {
-            R* phiBuffer = &phiResults[0];
+            R* RESTRICT phiBuffer = &phiResults[0];
             for( std::size_t tPrime=0; tPrime<q; ++tPrime )
                 phiBuffer[tPrime] *= TwoPi;
         }
@@ -96,13 +96,13 @@ SourceWeightRecursion
 
         WeightGrid<R,1,q> scaledWeightGrid;
         {
-            R* scaledRealBuffer = scaledWeightGrid.RealBuffer();
-            R* scaledImagBuffer = scaledWeightGrid.ImagBuffer();
-            const R* cosBuffer = &cosResults[0];
-            const R* sinBuffer = &sinResults[0];
-            const R* oldRealBuffer = 
+            R* RESTRICT scaledRealBuffer = scaledWeightGrid.RealBuffer();
+            R* RESTRICT scaledImagBuffer = scaledWeightGrid.ImagBuffer();
+            const R* RESTRICT cosBuffer = &cosResults[0];
+            const R* RESTRICT sinBuffer = &sinResults[0];
+            const R* RESTRICT oldRealBuffer = 
                 oldWeightGridList[interactionIndex].RealBuffer();
-            const R* oldImagBuffer = 
+            const R* RESTRICT oldImagBuffer = 
                 oldWeightGridList[interactionIndex].ImagBuffer();
             for( std::size_t tPrime=0; tPrime<q; ++tPrime )
             {
@@ -137,8 +137,8 @@ SourceWeightRecursion
     //------------------------------------------------------------------------//
     const std::vector< Array<R,1> >& chebyshevGrid = context.GetChebyshevGrid();
     {
-        R* pPointsBuffer = &(pPoints[0][0]);
-        const R* chebyshevBuffer = &(chebyshevGrid[0][0]);
+        R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
+        const R* RESTRICT chebyshevBuffer = &(chebyshevGrid[0][0]);
         for( std::size_t t=0; t<q; ++t )
             pPointsBuffer[t] = p0B[0] + wB[0]*chebyshevBuffer[t];
     }
@@ -150,10 +150,10 @@ SourceWeightRecursion
     }
     SinCosBatch( phiResults, sinResults, cosResults );
     {
-        R* realBuffer = weightGrid.RealBuffer();
-        R* imagBuffer = weightGrid.ImagBuffer();
-        const R* cosBuffer = &cosResults[0];
-        const R* sinBuffer = &sinResults[0];
+        R* RESTRICT realBuffer = weightGrid.RealBuffer();
+        R* RESTRICT imagBuffer = weightGrid.ImagBuffer();
+        const R* RESTRICT cosBuffer = &cosResults[0];
+        const R* RESTRICT sinBuffer = &sinResults[0];
         for( std::size_t t=0; t<q; ++t )
         {
             const R realPhase = cosBuffer[t];
@@ -207,10 +207,10 @@ SourceWeightRecursion
 
         // Form the set of p points to evaluate
         {
-            R* pPointsBuffer = &(pPoints[0][0]);
-            const R* wBBuffer = &wB[0];
-            const R* p0Buffer = &p0B[0];
-            const R* sourceChildBuffer = &(sourceChildGrids[c*q*q][0]);
+            R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
+            const R* RESTRICT wBBuffer = &wB[0];
+            const R* RESTRICT p0Buffer = &p0B[0];
+            const R* RESTRICT sourceChildBuffer = &(sourceChildGrids[c*q*q][0]);
             for( std::size_t tPrime=0; tPrime<q*q; ++tPrime )
                 for( std::size_t j=0; j<2; ++j )
                     pPointsBuffer[tPrime*2+j] = 
@@ -229,13 +229,13 @@ SourceWeightRecursion
 
         WeightGrid<R,2,q> scaledWeightGrid;
         {
-            R* scaledRealBuffer = scaledWeightGrid.RealBuffer();
-            R* scaledImagBuffer = scaledWeightGrid.ImagBuffer();
-            const R* cosBuffer = &cosResults[0];
-            const R* sinBuffer = &sinResults[0];
-            const R* oldRealBuffer = 
+            R* RESTRICT scaledRealBuffer = scaledWeightGrid.RealBuffer();
+            R* RESTRICT scaledImagBuffer = scaledWeightGrid.ImagBuffer();
+            const R* RESTRICT cosBuffer = &cosResults[0];
+            const R* RESTRICT sinBuffer = &sinResults[0];
+            const R* RESTRICT oldRealBuffer = 
                 oldWeightGridList[interactionIndex].RealBuffer();
-            const R* oldImagBuffer =
+            const R* RESTRICT oldImagBuffer =
                 oldWeightGridList[interactionIndex].ImagBuffer();
             for( std::size_t tPrime=0; tPrime<q*q; ++tPrime )
             {
@@ -287,10 +287,10 @@ SourceWeightRecursion
     //------------------------------------------------------------------------//
     const std::vector< Array<R,2> >& chebyshevGrid = context.GetChebyshevGrid();
     {
-        R* pPointsBuffer = &(pPoints[0][0]);
-        const R* wBBuffer = &wB[0];
-        const R* p0Buffer = &p0B[0];
-        const R* chebyshevBuffer = &(chebyshevGrid[0][0]);
+        R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
+        const R* RESTRICT wBBuffer = &wB[0];
+        const R* RESTRICT p0Buffer = &p0B[0];
+        const R* RESTRICT chebyshevBuffer = &(chebyshevGrid[0][0]);
         for( std::size_t t=0; t<q*q; ++t )
             for( std::size_t j=0; j<2; ++j )
                 pPointsBuffer[t*2+j] = 
@@ -304,10 +304,10 @@ SourceWeightRecursion
     }
     SinCosBatch( phiResults, sinResults, cosResults );
     {
-        R* realBuffer = weightGrid.RealBuffer();
-        R* imagBuffer = weightGrid.ImagBuffer();
-        const R* cosBuffer = &cosResults[0];
-        const R* sinBuffer = &sinResults[0];
+        R* RESTRICT realBuffer = weightGrid.RealBuffer();
+        R* RESTRICT imagBuffer = weightGrid.ImagBuffer();
+        const R* RESTRICT cosBuffer = &cosResults[0];
+        const R* RESTRICT sinBuffer = &sinResults[0];
         for( std::size_t t=0; t<q*q; ++t )
         {
             const R realPhase = cosBuffer[t];
@@ -363,10 +363,11 @@ SourceWeightRecursion
 
         // Form the set of p points to evaluate
         {
-            R* pPointsBuffer = &(pPoints[0][0]);
-            const R* wBBuffer = &wB[0];
-            const R* p0BBuffer = &p0B[0];
-            const R* sourceChildBuffer = &(sourceChildGrids[c*q_to_d][0]);
+            R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
+            const R* RESTRICT wBBuffer = &wB[0];
+            const R* RESTRICT p0BBuffer = &p0B[0];
+            const R* RESTRICT sourceChildBuffer = 
+                &(sourceChildGrids[c*q_to_d][0]);
             for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
                 for( std::size_t j=0; j<d; ++j )
                     pPointsBuffer[tPrime*d+j] = 
@@ -384,13 +385,13 @@ SourceWeightRecursion
         SinCosBatch( phiResults, sinResults, cosResults );
 
         {
-            R* scaledRealBuffer = scaledWeightGrid.RealBuffer();
-            R* scaledImagBuffer = scaledWeightGrid.ImagBuffer();
-            const R* cosBuffer = &cosResults[0];
-            const R* sinBuffer = &sinResults[0];
-            const R* oldRealBuffer = 
+            R* RESTRICT scaledRealBuffer = scaledWeightGrid.RealBuffer();
+            R* RESTRICT scaledImagBuffer = scaledWeightGrid.ImagBuffer();
+            const R* RESTRICT cosBuffer = &cosResults[0];
+            const R* RESTRICT sinBuffer = &sinResults[0];
+            const R* RESTRICT oldRealBuffer = 
                 oldWeightGridList[interactionIndex].RealBuffer();
-            const R* oldImagBuffer = 
+            const R* RESTRICT oldImagBuffer = 
                 oldWeightGridList[interactionIndex].ImagBuffer();
             for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
             {
@@ -473,11 +474,14 @@ SourceWeightRecursion
                 ( j==d-1 ? weightGrid.ImagBuffer()
                          : ( j&1 ? scaledWeightGrid.ImagBuffer()
                                  : tempWeightGrid.ImagBuffer() ) );
-            const R* realReadBuffer = ( j&1 ? tempWeightGrid.RealBuffer() 
-                                            : scaledWeightGrid.RealBuffer() );
-            const R* imagReadBuffer = ( j&1 ? tempWeightGrid.ImagBuffer()
-                                            : scaledWeightGrid.ImagBuffer() );
-            const R* mapBuffer = ( (c>>j)&1 ? &rightMap[0] : &leftMap[0] );
+            const R* realReadBuffer = 
+                ( j&1 ? tempWeightGrid.RealBuffer() 
+                      : scaledWeightGrid.RealBuffer() );
+            const R* imagReadBuffer = 
+                ( j&1 ? tempWeightGrid.ImagBuffer()
+                      : scaledWeightGrid.ImagBuffer() );
+            const R* RESTRICT mapBuffer = 
+                ( (c>>j)&1 ? &rightMap[0] : &leftMap[0] );
 
             if( j != d-1 )
             {
@@ -487,10 +491,10 @@ SourceWeightRecursion
             for( std::size_t p=0; p<q_to_d/(q_to_j*q); ++p )
             {
                 const std::size_t offset = p*(q_to_j*q);
-                R* offsetRealWriteBuffer = &realWriteBuffer[offset];
-                R* offsetImagWriteBuffer = &imagWriteBuffer[offset];
-                const R* offsetRealReadBuffer = &realReadBuffer[offset];
-                const R* offsetImagReadBuffer = &imagReadBuffer[offset];
+                R* RESTRICT offsetRealWriteBuffer = &realWriteBuffer[offset];
+                R* RESTRICT offsetImagWriteBuffer = &imagWriteBuffer[offset];
+                const R* RESTRICT offsetRealReadBuffer = &realReadBuffer[offset];
+                const R* RESTRICT offsetImagReadBuffer = &imagReadBuffer[offset];
                 for( std::size_t w=0; w<q_to_j; ++w )
                 {
                     for( std::size_t t=0; t<q; ++t )
@@ -522,10 +526,10 @@ SourceWeightRecursion
     //------------------------------------------------------------------------//
     const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
     {
-        R* pPointsBuffer = &(pPoints[0][0]);
-        const R* wBBuffer = &wB[0];
-        const R* p0BBuffer = &p0B[0];
-        const R* chebyshevBuffer = &(chebyshevGrid[0][0]);
+        R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
+        const R* RESTRICT wBBuffer = &wB[0];
+        const R* RESTRICT p0BBuffer = &p0B[0];
+        const R* RESTRICT chebyshevBuffer = &(chebyshevGrid[0][0]);
         for( std::size_t t=0; t<q_to_d; ++t )
             for( std::size_t j=0; j<d; ++j )
                 pPointsBuffer[t*d+j] =  
@@ -539,10 +543,10 @@ SourceWeightRecursion
     }
     SinCosBatch( phiResults, sinResults, cosResults );
     {
-        R* realBuffer = weightGrid.RealBuffer();
-        R* imagBuffer = weightGrid.ImagBuffer();
-        const R* cosBuffer = &cosResults[0];
-        const R* sinBuffer = &sinResults[0];
+        R* RESTRICT realBuffer = weightGrid.RealBuffer();
+        R* RESTRICT imagBuffer = weightGrid.ImagBuffer();
+        const R* RESTRICT cosBuffer = &cosResults[0];
+        const R* RESTRICT sinBuffer = &sinResults[0];
         for( std::size_t t=0; t<q_to_d; ++t )
         {
             const R realPhase = cosBuffer[t];

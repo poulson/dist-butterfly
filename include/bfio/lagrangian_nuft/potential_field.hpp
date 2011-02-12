@@ -1,6 +1,6 @@
 /*
    ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
-   Copyright (C) 2010 Jack Poulson <jack.poulson@gmail.com>
+   Copyright (C) 2010-2011 Jack Poulson <jack.poulson@gmail.com>
  
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@ public:
     ( const lagrangian_nuft::Context<R,d,q>& context,
       const Box<R,d>& sourceBox,
       const Box<R,d>& targetBox,
+      const Array<std::size_t,d>& myTargetBoxCoords,
       const Array<std::size_t,d>& log2TargetSubboxesPerDim,
       const WeightGridList<R,d,q>& weightGridList );
 
@@ -45,9 +46,19 @@ public:
     const Box<R,d>& GetBox() const;
     std::size_t GetNumSubboxes() const;
     const Array<R,d>& GetSubboxWidths() const;
+    const Array<std::size_t,d>& GetMyTargetBoxCoords() const;
     const Array<std::size_t,d>& GetLog2SubboxesPerDim() const;
     const Array<std::size_t,d>& GetLog2SubboxesUpToDim() const;
+    const general_fio::PotentialField<R,d,q>& GetGeneralPotentialField() const;
 };
+
+template<std::size_t d,std::size_t q>
+void WriteVtkXmlPImageData
+( MPI_Comm comm, 
+  const std::size_t N,
+  const PotentialField<double,d,q>& u,
+  const std::string& basename );
+
 } // lagrangian_nuft
 
 // Implementations
@@ -57,6 +68,7 @@ lagrangian_nuft::PotentialField<R,d,q>::PotentialField
 ( const lagrangian_nuft::Context<R,d,q>& nuftContext,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
+  const Array<std::size_t,d>& myTargetBoxCoords,
   const Array<std::size_t,d>& log2TargetSubboxesPerDim,
   const WeightGridList<R,d,q>& weightGridList )
 : _nuftContext(nuftContext), 
@@ -66,6 +78,7 @@ lagrangian_nuft::PotentialField<R,d,q>::PotentialField
     this->_dotProduct,
     sourceBox,
     targetBox,
+    myTargetBoxCoords,
     log2TargetSubboxesPerDim,
     weightGridList )
 { }
@@ -92,6 +105,11 @@ lagrangian_nuft::PotentialField<R,d,q>::GetSubboxWidths() const
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
+lagrangian_nuft::PotentialField<R,d,q>::GetMyTargetBoxCoords() const
+{ return _generalPotential.GetMyTargetBoxCoords(); }
+
+template<typename R,std::size_t d,std::size_t q>
+inline const Array<std::size_t,d>&
 lagrangian_nuft::PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
 { return _generalPotential.GetLog2SubboxesPerDim(); }
 
@@ -99,6 +117,23 @@ template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
 lagrangian_nuft::PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
 { return _generalPotential.GetLog2SubboxesUpToDim(); }
+
+template<typename R,std::size_t d,std::size_t q>
+const general_fio::PotentialField<R,d,q>& 
+lagrangian_nuft::PotentialField<R,d,q>::GetGeneralPotentialField() const
+{ return _generalPotential; }
+
+template<std::size_t d,std::size_t q>
+inline void 
+lagrangian_nuft::WriteVtkXmlPImageData
+( MPI_Comm comm, 
+  const std::size_t N,
+  const lagrangian_nuft::PotentialField<double,d,q>& u,
+  const std::string& basename )
+{
+    general_fio::WriteVtkXmlPImageData
+    ( comm, N, u.GetGeneralPotentialField(), basename );
+}
 
 } // bfio
 

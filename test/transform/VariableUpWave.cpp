@@ -1,6 +1,6 @@
 /*
    ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
-   Copyright (C) 2010 Jack Poulson <jack.poulson@gmail.com>
+   Copyright (C) 2010-2011 Jack Poulson <jack.poulson@gmail.com>
  
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -38,11 +38,6 @@ static const std::size_t q = 12;
 
 // Define the number of samples to take from each box if testing accuracy
 static const std::size_t numAccuracyTestsPerBox = 10;
-
-// If we store the results, define the number of samples per box per dim.
-static const std::size_t numSamplesPerBoxDim = 5;
-static const std::size_t numSamplesPerBox = 
-    bfio::Pow<numSamplesPerBoxDim,d>::val;
 
 template<typename R>
 class Oscillatory : public bfio::AmplitudeFunctor<R,d>
@@ -94,15 +89,15 @@ Oscillatory<R>::BatchEvaluate
   const std::vector< bfio::Array<R,d> >& pPoints,
         std::vector< std::complex<R>  >& results ) const
 {
-    const std::size_t nxPoints = xPoints.size();
-    const std::size_t npPoints = pPoints.size();
+    const std::size_t xSize = xPoints.size();
+    const std::size_t pSize = pPoints.size();
 
     // Set up the sin and cos arguments
-    std::vector<R> sinArguments( d*nxPoints );
+    std::vector<R> sinArguments( d*xSize );
     {
         R* sinArgBuffer = &sinArguments[0];
         const R* xPointsBuffer = &(xPoints[0][0]);
-        for( std::size_t i=0; i<nxPoints; ++i )
+        for( std::size_t i=0; i<xSize; ++i )
         {
             sinArgBuffer[i*d+0] =   bfio::Pi*xPointsBuffer[i*d+0];
             sinArgBuffer[i*d+1] = 4*bfio::Pi*xPointsBuffer[i*d+1];
@@ -112,7 +107,7 @@ Oscillatory<R>::BatchEvaluate
     {
         R* cosArgBuffer = &cosArguments[0];
         const R* pPointsBuffer = &(pPoints[0][0]);
-        for( std::size_t j=0; j<npPoints; ++j )
+        for( std::size_t j=0; j<pSize; ++j )
         {
             cosArgBuffer[j*d+0] = 3*bfio::Pi*pPointsBuffer[j*d+0];
             cosArgBuffer[j*d+1] = 4*bfio::Pi*pPointsBuffer[j*d+1];
@@ -126,30 +121,30 @@ Oscillatory<R>::BatchEvaluate
     bfio::CosBatch( cosArguments, cosResults );
 
     // Form the x and p coefficients
-    std::vector<R> xCoefficients( nxPoints ); 
-    std::vector<R> pCoefficients( npPoints );
+    std::vector<R> xCoefficients( xSize ); 
+    std::vector<R> pCoefficients( pSize );
     {
         R* xCoefficientsBuffer = &xCoefficients[0];
         const R* sinBuffer = &sinResults[0];
-        for( std::size_t i=0; i<nxPoints; ++i )
+        for( std::size_t i=0; i<xSize; ++i )
             xCoefficientsBuffer[i] = 0.5*sinBuffer[i*d]*sinBuffer[i*d+1];
     }
     {
         R* pCoefficientsBuffer = &pCoefficients[0];
         const R* cosBuffer = &cosResults[0];
-        for( std::size_t j=0; j<npPoints; ++j )
+        for( std::size_t j=0; j<pSize; ++j )
             pCoefficientsBuffer[j] = cosBuffer[j*d]*cosBuffer[j*d+1];
     }
 
     // Form the answer
-    results.resize( nxPoints*npPoints );
+    results.resize( xSize*pSize );
     {
         std::complex<R>* resultsBuffer = &results[0];
         const R* xCoefficientsBuffer = &xCoefficients[0];
         const R* pCoefficientsBuffer = &pCoefficients[0];
-        for( std::size_t i=0; i<nxPoints; ++i )
-            for( std::size_t j=0; j<npPoints; ++j )
-                resultsBuffer[i*npPoints+j] = 
+        for( std::size_t i=0; i<xSize; ++i )
+            for( std::size_t j=0; j<pSize; ++j )
+                resultsBuffer[i*pSize+j] = 
                     1. + xCoefficientsBuffer[i]*pCoefficientsBuffer[j];
     }
 }
@@ -169,15 +164,15 @@ UpWave<R>::BatchEvaluate
   const std::vector< bfio::Array<R,d> >& pPoints,
         std::vector< R                >& results ) const
 {
-    const std::size_t nxPoints = xPoints.size();
-    const std::size_t npPoints = pPoints.size();
+    const std::size_t xSize = xPoints.size();
+    const std::size_t pSize = pPoints.size();
 
     // Set up the square root arguments 
-    std::vector<R> sqrtArguments( npPoints );
+    std::vector<R> sqrtArguments( pSize );
     {
         R* sqrtArgBuffer = &sqrtArguments[0];
         const R* pPointsBuffer = &(pPoints[0][0]);
-        for( std::size_t j=0; j<npPoints; ++j )
+        for( std::size_t j=0; j<pSize; ++j )
             sqrtArgBuffer[j] = pPointsBuffer[j*d+0]*pPointsBuffer[j*d+0] +
                                pPointsBuffer[j*d+1]*pPointsBuffer[j*d+1];
     }
@@ -189,20 +184,20 @@ UpWave<R>::BatchEvaluate
     // Scale the square roots by 1/2
     {
         R* sqrtBuffer = &sqrtResults[0];
-        for( std::size_t j=0; j<npPoints; ++j )
+        for( std::size_t j=0; j<pSize; ++j )
             sqrtBuffer[j] *= 0.5;
     }
 
     // Form the final results
-    results.resize( nxPoints*npPoints );
+    results.resize( xSize*pSize );
     {
         R* resultsBuffer = &results[0];
         const R* sqrtBuffer = &sqrtResults[0];
         const R* xPointsBuffer = &(xPoints[0][0]);
         const R* pPointsBuffer = &(pPoints[0][0]);
-        for( std::size_t i=0; i<nxPoints; ++i )
-            for( std::size_t j=0; j<npPoints; ++j )
-                resultsBuffer[i*npPoints+j] =
+        for( std::size_t i=0; i<xSize; ++i )
+            for( std::size_t j=0; j<pSize; ++j )
+                resultsBuffer[i*pSize+j] =
                     xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] +
                     xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] +
                     sqrtBuffer[j];
@@ -415,92 +410,8 @@ main
         }
 
         if( store )
-        {
-            std::ostringstream basenameStream;
-            basenameStream << "variableUpWave-N=" << N << "-q=" << q 
-                           << "-rank=" << rank;
-            std::string basename = basenameStream.str();
-
-            // Columns 0-(d-1) contain the coordinates of the sources, 
-            // and columns d and d+1 contain the real and complex components of
-            // the magnitudes of the sources.
-            if( rank == 0 )
-                std::cout << "Creating sources file..." << std::endl;
-            std::ofstream file;
-            file.open( (basename+"-sources.dat").c_str() );
-            for( std::size_t i=0; i<globalSources.size(); ++i )
-            {
-                for( std::size_t j=0; j<d; ++j )
-                    file << globalSources[i].p[j] << " ";
-                file << std::real(globalSources[i].magnitude) << " "
-                     << std::imag(globalSources[i].magnitude) << std::endl;
-            }
-            file.close();
-
-            // Columns 0-(d-1) contain the coordinates of the samples, 
-            // columns d and d+1 contain the real and complex components of 
-            // the true solution, d+2 and d+3 contain the real and complex 
-            // components of the approximate solution, and columns d+4 and d+5
-            // contain the real and complex parts of the error, truth-approx.
-            if( rank == 0 )
-                std::cout << "Creating results file..." << std::endl;
-            file.open( (basename+"-results.dat").c_str() );
-            const bfio::Box<double,d>& myBox = u->GetBox();
-            const bfio::Array<double,d>& wA = u->GetSubboxWidths();
-            const bfio::Array<std::size_t,d>& log2SubboxesPerDim =
-                u->GetLog2SubboxesPerDim();
-            const std::size_t numSubboxes = u->GetNumSubboxes();
-            const std::size_t numSamples = numSamplesPerBox*numSubboxes;
-
-            bfio::Array<std::size_t,d> numSamplesUpToDim;
-            for( std::size_t j=0; j<d; ++j )
-            {
-                numSamplesUpToDim[j] = 1;
-                for( std::size_t i=0; i<j; ++i )
-                {
-                    numSamplesUpToDim[j] *=
-                        numSamplesPerBoxDim << log2SubboxesPerDim[i];
-                }
-            }
-
-            for( std::size_t k=0; k<numSamples; ++k )
-            {
-                // Extract our indices in each dimension
-                bfio::Array<std::size_t,d> coords;
-                for( std::size_t j=0; j<d; ++j )
-                    coords[j] = (k/numSamplesUpToDim[j]) %
-                                (numSamplesPerBoxDim<<log2SubboxesPerDim[j]);
-
-                // Compute the location of our sample
-                bfio::Array<double,d> x;
-                for( std::size_t j=0; j<d; ++j )
-                {
-                    x[j] = myBox.offsets[j] +
-                           coords[j]*wA[j]/numSamplesPerBoxDim;
-                }
-
-                std::complex<double> truth(0,0);
-                for( std::size_t m=0; m<globalSources.size(); ++m )
-                {
-                    std::complex<double> beta =
-                        oscillatory( x, globalSources[m].p ) *
-                        bfio::ImagExp
-                        ( bfio::TwoPi*upWave(x,globalSources[m].p) );
-                    truth += beta * globalSources[m].magnitude;
-                }
-                std::complex<double> approx = u->Evaluate( x );
-                std::complex<double> error = truth - approx;
-
-                // Write out this sample
-                for( std::size_t j=0; j<d; ++j )
-                    file << x[j] << " ";
-                file << std::real(truth)  << " " << std::imag(truth)  << " "
-                     << std::real(approx) << " " << std::imag(approx) << " "
-                     << std::real(error)  << " " << std::imag(error)  
-                     << std::endl;
-            }
-            file.close();
-        }
+            bfio::general_fio::WriteVtkXmlPImageData
+            ( comm, N, *u, "varUpWave" );
     }
     catch( const std::exception& e )
     {

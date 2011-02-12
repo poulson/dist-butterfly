@@ -1,6 +1,6 @@
 /*
    ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
-   Copyright (C) 2010 Jack Poulson <jack.poulson@gmail.com>
+   Copyright (C) 2010-2011 Jack Poulson <jack.poulson@gmail.com>
  
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -81,10 +81,10 @@ SwitchToTargetInterp
 
         std::vector< Array<R,d> > xPoints( q_to_d );
         {
-            R* xPointsBuffer = &(xPoints[0][0]);
-            const R* x0ABuffer = &x0A[0];
-            const R* wABuffer = &wA[0];
-            const R* chebyshevBuffer = &(chebyshevGrid[0][0]);
+            R* RESTRICT xPointsBuffer = &(xPoints[0][0]);
+            const R* RESTRICT x0ABuffer = &x0A[0];
+            const R* RESTRICT wABuffer = &wA[0];
+            const R* RESTRICT chebyshevBuffer = &(chebyshevGrid[0][0]);
             for( std::size_t t=0; t<q_to_d; ++t )
                 for( std::size_t j=0; j<d; ++j )
                     xPointsBuffer[t*d+j] = 
@@ -109,10 +109,10 @@ SwitchToTargetInterp
 
             std::vector< Array<R,d> > pPoints( q_to_d );
             {
-                R* pPointsBuffer = &(pPoints[0][0]);
-                const R* p0BBuffer = &p0B[0];
-                const R* wBBuffer = &wB[0];
-                const R* chebyshevBuffer = &(chebyshevGrid[0][0]);
+                R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
+                const R* RESTRICT p0BBuffer = &p0B[0];
+                const R* RESTRICT wBBuffer = &wB[0];
+                const R* RESTRICT chebyshevBuffer = &(chebyshevGrid[0][0]);
                 for( std::size_t t=0; t<q_to_d; ++t )
                     for( std::size_t j=0; j<d; ++j )
                         pPointsBuffer[t*d+j] = 
@@ -135,12 +135,12 @@ SwitchToTargetInterp
             ( &oldImagWeights[0], weightGridList[key].ImagBuffer(),
               q_to_d*sizeof(R) );
             std::memset( weightGridList[key].Buffer(), 0, 2*q_to_d*sizeof(R) );
-            R* realBuffer = weightGridList[key].RealBuffer();
-            R* imagBuffer = weightGridList[key].ImagBuffer();
-            const R* oldRealBuffer = &oldRealWeights[0];
-            const R* oldImagBuffer = &oldImagWeights[0];
-            const R* cosBuffer = &cosResults[0];
-            const R* sinBuffer = &sinResults[0];
+            R* RESTRICT realBuffer = weightGridList[key].RealBuffer();
+            R* RESTRICT imagBuffer = weightGridList[key].ImagBuffer();
+            const R* RESTRICT oldRealBuffer = &oldRealWeights[0];
+            const R* RESTRICT oldImagBuffer = &oldImagWeights[0];
+            const R* RESTRICT cosBuffer = &cosResults[0];
+            const R* RESTRICT sinBuffer = &sinResults[0];
             if( unitAmplitude )
             {
                 for( std::size_t t=0; t<q_to_d; ++t )
@@ -163,7 +163,7 @@ SwitchToTargetInterp
             else
             {
                 Amp.BatchEvaluate( xPoints, pPoints, ampResults );
-                const C* ampBuffer = &ampResults[0];
+                const C* RESTRICT ampBuffer = &ampResults[0];
                 for( std::size_t t=0; t<q_to_d; ++t )
                 {
                     for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )

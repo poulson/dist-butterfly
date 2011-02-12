@@ -1,3 +1,20 @@
+#
+#  ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
+#  Copyright (C) 2010-2011 Jack Poulson <jack.poulson@gmail.com>
+# 
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+# 
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 cmake_minimum_required(VERSION 2.8)
 project(Butterfly-FIO)
 
@@ -14,11 +31,12 @@ option(BUILD_TESTS "Build the test drivers" ON)
 option(AVOID_COMPLEX_MPI "Avoid complex MPI routines for robustness" ON)
 mark_as_advanced(AVOID_COMPLEX_MPI)
 
-set(CXX_FLAGS "-O3" CACHE STRING "CXX flags")
-set(C_FLAGS "-O3" CACHE STRING "C flags")
-
+if(APPLE)
+  set(CXX_FLAGS "-fast" CACHE STRING "CXX flags")
+else(APPLE)
+  set(CXX_FLAGS "-O3" CACHE STRING "CXX flags")
+endif(APPLE)
 set(CMAKE_CXX_FLAGS "${CXX_FLAGS}")
-set(CMAKE_C_FLAGS "${C_FLAGS}")
 
 # Query the size of a void pointer in order to determine whether or not this is
 # a 32-bit system
@@ -151,8 +169,42 @@ else(HAVE_DPOTRF)
   endif(HAVE_DPOTRF_POST)
 endif(HAVE_DPOTRF)
 
+# Look for MKL and MASS vectorization routines
 check_function_exists(vdSin MKL)
 check_function_exists(vsin MASS)
+
+# Look for restrict support
+include(CheckCXXSourceCompiles)
+set(RESTRICT_CODE
+    "int main(void)
+     {
+         int* RESTRICT a;
+         return 0;
+     }
+    ")
+set(CMAKE_REQUIRED_DEFINITIONS "-DRESTRICT=__restrict__")
+check_cxx_source_compiles("${RESTRICT_CODE}" HAVE___restrict__)
+if(HAVE___restrict__)
+  set(RESTRICT "__restrict__")
+  message(STATUS "Using __restrict__ keyword.")
+else(HAVE___restrict__)
+  set(CMAKE_REQUIRED_DEFINITIONS "-DRESTRICT=__restrict")
+  check_cxx_source_compiles("${RESTRICT_CODE}" HAVE___restrict)
+  if(HAVE___restrict)
+    set(RESTRICT "__restrict")
+    message(STATUS "Using __restrict keyword.")
+  else(HAVE___restrict)
+    set(CMAKE_REQUIRED_DEFINITIONS "-DRESTRICT=restrict")
+    check_cxx_source_compiles("${RESTRICT_CODE}" HAVE_restrict)
+    if(HAVE_restrict)
+      set(RESTRICT "restrict")
+      message(STATUS "Using restrict keyword.")
+    else(HAVE_restrict)
+      set(RESTRICT "")
+      message(STATUS "Could not find a restrict keyword.")
+    endif(HAVE_restrict)
+  endif(HAVE___restrict)
+endif(HAVE___restrict__)
 
 configure_file(${CMAKE_SOURCE_DIR}/include/bfio/config.h.cmake
                ${CMAKE_BINARY_DIR}/include/bfio/config.h)
@@ -167,7 +219,7 @@ if(BUILD_TESTS)
   set(HTREE_TESTS ConstrainedHTreeWalker HTreeWalker)
 
   set(TRANSFORM_TEST_DIR ${PROJECT_SOURCE_DIR}/test/transform)
-  set(TRANSFORM_TESTS GeneralizedRadon NonUniformFT-2d NonUniformFT-3d 
+  set(TRANSFORM_TESTS GenRadon-2d GenRadon-3d NonUniformFT-2d NonUniformFT-3d 
                       Random3DWaves UpWave VariableUpWave)
 endif(BUILD_TESTS)
 
