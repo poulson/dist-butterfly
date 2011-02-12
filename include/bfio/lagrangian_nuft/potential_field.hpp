@@ -52,11 +52,11 @@ public:
     const general_fio::PotentialField<R,d,q>& GetGeneralPotentialField() const;
 };
 
-template<std::size_t d,std::size_t q>
+template<typename R,std::size_t d,std::size_t q>
 void WriteVtkXmlPImageData
 ( MPI_Comm comm, 
   const std::size_t N,
-  const PotentialField<double,d,q>& u,
+  const PotentialField<R,d,q>& u,
   const std::string& basename );
 
 } // lagrangian_nuft
@@ -123,12 +123,12 @@ const general_fio::PotentialField<R,d,q>&
 lagrangian_nuft::PotentialField<R,d,q>::GetGeneralPotentialField() const
 { return _generalPotential; }
 
-template<std::size_t d,std::size_t q>
+template<typename R,std::size_t d,std::size_t q>
 inline void 
 lagrangian_nuft::WriteVtkXmlPImageData
 ( MPI_Comm comm, 
   const std::size_t N,
-  const lagrangian_nuft::PotentialField<double,d,q>& u,
+  const lagrangian_nuft::PotentialField<R,d,q>& u,
   const std::string& basename )
 {
     general_fio::WriteVtkXmlPImageData

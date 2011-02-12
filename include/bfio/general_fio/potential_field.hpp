@@ -74,11 +74,11 @@ public:
     const Array<std::size_t,d>& GetLog2SubboxesUpToDim() const;
 };
 
-template<std::size_t d,std::size_t q>
+template<typename R,std::size_t d,std::size_t q>
 void WriteVtkXmlPImageData
 ( MPI_Comm comm, 
   const std::size_t N,
-  const PotentialField<double,d,q>& u,
+  const PotentialField<R,d,q>& u,
   const std::string& basename );
 
 } // general_fio
@@ -230,12 +230,12 @@ inline const Array<std::size_t,d>&
 general_fio::PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
 { return _log2TargetSubboxesUpToDim; }
 
-template<std::size_t d,std::size_t q>
+template<typename R,std::size_t d,std::size_t q>
 inline void
 general_fio::WriteVtkXmlPImageData
 ( MPI_Comm comm,
   const std::size_t N,
-  const general_fio::PotentialField<double,d,q>& u,
+  const general_fio::PotentialField<R,d,q>& u,
   const std::string& basename )
 {
     using namespace std;
@@ -249,8 +249,8 @@ general_fio::WriteVtkXmlPImageData
 
     if( d <= 3 )
     {
-        const bfio::Box<double,d>& myBox = u.GetBox();
-        const bfio::Array<double,d>& wA = u.GetSubboxWidths();
+        const bfio::Box<R,d>& myBox = u.GetBox();
+        const bfio::Array<R,d>& wA = u.GetSubboxWidths();
         const bfio::Array<size_t,d>& log2SubboxesPerDim = 
             u.GetLog2SubboxesPerDim();
         const size_t numSubboxes = u.GetNumSubboxes();
@@ -271,43 +271,57 @@ general_fio::WriteVtkXmlPImageData
         // Have the root create the parallel file
         if( rank == 0 )
         {
-            ostringstream parallelStream;
-            parallelStream << basename << ".pvti";
-            cout << "Creating parallel file " << parallelStream.str() << "...";
+            cout << "Creating parallel files...";
             cout.flush();
-            ofstream file;
-            file.open( parallelStream.str().c_str() );
-            file << "<?xml version=\"1.0\"?>\n"
-                 << "<VTKFile type=\"PImageData\" version=\"0.1\">\n"
-                 << " <PImageData WholeExtent=\"";
+            ofstream realFile, imagFile;
+            ostringstream os;
+            os << basename << "_real.pvti";
+            realFile.open( os.str().c_str() );
+            os.clear();
+            os.str("");
+            os << basename << "_imag.pvti";
+            imagFile.open( os.str().c_str() );
+            os.clear();
+            os.str("");
+            os << "<?xml version=\"1.0\"?>\n"
+               << "<VTKFile type=\"PImageData\" version=\"0.1\">\n"
+               << " <PImageData WholeExtent=\"";
             // Make the box [0,N]^d x [0,1]^(3-d)
             for( size_t j=0; j<d; ++j )
-                file << "0 " << N*numSamplesPerBoxDim << " "; 
+                os << "0 " << N*numSamplesPerBoxDim << " "; 
             for( size_t j=d; j<3; ++j )
-                file << "0 1 ";
-            file << "\" Origin=\"0 0 0\" Spacing=\"1 1 1\" GhostLevel=\"0\">\n"
-                 << "  <PCellData Scalars=\"cell_scalars\">\n"
-                 << "   <PDataArray type=\"Float64\" Name=\"cell_scalars\"/>\n"
-                 << "  </PCellData>\n";
+                os << "0 1 ";
+            os << "\" Origin=\"0 0 0\" Spacing=\"1 1 1\" GhostLevel=\"0\">\n"
+               << "  <PCellData Scalars=\"cell_scalars\">\n"
+               << "   <PDataArray type=\"Float32\" Name=\"cell_scalars\"/>\n"
+               << "  </PCellData>\n";
             for( size_t i=0; i<numProcesses; ++i )
             {
-                file << "  <Piece Extent=\"";
+                os << "  <Piece Extent=\"";
                 for( size_t j=0; j<d; ++j )
                 {
                     size_t width = 
                         numSamplesPerBoxDim << log2SubboxesPerDim[j];
-                    file << coords[i*d+j]*width << " " 
-                         << (coords[i*d+j]+1)*width << " ";
+                    os << coords[i*d+j]*width << " " 
+                       << (coords[i*d+j]+1)*width << " ";
                 }
                 for( size_t j=d; j<3; ++j )
-                    file << "0 1 ";
-                ostringstream sourceStream;
-                sourceStream << basename << "_" << i << ".vti";
-                file << "\" Source=\"" << sourceStream.str() << "\"/>\n";
+                    os << "0 1 ";
+                realFile << os.str();
+                imagFile << os.str();
+                os.clear();
+                os.str("");
+                realFile << "\" Source=\"" << basename << "_real_" << i 
+                         << ".vti\"/>\n";
+                imagFile << "\" Source=\"" << basename << "_imag_" << i 
+                         << ".vti\"/>\n";
             }
-            file << " </PImageData>\n"
-                 << "</VTKFile>" << endl;
-            file.close();
+            os << " </PImageData>\n"
+               << "</VTKFile>" << endl;
+            realFile << os.str();
+            imagFile << os.str();
+            realFile.close();
+            imagFile.close();
             cout << "done" << endl;
         }
 
@@ -317,30 +331,40 @@ general_fio::WriteVtkXmlPImageData
             cout << "Creating serial vti files...";
             cout.flush();
         }
-        ostringstream sourceStream;
-        sourceStream << basename << "_" << rank << ".vti";
-        ofstream file;
-        file.open( sourceStream.str().c_str() );
-        file << "<?xml version=\"1.0\"?>\n"
-             << "<VTKFile type=\"ImageData\" version=\"0.1\">\n"
-             << " <ImageData WholeExtent=\"";
+        ofstream realFile, imagFile;
+        ostringstream os;
+        os << basename << "_real_" << rank << ".vti";
+        realFile.open( os.str().c_str() );
+        os.clear();
+        os.str("");
+        os << basename << "_imag_" << rank << ".vti";
+        imagFile.open( os.str().c_str() );
+        os.clear();
+        os.str("");
+        os << "<?xml version=\"1.0\"?>\n"
+           << "<VTKFile type=\"ImageData\" version=\"0.1\">\n"
+           << " <ImageData WholeExtent=\"";
         for( size_t j=0; j<d; ++j )
-            file << "0 " << N*numSamplesPerBoxDim << " ";
+            os << "0 " << N*numSamplesPerBoxDim << " ";
         for( size_t j=d; j<3; ++j )
-            file << "0 1 ";
-        file << "\" Origin=\"0 0 0\" Spacing=\"1 1 1\">\n"
-             << "  <Piece Extent=\"";
+            os << "0 1 ";
+        os << "\" Origin=\"0 0 0\" Spacing=\"1 1 1\">\n"
+           << "  <Piece Extent=\"";
         for( size_t j=0; j<d; ++j )
         {
             size_t width = numSamplesPerBoxDim << log2SubboxesPerDim[j];
-            file << myCoords[j]*width << " " << (myCoords[j]+1)*width << " ";
+            os << myCoords[j]*width << " " << (myCoords[j]+1)*width << " ";
         }
         for( size_t j=d; j<3; ++j )
-            file << "0 1 ";
-        file << "\">\n"
-             << "   <CellData Scalars=\"cell_scalars\">\n"
-             << "    <DataArray type=\"Float64\" Name=\"cell_scalars\""
-             << " format=\"ascii\">\n";
+            os << "0 1 ";
+        os << "\">\n"
+           << "   <CellData Scalars=\"cell_scalars\">\n"
+           << "    <DataArray type=\"Float32\" Name=\"cell_scalars\""
+           << " format=\"ascii\">\n";
+        realFile << os.str();
+        imagFile << os.str();
+        os.clear();
+        os.str("");
         bfio::Array<size_t,d> numSamplesUpToDim;
         for( size_t j=0; j<d; ++j )
         {
@@ -360,21 +384,29 @@ general_fio::WriteVtkXmlPImageData
                             (numSamplesPerBoxDim<<log2SubboxesPerDim[j]);
 
             // Compute the location of our sample
-            bfio::Array<double,d> x;
+            bfio::Array<R,d> x;
             for( size_t j=0; j<d; ++j )
                 x[j] = myBox.offsets[j] +
                        coords[j]*wA[j]/numSamplesPerBoxDim;
-            complex<double> approx = u.Evaluate( x );
-            file << real(approx) << " ";
-            if( numSamples % numSamplesPerBox == 0 )
-                file << "\n";
+            complex<R> approx = u.Evaluate( x );
+            realFile << (float)real(approx) << " ";
+            imagFile << (float)imag(approx) << " ";
+            if( k % numSamplesPerBox == 0 )
+            {
+                realFile << "\n";
+                imagFile << "\n";
+            }
         }
-        file << "\n    </DataArray>\n"
-             << "   </CellData>\n"
-             << "  </Piece>\n"
-             << " </ImageData>\n"
-             << "</VTKFile>" << endl;
-        file.close();
+        os << "\n"
+           << "    </DataArray>\n"
+           << "   </CellData>\n"
+           << "  </Piece>\n"
+           << " </ImageData>\n"
+           << "</VTKFile>" << endl;
+        realFile << os.str();
+        imagFile << os.str();
+        realFile.close();
+        imagFile.close();
         if( rank == 0 )
             cout << "done" << endl;
     }
