@@ -91,8 +91,8 @@ std::auto_ptr< const fio_from_ft::PotentialField<R,d,q> >
 transform
 ( const fio_from_ft::Context<R,d,q>& context,
   const Plan<d>& plan,
-  const AmplitudeFunctor<R,d>& Amp,
-  const PhaseFunctor<R,d>& Phi,
+  const Amplitude<R,d>& amplitude,
+  const Phase<R,d>& phase,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
   const std::vector< Source<R,d> >& mySources )
@@ -162,7 +162,7 @@ transform
     fio_from_ft::initializeWeightsTimer.Start();
 #endif
     fio_from_ft::InitializeWeights
-    ( context, plan, Phi, sourceBox, targetBox, mySourceBox, 
+    ( context, plan, phase, sourceBox, targetBox, mySourceBox, 
       log2LocalSourceBoxes, log2LocalSourceBoxesPerDim, mySources, 
       weightGridList );
 #ifdef TIMING
@@ -188,7 +188,7 @@ transform
 	fio_from_ft::switchToTargetInterpTimer.Start();
 #endif
         fio_from_ft::SwitchToTargetInterp
-        ( context, plan, Amp, Phi, sourceBox, targetBox, mySourceBox, 
+        ( context, plan, amplitude, phase, sourceBox, targetBox, mySourceBox, 
           myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
           log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
           weightGridList );
@@ -261,7 +261,7 @@ transform
 			fio_from_ft::sourceWeightRecursionTimer.Start();
 #endif
                         fio_from_ft::SourceWeightRecursion
-                        ( context, plan, Phi, level, x0A, p0B, wB, 
+                        ( context, plan, phase, level, x0A, p0B, wB, 
                           parentInteractionOffset, oldWeightGridList,
                           weightGridList[interactionIndex] );
 #ifdef TIMING
@@ -286,7 +286,7 @@ transform
 			fio_from_ft::targetWeightRecursionTimer.Start();
 #endif
                         fio_from_ft::TargetWeightRecursion
-                        ( context, plan, Phi, level,
+                        ( context, plan, phase, level,
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentInteractionOffset, oldWeightGridList, 
                           weightGridList[interactionIndex] );
@@ -355,7 +355,7 @@ transform
 		    fio_from_ft::sourceWeightRecursionTimer.Start();
 #endif
                     fio_from_ft::SourceWeightRecursion
-                    ( context, plan, Phi, level, x0A, p0B, wB,
+                    ( context, plan, phase, level, x0A, p0B, wB,
                       parentInteractionOffset, weightGridList,
                       partialWeightGridList[targetIndex] );
 #ifdef TIMING
@@ -379,7 +379,7 @@ transform
 		    fio_from_ft::targetWeightRecursionTimer.Start();
 #endif
                     fio_from_ft::TargetWeightRecursion
-                    ( context, plan, Phi, level,
+                    ( context, plan, phase, level,
                       ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                       parentInteractionOffset, weightGridList, 
                       partialWeightGridList[targetIndex] );
@@ -477,10 +477,10 @@ transform
 	    fio_from_ft::switchToTargetInterpTimer.Start();
 #endif
             fio_from_ft::SwitchToTargetInterp
-            ( context, plan, Amp, Phi, sourceBox, targetBox, mySourceBox, 
-              myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
-              log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
-              weightGridList );
+            ( context, plan, amplitude, phase, sourceBox, targetBox, 
+              mySourceBox, myTargetBox, log2LocalSourceBoxes, 
+              log2LocalTargetBoxes, log2LocalSourceBoxesPerDim, 
+              log2LocalTargetBoxesPerDim, weightGridList );
 #ifdef TIMING
 	    fio_from_ft::switchToTargetInterpTimer.Stop();
 #endif
@@ -491,8 +491,8 @@ transform
     std::auto_ptr< const fio_from_ft::PotentialField<R,d,q> > 
     potentialField( 
         new fio_from_ft::PotentialField<R,d,q>
-            ( context, Phi, sourceBox, myTargetBox, myTargetBoxCoords, 
-              log2LocalTargetBoxesPerDim, weightGridList )
+            ( context, amplitude, phase, sourceBox, myTargetBox, 
+              myTargetBoxCoords, log2LocalTargetBoxesPerDim, weightGridList )
     );
 
 #ifdef TIMING
@@ -509,14 +509,14 @@ std::auto_ptr< const fio_from_ft::PotentialField<R,d,q> >
 FIOFromFT
 ( const fio_from_ft::Context<R,d,q>& context,
   const Plan<d>& plan,
-  const AmplitudeFunctor<R,d>& Amp,
-  const PhaseFunctor<R,d>& Phi,
+  const Amplitude<R,d>& amplitude,
+  const Phase<R,d>& phase,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
   const std::vector< Source<R,d> >& mySources )
 {
     return fio_from_ft::transform
-    ( context, plan, Amp, Phi, sourceBox, targetBox, mySources );
+    ( context, plan, amplitude, phase, sourceBox, targetBox, mySources );
 }
 
 template<typename R,std::size_t d,std::size_t q>
@@ -524,14 +524,16 @@ std::auto_ptr< const fio_from_ft::PotentialField<R,d,q> >
 FIOFromFT
 ( const fio_from_ft::Context<R,d,q>& context,
   const Plan<d>& plan,
-  const PhaseFunctor<R,d>& Phi,
+  const Phase<R,d>& phase,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
   const std::vector< Source<R,d> >& mySources )
 {
-    return fio_from_ft::transform
-    ( context, plan, UnitAmplitude<R,d>(), Phi, sourceBox, targetBox, 
-      mySources );
+    UnitAmplitude<R,d> unitAmp;
+    std::auto_ptr< const fio_from_ft::PotentialField<R,d,q> > u = 
+        fio_from_ft::transform
+        ( context, plan, unitAmp, phase, sourceBox, targetBox, mySources );
+    return u;
 }
 
 } // bfio

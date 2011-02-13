@@ -27,6 +27,7 @@ template<typename R,std::size_t d,std::size_t q>
 class Context
 {
     const fio_from_ft::Context<R,d,q> _fioContext;
+    const Direction _direction;
     const std::size_t _N;
     const Box<R,d> _sourceBox;
     const Box<R,d> _targetBox;
@@ -38,12 +39,16 @@ class Context
 
 public:        
     Context
-    ( const std::size_t N,
+    ( const Direction direction,
+      const std::size_t N,
       const Box<R,d>& sourceBox,
       const Box<R,d>& targetBox );
 
     const fio_from_ft::Context<R,d,q>&
     GetFIOContext() const;
+
+    Direction
+    GetDirection() const;
 
     const Array< std::vector<R>, d >&
     GetRealOffsetEvaluations() const;
@@ -70,6 +75,7 @@ lagrangian_nuft::Context<R,d,q>::GenerateOffsetEvaluations()
     }
 
     // Form the offset grid evaluations
+    const R SignedTwoPi = ( _direction==FORWARD ? -TwoPi : TwoPi ); 
     std::vector<R> phaseEvaluations(q*q);
     const std::vector<R>& chebyshevNodes = _fioContext.GetChebyshevNodes();
     const R* chebyshevBuffer = &chebyshevNodes[0];
@@ -78,7 +84,7 @@ lagrangian_nuft::Context<R,d,q>::GenerateOffsetEvaluations()
         for( std::size_t t=0; t<q; ++t )
             for( std::size_t tPrime=0; tPrime<q; ++tPrime )
                 phaseEvaluations[t*q+tPrime] =
-                    TwoPi*wAMiddle[j]*wBMiddle[j]*
+                    SignedTwoPi*wAMiddle[j]*wBMiddle[j]*
                     chebyshevBuffer[t]*chebyshevBuffer[tPrime];
         SinCosBatch
         ( phaseEvaluations, 
@@ -87,23 +93,31 @@ lagrangian_nuft::Context<R,d,q>::GenerateOffsetEvaluations()
 }
 
 template<typename R,std::size_t d,std::size_t q>
+inline
 lagrangian_nuft::Context<R,d,q>::Context
-( std::size_t N, const Box<R,d>& sourceBox, const Box<R,d>& targetBox ) 
-: _fioContext(), _N(N), _sourceBox(sourceBox), _targetBox(targetBox)
+( Direction direction, std::size_t N, 
+  const Box<R,d>& sourceBox, const Box<R,d>& targetBox ) 
+: _fioContext(), _direction(direction), _N(N), 
+  _sourceBox(sourceBox), _targetBox(targetBox)
 { GenerateOffsetEvaluations(); }
 
 template<typename R,std::size_t d,std::size_t q>
-const fio_from_ft::Context<R,d,q>&
+inline const fio_from_ft::Context<R,d,q>&
 lagrangian_nuft::Context<R,d,q>::GetFIOContext() const
 { return _fioContext; }
 
 template<typename R,std::size_t d,std::size_t q>
-const Array< std::vector<R>, d >&
+inline Direction
+lagrangian_nuft::Context<R,d,q>::GetDirection() const
+{ return _direction; }
+
+template<typename R,std::size_t d,std::size_t q>
+inline const Array< std::vector<R>, d >&
 lagrangian_nuft::Context<R,d,q>::GetRealOffsetEvaluations() const
 { return _realOffsetEvaluations; }
 
 template<typename R,std::size_t d,std::size_t q>
-const Array< std::vector<R>, d >&
+inline const Array< std::vector<R>, d >&
 lagrangian_nuft::Context<R,d,q>::GetImagOffsetEvaluations() const
 { return _imagOffsetEvaluations; }
 

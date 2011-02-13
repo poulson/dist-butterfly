@@ -95,6 +95,9 @@ InterpolativeNUFT
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
 
+    const Direction direction = context.GetDirection();
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+
     // Extract our communicator and its size
     MPI_Comm comm = plan.GetComm();
     int rank, numProcesses;
@@ -208,7 +211,7 @@ InterpolativeNUFT
                 {
                     for( std::size_t t=0; t<q; ++t )
                         prescalingArguments[t] = 
-                            TwoPi*x0A[j]*chebyshevNodes[t]*wB[j]/2;
+                            SignedTwoPi*x0A[j]*chebyshevNodes[t]*wB[j]/2;
                     SinCosBatch
                     ( prescalingArguments, 
                       imagPrescalings[j], realPrescalings[j] );
@@ -324,7 +327,7 @@ InterpolativeNUFT
                 {
                     for( std::size_t t=0; t<q; ++t )
                         prescalingArguments[t] =
-                            TwoPi*x0A[j]*chebyshevNodes[t]*wB[j]/2;
+                            SignedTwoPi*x0A[j]*chebyshevNodes[t]*wB[j]/2;
                     SinCosBatch
                     ( prescalingArguments, 
                       imagPrescalings[j], realPrescalings[j] );

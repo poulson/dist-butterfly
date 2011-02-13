@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_FUNCTORS_AMPLITUDE_FUNCTOR_HPP
-#define BFIO_FUNCTORS_AMPLITUDE_FUNCTOR_HPP 1
+#ifndef BFIO_FUNCTORS_AMPLITUDE_HPP
+#define BFIO_FUNCTORS_AMPLITUDE_HPP 1
 
 #include <cstddef>
 #include <complex>
@@ -28,16 +28,18 @@ namespace bfio {
 
 // You will need to derive from this class and override the operator()
 template<typename R,std::size_t d>
-class AmplitudeFunctor
+class Amplitude
 {
     // If a derived class sets this variable to 'true', then evaluation of the
     // amplitude function is circumvented.
     bool _isUnity; 
                    
 public:
-    AmplitudeFunctor();
-    AmplitudeFunctor( bool isUnity );
-    virtual ~AmplitudeFunctor();
+    Amplitude();
+    Amplitude( bool isUnity );
+    virtual ~Amplitude();
+
+    virtual Amplitude<R,d>* Clone() const = 0;
 
     bool IsUnity() const;
 
@@ -54,42 +56,50 @@ public:
             std::vector< std::complex<R> >& results ) const;
 };
 
+// Extend the default class and explicitly call it a unit amplitude functor.
 template<typename R,std::size_t d>
-class UnitAmplitude : public AmplitudeFunctor<R,d>
-{
+class UnitAmplitude : public Amplitude<R,d>
+{ 
 public:
     UnitAmplitude();
 
+    virtual UnitAmplitude<R,d>* Clone() const;
+
     virtual std::complex<R> operator()
     ( const Array<R,d>& x, const Array<R,d>& p ) const;
+
+    virtual void BatchEvaluate
+    ( const std::vector< Array<R,d>      >& x,
+      const std::vector< Array<R,d>      >& p,
+            std::vector< std::complex<R> >& results ) const;
 };
 
 // Implementations
 
 template<typename R,std::size_t d>
-AmplitudeFunctor<R,d>::AmplitudeFunctor() 
+Amplitude<R,d>::Amplitude() 
 : _isUnity(false) 
 { }
 
 template<typename R,std::size_t d>
 inline
-AmplitudeFunctor<R,d>::AmplitudeFunctor( bool isUnity ) 
+Amplitude<R,d>::Amplitude( bool isUnity ) 
 : _isUnity(isUnity) 
 { }
 
 template<typename R,std::size_t d>
 inline
-AmplitudeFunctor<R,d>::~AmplitudeFunctor() 
+Amplitude<R,d>::~Amplitude() 
 { }
 
 template<typename R,std::size_t d>
 inline bool 
-AmplitudeFunctor<R,d>::IsUnity() const 
+Amplitude<R,d>::IsUnity() const 
 { return _isUnity; }
 
 template<typename R,std::size_t d>
-void 
-AmplitudeFunctor<R,d>::BatchEvaluate
+inline void 
+Amplitude<R,d>::BatchEvaluate
 ( const std::vector< Array<R,d>      >& x,
   const std::vector< Array<R,d>      >& p,
         std::vector< std::complex<R> >& results ) const
@@ -103,16 +113,34 @@ AmplitudeFunctor<R,d>::BatchEvaluate
 template<typename R,std::size_t d>
 inline
 UnitAmplitude<R,d>::UnitAmplitude() 
-: AmplitudeFunctor<R,d>(true) 
+: Amplitude<R,d>(true) 
 { }
 
 template<typename R,std::size_t d>
-inline std::complex<R> 
+inline UnitAmplitude<R,d>* 
+UnitAmplitude<R,d>::Clone() const
+{ return new UnitAmplitude<R,d>(*this); }
+
+template<typename R,std::size_t d>
+inline std::complex<R>
 UnitAmplitude<R,d>::operator()
 ( const Array<R,d>& x, const Array<R,d>& p ) const
 { return 1; }
 
+template<typename R,std::size_t d>
+inline void
+UnitAmplitude<R,d>::BatchEvaluate
+( const std::vector< Array<R,d>      >& x,
+  const std::vector< Array<R,d>      >& p,
+        std::vector< std::complex<R> >& results ) const
+{
+    results.resize( x.size()*p.size() );
+    const std::size_t numEvals = results.size();
+    for( std::size_t i=0; i<numEvals; ++i )
+        results[i] = 1;
+}
+
 } // bfio
 
-#endif // BFIO_FUNCTORS_AMPLITUDE_FUNCTOR_HPP
+#endif // BFIO_FUNCTORS_AMPLITUDE_HPP
 

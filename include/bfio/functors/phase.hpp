@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_FUNCTORS_PHASE_FUNCTOR_HPP
-#define BFIO_FUNCTORS_PHASE_FUNCTOR_HPP 1
+#ifndef BFIO_FUNCTORS_PHASE_HPP
+#define BFIO_FUNCTORS_PHASE_HPP 1
 
 #include <cstddef>
 #include <vector>
@@ -27,10 +27,12 @@ namespace bfio {
 
 // You will need to derive from this class and override the operator()
 template<typename R,std::size_t d>
-class PhaseFunctor
+class Phase
 {
 public:
-    virtual ~PhaseFunctor();
+    virtual ~Phase();
+
+    virtual Phase<R,d>* Clone() const = 0;
 
     // Point-wise evaluation of the phase function
     virtual R operator() 
@@ -49,12 +51,12 @@ public:
 
 template<typename R,std::size_t d>
 inline
-PhaseFunctor<R,d>::~PhaseFunctor() 
+Phase<R,d>::~Phase() 
 { }
 
 template<typename R,std::size_t d>
 void 
-PhaseFunctor<R,d>::BatchEvaluate
+Phase<R,d>::BatchEvaluate
 ( const std::vector< Array<R,d> >& x,
   const std::vector< Array<R,d> >& p,
         std::vector< R          >& results ) const
@@ -67,5 +69,5 @@ PhaseFunctor<R,d>::BatchEvaluate
 
 } // bfio
 
-#endif // BFIO_FUNCTORS_PHASE_FUNCTOR_HPP
+#endif // BFIO_FUNCTORS_PHASE_HPP
 

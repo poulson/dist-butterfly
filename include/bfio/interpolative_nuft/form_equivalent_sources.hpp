@@ -56,6 +56,9 @@ FormEquivalentSources
     const std::vector<R>& chebyshevNodes = context.GetChebyshevNodes();
     const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
 
+    const Direction direction = context.GetDirection();
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+
     // Store the widths of the source and target boxes
     Array<R,d> wA;
     wA[0] = myTargetBox.widths[0] / (1<<log2LocalTargetBoxesPerDim[0]);
@@ -89,7 +92,7 @@ FormEquivalentSources
 
         // Compute the postscalings for all of the pairs interacting with A
         for( std::size_t t=0; t<q; ++t )
-            scalingArguments[t] = -TwoPi*x0[0]*chebyshevNodes[t]*wB[0];
+            scalingArguments[t] = -SignedTwoPi*x0[0]*chebyshevNodes[t]*wB[0];
         SinCosBatch( scalingArguments, imagPostscalings, realPostscalings );
 
         ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
@@ -112,7 +115,7 @@ FormEquivalentSources
             // Prescale
             for( std::size_t t=0; t<q; ++t )
                 scalingArguments[t] = 
-                    -TwoPi*(x0[0]+chebyshevNodes[t]*wA[0])*p0[0];
+                    -SignedTwoPi*(x0[0]+chebyshevNodes[t]*wA[0])*p0[0];
             SinCosBatch( scalingArguments, imagPrescalings, realPrescalings );
             {
                 R* realBuffer = weightGrid.RealBuffer();
@@ -203,6 +206,9 @@ FormEquivalentSources
     const std::vector<R>& chebyshevNodes = context.GetChebyshevNodes();
     const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
 
+    const Direction direction = context.GetDirection();
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+
     // Store the widths of the source and target boxes
     Array<R,d> wA;
     for( std::size_t j=0; j<d; ++j )
@@ -247,7 +253,7 @@ FormEquivalentSources
         for( std::size_t j=0; j<d; ++j )
         {
             for( std::size_t t=0; t<q; ++t )
-                scalingArguments[t] = -TwoPi*x0[j]*chebyshevNodes[t]*wB[j];
+                scalingArguments[t] = -SignedTwoPi*x0[j]*chebyshevNodes[t]*wB[j];
             SinCosBatch
             ( scalingArguments, imagPostscalings[j], realPostscalings[j] );
         }
@@ -273,7 +279,7 @@ FormEquivalentSources
             // Prescale
             for( std::size_t t=0; t<q; ++t )
                 scalingArguments[t] = 
-                    -TwoPi*(x0[0]+chebyshevNodes[t]*wA[0])*p0[0];
+                    -SignedTwoPi*(x0[0]+chebyshevNodes[t]*wA[0])*p0[0];
             SinCosBatch( scalingArguments, imagPrescalings, realPrescalings );
             {
                 R* realBuffer = weightGrid.RealBuffer();
@@ -352,7 +358,7 @@ FormEquivalentSources
             // Prescale
             for( std::size_t t=0; t<q; ++t )
                 scalingArguments[t] = 
-                    -TwoPi*(x0[1]+chebyshevNodes[t]*wA[1])*p0[1];
+                    -SignedTwoPi*(x0[1]+chebyshevNodes[t]*wA[1])*p0[1];
             SinCosBatch( scalingArguments, imagPrescalings, realPrescalings );
             {
                 R* realBuffer = &realTempWeights[0];
@@ -446,6 +452,9 @@ FormEquivalentSources
     const std::vector<R>& chebyshevNodes = context.GetChebyshevNodes();
     const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
 
+    const Direction direction = context.GetDirection();
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+
     // Store the widths of the source and target boxes
     Array<R,d> wA;
     for( std::size_t j=0; j<d; ++j )
@@ -492,7 +501,7 @@ FormEquivalentSources
         for( std::size_t j=0; j<d; ++j )
         {
             for( std::size_t t=0; t<q; ++t )
-                scalingArguments[t] = -TwoPi*x0[j]*chebyshevNodes[t]*wB[j];
+                scalingArguments[t] = -SignedTwoPi*x0[j]*chebyshevNodes[t]*wB[j];
             SinCosBatch
             ( scalingArguments, imagPostscalings[j], realPostscalings[j] );
         }
@@ -518,7 +527,7 @@ FormEquivalentSources
             // Prescale
             for( std::size_t t=0; t<q; ++t )
                 scalingArguments[t] = 
-                    -TwoPi*(x0[0]+chebyshevNodes[t]*wA[0])*p0[0];
+                    -SignedTwoPi*(x0[0]+chebyshevNodes[t]*wA[0])*p0[0];
             SinCosBatch( scalingArguments, imagPrescalings, realPrescalings );
             {
                 R* realBuffer = weightGrid.RealBuffer();
@@ -597,7 +606,7 @@ FormEquivalentSources
             // Prescale
             for( std::size_t t=0; t<q; ++t )
                 scalingArguments[t] = 
-                    -TwoPi*(x0[1]+chebyshevNodes[t]*wA[1])*p0[1];
+                    -SignedTwoPi*(x0[1]+chebyshevNodes[t]*wA[1])*p0[1];
             SinCosBatch( scalingArguments, imagPrescalings, realPrescalings );
             for( std::size_t p=0; p<Pow<q,d-2>::val; ++p )
             {
@@ -712,7 +721,7 @@ FormEquivalentSources
                 // Prescale, transform, and postscale
                 for( std::size_t t=0; t<q; ++t )
                     scalingArguments[t] = 
-                        -TwoPi*(x0[j]+chebyshevNodes[t]*wA[j])*p0[j];
+                        -SignedTwoPi*(x0[j]+chebyshevNodes[t]*wA[j])*p0[j];
                 SinCosBatch
                 ( scalingArguments, imagPrescalings, realPrescalings );
                 for( std::size_t p=0; p<q_to_d/(q_to_j*q); ++p )

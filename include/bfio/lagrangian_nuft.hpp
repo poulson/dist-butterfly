@@ -76,7 +76,7 @@ PrintTimings()
 #endif
 
 #include "bfio/lagrangian_nuft/context.hpp"
-#include "bfio/lagrangian_nuft/dot_product.hpp"
+#include "bfio/lagrangian_nuft/ft_phases.hpp"
 #include "bfio/lagrangian_nuft/potential_field.hpp"
 
 #include "bfio/fio_from_ft/initialize_weights.hpp"
@@ -102,9 +102,19 @@ LagrangianNUFT
 #endif
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
-    const lagrangian_nuft::DotProduct<R,d> dotProduct;
     const fio_from_ft::Context<R,d,q>& fioContext = 
         nuftContext.GetFIOContext();
+
+    // We will choose the phase function based on the context's direction.
+    // We could potentially have the plan direction be different
+    // (e.g., Forward direction with Adjoint FT phase function)
+    const Direction direction = nuftContext.GetDirection();
+    const lagrangian_nuft::ForwardFTPhase<R,d> forwardPhase;
+    const lagrangian_nuft::AdjointFTPhase<R,d> adjointPhase;
+    const lagrangian_nuft::FTPhase<R,d>& phase = 
+        ( direction==FORWARD ? 
+          (const lagrangian_nuft::FTPhase<R,d>&)forwardPhase :
+          (const lagrangian_nuft::FTPhase<R,d>&)adjointPhase );
 
     // Extract our communicator and its size
     MPI_Comm comm = plan.GetComm();
@@ -154,7 +164,7 @@ LagrangianNUFT
     lagrangian_nuft::initializeWeightsTimer.Start();
 #endif
     fio_from_ft::InitializeWeights
-    ( fioContext, plan, dotProduct, sourceBox, targetBox, mySourceBox, 
+    ( fioContext, plan, phase, sourceBox, targetBox, mySourceBox, 
       log2LocalSourceBoxes, log2LocalSourceBoxesPerDim, mySources, 
       weightGridList );
 #ifdef TIMING
@@ -241,7 +251,7 @@ LagrangianNUFT
 			lagrangian_nuft::sourceWeightRecursionTimer.Start();
 #endif
                         fio_from_ft::SourceWeightRecursion
-                        ( fioContext, plan, dotProduct, level, x0A, p0B, wB,
+                        ( fioContext, plan, phase, level, x0A, p0B, wB,
                           parentInteractionOffset, oldWeightGridList,
                           weightGridList[interactionIndex] );
 #ifdef TIMING
@@ -266,7 +276,7 @@ LagrangianNUFT
 			lagrangian_nuft::targetWeightRecursionTimer.Start();
 #endif
                         fio_from_ft::TargetWeightRecursion
-                        ( fioContext, plan, dotProduct, level,
+                        ( fioContext, plan, phase, level,
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentInteractionOffset, oldWeightGridList, 
                           weightGridList[interactionIndex] );
@@ -335,7 +345,7 @@ LagrangianNUFT
 		    lagrangian_nuft::sourceWeightRecursionTimer.Start();
 #endif
                     fio_from_ft::SourceWeightRecursion
-                    ( fioContext, plan, dotProduct, level, x0A, p0B, wB,
+                    ( fioContext, plan, phase, level, x0A, p0B, wB,
                       parentInteractionOffset, weightGridList,
                       partialWeightGridList[targetIndex] );
 #ifdef TIMING
@@ -359,7 +369,7 @@ LagrangianNUFT
 		    lagrangian_nuft::targetWeightRecursionTimer.Start();
 #endif
                     fio_from_ft::TargetWeightRecursion
-                    ( fioContext, plan, dotProduct, level,
+                    ( fioContext, plan, phase, level,
                       ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                       parentInteractionOffset, weightGridList, 
                       partialWeightGridList[targetIndex] );
@@ -471,9 +481,8 @@ LagrangianNUFT
     std::auto_ptr< const lagrangian_nuft::PotentialField<R,d,q> > 
     potentialField( 
         new lagrangian_nuft::PotentialField<R,d,q>
-            ( nuftContext, sourceBox, myTargetBox, 
-              myTargetBoxCoords, log2LocalTargetBoxesPerDim, 
-              weightGridList )
+            ( nuftContext, sourceBox, myTargetBox, myTargetBoxCoords,
+              log2LocalTargetBoxesPerDim, weightGridList )
     );
 
 #ifdef TIMING

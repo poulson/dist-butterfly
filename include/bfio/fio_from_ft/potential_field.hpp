@@ -32,8 +32,8 @@
 
 #include "bfio/fio_from_ft/context.hpp"
 
-#include "bfio/functors/amplitude_functor.hpp"
-#include "bfio/functors/phase_functor.hpp"
+#include "bfio/functors/amplitude.hpp"
+#include "bfio/functors/phase.hpp"
 #include "bfio/tools/special_functions.hpp"
 
 namespace bfio {
@@ -43,7 +43,8 @@ template<typename R,std::size_t d,std::size_t q>
 class PotentialField
 {
     const fio_from_ft::Context<R,d,q>& _context;
-    const PhaseFunctor<R,d>& _Phi;
+    const Amplitude<R,d>* _amplitude;
+    const Phase<R,d>* _phase;
     const Box<R,d> _sourceBox;
     const Box<R,d> _myTargetBox;
     const Array<std::size_t,d> _myTargetBoxCoords;
@@ -57,15 +58,21 @@ class PotentialField
 public:
     PotentialField
     ( const fio_from_ft::Context<R,d,q>& context,
-      const PhaseFunctor<R,d>& Phi,
+      const Amplitude<R,d>& amplitude,
+      const Phase<R,d>& phase,
       const Box<R,d>& sourceBox,
       const Box<R,d>& myTargetBox,
       const Array<std::size_t,d>& myTargetBoxCoords,
       const Array<std::size_t,d>& log2TargetSubboxesPerDim,
       const WeightGridList<R,d,q>& weightGridList );
 
-    std::complex<R> Evaluate( const Array<R,d>& x ) const;
+    ~PotentialField();
 
+    std::complex<R> Evaluate( const Array<R,d>& x ) const;
+    // TODO: BatchEvaluate? SafeEvaluate?
+
+    const Amplitude<R,d>& GetAmplitude() const;
+    const Phase<R,d>& GetPhase() const;
     const Box<R,d>& GetMyTargetBox() const;
     std::size_t GetNumSubboxes() const;
     const Array<R,d>& GetSubboxWidths() const;
@@ -75,12 +82,27 @@ public:
 };
 
 template<typename R,std::size_t d,std::size_t q>
+void PrintErrorEstimates
+( MPI_Comm comm,
+  const PotentialField<R,d,q>& u,
+  const std::vector< Source<R,d> >& globalSources );
+
+template<typename R,std::size_t d,std::size_t q>
 void WriteVtkXmlPImageData
 ( MPI_Comm comm, 
   const std::size_t N,
   const Box<R,d>& targetBox,
   const PotentialField<R,d,q>& u,
   const std::string& basename );
+
+template<typename R,std::size_t d,std::size_t q>
+void WriteVtkXmlPImageData
+( MPI_Comm comm, 
+  const std::size_t N,
+  const Box<R,d>& targetBox,
+  const PotentialField<R,d,q>& u,
+  const std::string& basename,
+  const std::vector< Source<R,d> >& globalSources );
 
 } // fio_from_ft
 
@@ -89,13 +111,14 @@ void WriteVtkXmlPImageData
 template<typename R,std::size_t d,std::size_t q>
 fio_from_ft::PotentialField<R,d,q>::PotentialField
 ( const fio_from_ft::Context<R,d,q>& context,
-  const PhaseFunctor<R,d>& Phi,
+  const Amplitude<R,d>& amplitude,
+  const Phase<R,d>& phase,
   const Box<R,d>& sourceBox,
   const Box<R,d>& myTargetBox,
   const Array<std::size_t,d>& myTargetBoxCoords,
   const Array<std::size_t,d>& log2TargetSubboxesPerDim,
   const WeightGridList<R,d,q>& weightGridList )
-: _context(context), _Phi(Phi), 
+: _context(context), _amplitude(amplitude.Clone()), _phase(phase.Clone()), 
   _sourceBox(sourceBox), _myTargetBox(myTargetBox),
   _myTargetBoxCoords(myTargetBoxCoords),
   _log2TargetSubboxesPerDim(log2TargetSubboxesPerDim)
@@ -143,6 +166,13 @@ fio_from_ft::PotentialField<R,d,q>::PotentialField
 }
 
 template<typename R,std::size_t d,std::size_t q>
+fio_from_ft::PotentialField<R,d,q>::~PotentialField()
+{
+    delete _amplitude;
+    delete _phase;
+}
+
+template<typename R,std::size_t d,std::size_t q>
 std::complex<R>
 fio_from_ft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 {
@@ -186,7 +216,7 @@ fio_from_ft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
         for( std::size_t j=0; j<d; ++j )
             xt[j] = lrp.x0[j] + _wA[j]*chebyshevGrid[t][j];
 
-        const C beta = ImagExp<R>( -TwoPi*_Phi(xt,_p0) );
+        const C beta = ImagExp<R>( -_phase->operator()(xt,_p0) );
         const R lambda = _context.Lagrange(t,xRef);
         const R realWeight = lrp.weightGrid.RealWeight(t);
         const R imagWeight = lrp.weightGrid.ImagWeight(t);
@@ -195,11 +225,21 @@ fio_from_ft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
         imagValue += lambda*
             (imagWeight*std::real(beta)+realWeight*std::imag(beta));
     }
-    const C beta = ImagExp<R>( TwoPi*_Phi(x,_p0) );
+    const C beta = ImagExp<R>( _phase->operator()(x,_p0) );
     const R realPotential = realValue*std::real(beta)-imagValue*std::imag(beta);
     const R imagPotential = imagValue*std::real(beta)+realValue*std::imag(beta);
     return C( realPotential, imagPotential );
 }
+
+template<typename R,std::size_t d,std::size_t q>
+inline const Amplitude<R,d>&
+fio_from_ft::PotentialField<R,d,q>::GetAmplitude() const
+{ return *_amplitude; }
+
+template<typename R,std::size_t d,std::size_t q>
+inline const Phase<R,d>&
+fio_from_ft::PotentialField<R,d,q>::GetPhase() const
+{ return *_phase; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Box<R,d>&
@@ -231,6 +271,94 @@ inline const Array<std::size_t,d>&
 fio_from_ft::PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
 { return _log2TargetSubboxesUpToDim; }
 
+template<typename R,std::size_t d,std::size_t q>
+void fio_from_ft::PrintErrorEstimates
+( MPI_Comm comm,
+  const PotentialField<R,d,q>& u,
+  const std::vector< Source<R,d> >& globalSources )
+{
+    const std::size_t numAccuracyTestsPerBox = 10;
+
+    int rank;
+    MPI_Comm_rank( comm, &rank );
+
+    const Amplitude<R,d>& amplitude = u.GetAmplitude();
+    const Phase<R,d>& phase = u.GetPhase();
+    const Box<R,d>& myTargetBox = u.GetMyTargetBox();
+    const std::size_t numSubboxes = u.GetNumSubboxes();
+    const std::size_t numTests = numSubboxes*numAccuracyTestsPerBox;
+
+    // Compute error estimates using a constant number of samples within
+    // each box in the resulting approximation of the transform.
+    //
+    // Double precision should be perfectly fine for our purposes.
+    //
+    if( rank == 0 )
+    {
+        std::cout << "Testing accuracy with " << numAccuracyTestsPerBox 
+                  << " N^d = " << numTests << " samples..."
+                  << std::endl;
+    }
+    // Compute the L1 norm of the sources
+    double L1Sources = 0.;
+    const std::size_t numSources = globalSources.size();
+    for( std::size_t m=0; m<numSources; ++m )
+        L1Sources += abs(globalSources[m].magnitude);
+    double myL2ErrorSquared = 0.;
+    double myL2TruthSquared = 0.;
+    double myLinfError = 0.;
+    for( std::size_t k=0; k<numTests; ++k )
+    {
+        // Compute a random point in our process's target box
+        Array<R,d> x;
+        for( std::size_t j=0; j<d; ++j )
+            x[j] = myTargetBox.offsets[j] +
+                   Uniform<R>()*myTargetBox.widths[j];
+
+        // Evaluate our potential field at x and compare against truth
+        std::complex<R> approx = u.Evaluate( x );
+        std::complex<R> truth(0.,0.);
+        for( std::size_t m=0; m<numSources; ++m )
+        {
+            std::complex<R> beta =
+                amplitude( x, globalSources[m].p ) *
+                ImagExp( phase(x,globalSources[m].p) );
+            truth += beta * globalSources[m].magnitude;
+        }
+        double absError = std::abs(approx-truth);
+        double absTruth = std::abs(truth);
+        myL2ErrorSquared += absError*absError;
+        myL2TruthSquared += absTruth*absTruth;
+        myLinfError = std::max( myLinfError, absError );
+    }
+    double L2ErrorSquared;
+    double L2TruthSquared;
+    double LinfError;
+    MPI_Reduce
+    ( &myL2ErrorSquared, &L2ErrorSquared, 1, MPI_DOUBLE, MPI_SUM, 0,
+      comm );
+    MPI_Reduce
+    ( &myL2TruthSquared, &L2TruthSquared, 1, MPI_DOUBLE, MPI_SUM, 0,
+      comm );
+    MPI_Reduce
+    ( &myLinfError, &LinfError, 1, MPI_DOUBLE, MPI_MAX, 0, comm );
+    if( rank == 0 )
+    {
+        std::cout << "---------------------------------------------\n"
+                  << "Estimate of relative ||e||_2:    "
+                  << sqrt(L2ErrorSquared/L2TruthSquared) << "\n"
+                  << "Estimate of ||e||_inf:           "
+                  << LinfError << "\n"
+                  << "||f||_1:                         "
+                  << L1Sources << "\n"
+                  << "Estimate of ||e||_inf / ||f||_1: "
+                  << LinfError/L1Sources << "\n" 
+                  << "---------------------------------------------\n"
+                  << std::endl;
+    }
+}
+
+// Just write out the real and imag components of the approximation
 template<typename R,std::size_t d,std::size_t q>
 inline void
 fio_from_ft::WriteVtkXmlPImageData
@@ -278,12 +406,10 @@ fio_from_ft::WriteVtkXmlPImageData
             ostringstream os;
             os << basename << "_real.pvti";
             realFile.open( os.str().c_str() );
-            os.clear();
-            os.str("");
+            os.clear(); os.str("");
             os << basename << "_imag.pvti";
             imagFile.open( os.str().c_str() );
-            os.clear();
-            os.str("");
+            os.clear(); os.str("");
             os << "<?xml version=\"1.0\"?>\n"
                << "<VTKFile type=\"PImageData\" version=\"0.1\">\n"
                << " <PImageData WholeExtent=\"";
@@ -319,8 +445,7 @@ fio_from_ft::WriteVtkXmlPImageData
                     os << "0 1 ";
                 realFile << os.str();
                 imagFile << os.str();
-                os.clear();
-                os.str("");
+                os.clear(); os.str("");
                 realFile << "\" Source=\"" << basename << "_real_" << i 
                          << ".vti\"/>\n";
                 imagFile << "\" Source=\"" << basename << "_imag_" << i 
@@ -345,12 +470,10 @@ fio_from_ft::WriteVtkXmlPImageData
         ostringstream os;
         os << basename << "_real_" << rank << ".vti";
         realFile.open( os.str().c_str() );
-        os.clear();
-        os.str("");
+        os.clear(); os.str("");
         os << basename << "_imag_" << rank << ".vti";
         imagFile.open( os.str().c_str() );
-        os.clear();
-        os.str("");
+        os.clear(); os.str("");
         os << "<?xml version=\"1.0\"?>\n"
            << "<VTKFile type=\"ImageData\" version=\"0.1\">\n"
            << " <ImageData WholeExtent=\"";
@@ -384,8 +507,7 @@ fio_from_ft::WriteVtkXmlPImageData
            << " format=\"ascii\">\n";
         realFile << os.str();
         imagFile << os.str();
-        os.clear();
-        os.str("");
+        os.clear(); os.str("");
         Array<size_t,d> numSamplesUpToDim;
         for( size_t j=0; j<d; ++j )
         {
@@ -428,6 +550,301 @@ fio_from_ft::WriteVtkXmlPImageData
         imagFile << os.str();
         realFile.close();
         imagFile.close();
+        if( rank == 0 )
+            cout << "done" << endl;
+    }
+    else
+    {
+        throw logic_error("VTK only supports visualizing up to 3d.");
+    }
+}
+
+// Write out the real and imag components of the truth, the approximation,
+// and the error.
+template<typename R,std::size_t d,std::size_t q>
+inline void
+fio_from_ft::WriteVtkXmlPImageData
+( MPI_Comm comm,
+  const std::size_t N,
+  const Box<R,d>& targetBox,
+  const fio_from_ft::PotentialField<R,d,q>& u,
+  const std::string& basename,
+  const std::vector< Source<R,d> >& globalSources )
+{
+    using namespace std;
+
+    const std::size_t numSamplesPerBoxDim = 4;
+    const std::size_t numSamplesPerBox = Pow<numSamplesPerBoxDim,d>::val;
+
+    const Amplitude<R,d>& amplitude = u.GetAmplitude();
+    const Phase<R,d>& phase = u.GetPhase();
+
+    int rank, numProcesses;
+    MPI_Comm_rank( comm, &rank );
+    MPI_Comm_size( comm, &numProcesses );
+
+    if( d <= 3 )
+    {
+        const Box<R,d>& myTargetBox = u.GetMyTargetBox();
+        const Array<R,d>& wA = u.GetSubboxWidths();
+        const Array<size_t,d>& log2SubboxesPerDim = u.GetLog2SubboxesPerDim();
+        const size_t numSubboxes = u.GetNumSubboxes();
+        const size_t numSamples = numSamplesPerBox*numSubboxes;
+
+        // Gather the target box coordinates to the root to write the 
+        // Piece Extent data.
+        Array<size_t,d> myCoordsArray = u.GetMyTargetBoxCoords();
+        vector<int> myCoords(d);
+        for( size_t j=0; j<d; ++j )
+            myCoords[j] = myCoordsArray[j]; // convert size_t -> int
+        vector<int> coords(1);
+        if( rank == 0 )
+            coords.resize(d*numProcesses);
+        MPI_Gather
+        ( &myCoords[0], d, MPI_INT, &coords[0], d, MPI_INT, 0, comm );
+
+        // Have the root create the parallel file
+        if( rank == 0 )
+        {
+            cout << "Creating parallel files...";
+            cout.flush();
+            ofstream realTruthFile, imagTruthFile;
+            ofstream realApproxFile, imagApproxFile;
+            ofstream realErrorFile, imagErrorFile;
+            ostringstream os;
+            os << basename << "_realTruth.pvti";
+            realTruthFile.open( os.str().c_str() );
+            os.clear(); os.str("");
+            os << basename << "_imagTruth.pvti";
+            imagTruthFile.open( os.str().c_str() );
+            os.clear(); os.str("");
+            os << basename << "_realApprox.pvti";
+            realApproxFile.open( os.str().c_str() );
+            os.clear(); os.str("");
+            os << basename << "_imagApprox.pvti";
+            imagApproxFile.open( os.str().c_str() );
+            os.clear(); os.str("");
+            os << basename << "_realError.pvti";
+            realErrorFile.open( os.str().c_str() );
+            os.clear(); os.str("");
+            os << basename << "_imagError.pvti";
+            imagErrorFile.open( os.str().c_str() );
+            os.clear(); os.str("");
+            os << "<?xml version=\"1.0\"?>\n"
+               << "<VTKFile type=\"PImageData\" version=\"0.1\">\n"
+               << " <PImageData WholeExtent=\"";
+            for( size_t j=0; j<d; ++j )
+                os << "0 " << N*numSamplesPerBoxDim << " ";
+            for( size_t j=d; j<3; ++j )
+                os << "0 1 ";
+            os << "\" Origin=\"";
+            for( size_t j=0; j<d; ++j )
+                os << targetBox.offsets[j] << " ";
+            for( size_t j=d; j<3; ++j )
+                os << "0 ";
+            os << "\" Spacing=\"";
+            for( size_t j=0; j<d; ++j )
+                os << targetBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
+            for( size_t j=d; j<3; ++j )
+                os << "1 ";
+            os << "\" GhostLevel=\"0\">\n"
+               << "  <PCellData Scalars=\"cell_scalars\">\n"
+               << "   <PDataArray type=\"Float32\" Name=\"cell_scalars\"/>\n"
+               << "  </PCellData>\n";
+            for( size_t i=0; i<numProcesses; ++i )
+            {
+                os << "  <Piece Extent=\"";
+                for( size_t j=0; j<d; ++j )
+                {
+                    size_t width = 
+                        numSamplesPerBoxDim << log2SubboxesPerDim[j];
+                    os << coords[i*d+j]*width << " "
+                       << (coords[i*d+j]+1)*width << " ";
+                }
+                for( size_t j=d; j<3; ++j )
+                    os << "0 1 ";
+                realTruthFile << os.str();
+                imagTruthFile << os.str();
+                realApproxFile << os.str();
+                imagApproxFile << os.str();
+                realErrorFile << os.str();
+                imagErrorFile << os.str();
+                os.clear(); os.str("");
+                realTruthFile 
+                    << "\" Source=\"" << basename << "_realTruth_" << i 
+                    << ".vti\"/>\n";
+                imagTruthFile 
+                    << "\" Source=\"" << basename << "_imagTruth_" << i 
+                    << ".vti\"/>\n";
+                realApproxFile 
+                    << "\" Source=\"" << basename << "_realApprox_" << i 
+                    << ".vti\"/>\n";
+                imagApproxFile 
+                    << "\" Source=\"" << basename << "_imagApprox_" << i 
+                    << ".vti\"/>\n";
+                realErrorFile 
+                    << "\" Source=\"" << basename << "_realError_" << i 
+                    << ".vti\"/>\n";
+                imagErrorFile 
+                    << "\" Source=\"" << basename << "_imagError_" << i 
+                    << ".vti\"/>\n";
+            }
+            os << " </PImageData>\n"
+               << "</VTKFile>" << endl;
+            realTruthFile << os.str();
+            imagTruthFile << os.str();
+            realApproxFile << os.str();
+            imagApproxFile << os.str();
+            realErrorFile << os.str();
+            imagErrorFile << os.str();
+            realTruthFile.close();
+            imagTruthFile.close();
+            realApproxFile.close();
+            imagApproxFile.close();
+            realErrorFile.close();
+            imagErrorFile.close();
+            cout << "done" << endl;
+        }
+
+        // Have each process write its serial image data
+        if( rank == 0 )
+        {
+            cout << "Creating serial vti files...";
+            cout.flush();
+        }
+        ofstream realTruthFile, imagTruthFile;
+        ofstream realApproxFile, imagApproxFile;
+        ofstream realErrorFile, imagErrorFile;
+        ostringstream os;
+        os << basename << "_realTruth_" << rank << ".vti";
+        realTruthFile.open( os.str().c_str() );
+        os.clear(); os.str("");
+        os << basename << "_imagTruth_" << rank << ".vti";
+        imagTruthFile.open( os.str().c_str() );
+        os.clear(); os.str("");
+        os << basename << "_realApprox_" << rank << ".vti";
+        realApproxFile.open( os.str().c_str() );
+        os.clear(); os.str("");
+        os << basename << "_imagApprox_" << rank << ".vti";
+        imagApproxFile.open( os.str().c_str() );
+        os.clear(); os.str("");
+        os << basename << "_realError_" << rank << ".vti";
+        realErrorFile.open( os.str().c_str() );
+        os.clear(); os.str("");
+        os << basename << "_imagError_" << rank << ".vti";
+        imagErrorFile.open( os.str().c_str() );
+        os.clear(); os.str("");
+        os << "<?xml version=\"1.0\"?>\n"
+           << "<VTKFile type=\"ImageData\" version=\"0.1\">\n"
+           << " <ImageData WholeExtent=\"";
+        for( size_t j=0; j<d; ++j )
+            os << "0 " << N*numSamplesPerBoxDim << " ";
+        for( size_t j=d; j<3; ++j )
+            os << "0 1 ";
+        os << "\" Origin=\"";
+        for( size_t j=0; j<d; ++j )
+            os << targetBox.offsets[j] << " ";
+        for( size_t j=d; j<3; ++j )
+            os << "0 ";
+        os << "\" Spacing=\"";
+        for( size_t j=0; j<d; ++j )
+            os << targetBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
+        for( size_t j=d; j<3; ++j )
+            os << "1 ";
+        os << "\">\n"
+           << "  <Piece Extent=\"";
+        for( size_t j=0; j<d; ++j )
+        {
+            size_t width =
+                numSamplesPerBoxDim << log2SubboxesPerDim[j];
+            os << myCoords[j]*width << " " << (myCoords[j]+1)*width << " ";
+        }
+        for( size_t j=d; j<3; ++j )
+            os << "0 1 ";
+        os << "\">\n"
+           << "   <CellData Scalars=\"cell_scalars\">\n"
+           << "    <DataArray type=\"Float32\" Name=\"cell_scalars\""
+           << " format=\"ascii\">\n";
+        realTruthFile << os.str();
+        imagTruthFile << os.str();
+        realApproxFile << os.str();
+        imagApproxFile << os.str();
+        realErrorFile << os.str();
+        imagErrorFile << os.str();
+        os.clear(); os.str("");
+        Array<size_t,d> numSamplesUpToDim;
+        for( size_t j=0; j<d; ++j )
+        {
+            numSamplesUpToDim[j] = 1;
+            for( size_t i=0; i<j; ++i )
+            {
+                numSamplesUpToDim[j] *=
+                    numSamplesPerBoxDim << log2SubboxesPerDim[i];
+            }
+        }
+        const std::size_t numSources = globalSources.size();
+        for( size_t k=0; k<numSamples; ++k )
+        {
+            // Extract our indices in each dimension
+            Array<size_t,d> coords;
+            for( size_t j=0; j<d; ++j )
+                coords[j] = (k/numSamplesUpToDim[j]) %
+                            (numSamplesPerBoxDim<<log2SubboxesPerDim[j]);
+
+            // Compute the location of our sample
+            Array<R,d> x;
+            for( size_t j=0; j<d; ++j )
+                x[j] = myTargetBox.offsets[j] +
+                       coords[j]*wA[j]/numSamplesPerBoxDim;
+
+            // Compute the approximation
+            complex<R> approx = u.Evaluate( x );
+
+            // Compute the 'exact' answer
+            complex<R> truth(0,0);
+            for( std::size_t m=0; m<numSources; ++m )
+            {
+                complex<R> beta = 
+                    ImagExp<R>( phase(x,globalSources[m].p) );
+                truth += amplitude(x,globalSources[m].p)*
+                         beta*globalSources[m].magnitude;
+            }
+            const complex<R> error = approx-truth;
+
+            realTruthFile << (float)real(truth) << " ";
+            imagTruthFile << (float)imag(truth) << " ";
+            realApproxFile << (float)real(approx) << " ";
+            imagApproxFile << (float)imag(approx) << " ";
+            realErrorFile << (float)abs(real(error)) << " ";
+            imagErrorFile << (float)abs(imag(error)) << " ";
+            if( k % numSamplesPerBox == 0 )
+            {
+                realTruthFile << "\n";
+                imagTruthFile << "\n";
+                realApproxFile << "\n";
+                imagApproxFile << "\n";
+                realErrorFile << "\n";
+                imagErrorFile << "\n";
+            }
+        }
+        os << "\n"
+           << "    </DataArray>\n"
+           << "   </CellData>\n"
+           << "  </Piece>\n"
+           << " </ImageData>\n"
+           << "</VTKFile>" << endl;
+        realTruthFile << os.str();
+        imagTruthFile << os.str();
+        realApproxFile << os.str();
+        imagApproxFile << os.str();
+        realErrorFile << os.str();
+        imagErrorFile << os.str();
+        realTruthFile.close();
+        imagTruthFile.close();
+        realApproxFile.close();
+        imagApproxFile.close();
+        realErrorFile.close();
+        imagErrorFile.close();
         if( rank == 0 )
             cout << "done" << endl;
     }

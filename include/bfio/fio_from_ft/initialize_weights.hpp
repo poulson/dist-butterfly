@@ -33,7 +33,7 @@
 #include "bfio/tools/mpi.hpp"
 #include "bfio/tools/special_functions.hpp"
 
-#include "bfio/functors/phase_functor.hpp"
+#include "bfio/functors/phase.hpp"
 
 #include "bfio/fio_from_ft/context.hpp"
 
@@ -45,7 +45,7 @@ void
 InitializeWeights
 ( const fio_from_ft::Context<R,d,q>& context,
   const Plan<d>& plan,
-  const PhaseFunctor<R,d>& Phi,
+  const Phase<R,d>& phase,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
   const Box<R,d>& mySourceBox,
@@ -196,12 +196,7 @@ InitializeWeights
 #ifdef TIMING
                 preprocessTimer.Start();
 #endif // TIMING
-                Phi.BatchEvaluate( xPoint, pPoints, phiResults );
-                {
-                    R* phiBuffer = &phiResults[0];
-                    for( std::size_t s=0; s<numSources; ++s )
-                        phiBuffer[s] *= TwoPi;
-                }
+                phase.BatchEvaluate( xPoint, pPoints, phiResults );
                 SinCosBatch( phiResults, sinResults, cosResults );
 #ifdef TIMING
                 preprocessTimer.Stop();
@@ -292,22 +287,17 @@ InitializeWeights
                 // Compute the prefactors given this p0 and multiply it by 
                 // the corresponding weights
                 {
-                    R* RESTRICT chebyshevPointsBuffer = &(chebyshevPoints[0][0]);
+                    R* RESTRICT chebyshevPointsBuffer = &chebyshevPoints[0][0];
                     const R* RESTRICT p0Buffer = &p0[0];
                     const R* RESTRICT wBBuffer = &wB[0];
-                    const R* RESTRICT chebyshevBuffer = &(chebyshevGrid[0][0]);
+                    const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
                     for( std::size_t t=0; t<q_to_d; ++t )
                         for( std::size_t j=0; j<d; ++j )
                             chebyshevPointsBuffer[t*d+j] = 
                                 p0Buffer[j] + 
                                 wBBuffer[j]*chebyshevBuffer[t*d+j];
                 }
-                Phi.BatchEvaluate( xPoint, chebyshevPoints, phiResults );
-                {
-                    R* phiBuffer = &phiResults[0];
-                    for( std::size_t t=0; t<q_to_d; ++t )
-                        phiBuffer[t] *= -TwoPi;
-                }
+                phase.BatchEvaluate( xPoint, chebyshevPoints, phiResults );
                 SinCosBatch( phiResults, sinResults, cosResults );
                 {
                     R* RESTRICT realBuffer = weightGrid.RealBuffer();
@@ -317,7 +307,7 @@ InitializeWeights
                     for( std::size_t t=0; t<q_to_d; ++t )
                     {
                         const R realPhase = cosBuffer[t];
-                        const R imagPhase = sinBuffer[t];
+                        const R imagPhase = -sinBuffer[t];
                         const R realWeight = realBuffer[t];
                         const R imagWeight = imagBuffer[t];
                         realBuffer[t] = 

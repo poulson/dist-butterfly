@@ -55,6 +55,9 @@ FormCheckPotentials
     const std::size_t d = 1;
     std::memset( weightGrid.Buffer(), 0, 2*q*sizeof(R) );
 
+    const Direction direction = context.GetDirection();
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+
     const std::size_t log2NumMergingProcesses = 
         plan.GetLog2NumMergingProcesses( level );
     const std::vector<R>& chebyshevNodes = context.GetChebyshevNodes();
@@ -131,7 +134,7 @@ FormCheckPotentials
         // Postscaling
         for( std::size_t t=0; t<q; ++t )
             postscalingArguments[t] = 
-                -TwoPi*(x0A[0]+chebyshevNodes[t]*wA[0])*p0Bc[0];
+                -SignedTwoPi*(x0A[0]+chebyshevNodes[t]*wA[0])*p0Bc[0];
         SinCosBatch( postscalingArguments, imagPostscalings, realPostscalings );
         {
             R* realWriteBuffer = weightGrid.RealBuffer();
@@ -175,6 +178,9 @@ FormCheckPotentials
     const std::size_t d = 2;
     const std::size_t q_to_d = q*q;
     std::memset( weightGrid.Buffer(), 0, 2*q_to_d*sizeof(R) );
+
+    const Direction direction = context.GetDirection();
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
 
     const std::size_t log2NumMergingProcesses = 
         plan.GetLog2NumMergingProcesses( level );
@@ -259,7 +265,7 @@ FormCheckPotentials
         // Postscale
         for( std::size_t t=0; t<q; ++t )
             postscalingArguments[t] = 
-                TwoPi*(x0A[0]+chebyshevNodes[t]*wA[0])*p0Bc[0];
+                SignedTwoPi*(x0A[0]+chebyshevNodes[t]*wA[0])*p0Bc[0];
         SinCosBatch( postscalingArguments, imagPostscalings, realPostscalings );
         {
             R* realBuffer = &realTempWeights1[0];
@@ -338,7 +344,7 @@ FormCheckPotentials
         // Postscale
         for( std::size_t t=0; t<q; ++t )
             postscalingArguments[t] = 
-                TwoPi*(x0A[1]+chebyshevNodes[t]*wA[1])*p0Bc[1];
+                SignedTwoPi*(x0A[1]+chebyshevNodes[t]*wA[1])*p0Bc[1];
         SinCosBatch( postscalingArguments, imagPostscalings, realPostscalings );
         {
             R* realWriteBuffer = weightGrid.RealBuffer();
@@ -384,6 +390,9 @@ FormCheckPotentials
 {
     const std::size_t q_to_d = Pow<q,d>::val;
     std::memset( weightGrid.Buffer(), 0, 2*q_to_d*sizeof(R) );
+
+    const Direction direction = context.GetDirection();
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
 
     const std::size_t log2NumMergingProcesses = 
         plan.GetLog2NumMergingProcesses( level );
@@ -468,7 +477,7 @@ FormCheckPotentials
         // Postscale
         for( std::size_t t=0; t<q; ++t )
             postscalingArguments[t] = 
-                TwoPi*(x0A[0]+chebyshevNodes[t]*wA[0])*p0Bc[0];
+                SignedTwoPi*(x0A[0]+chebyshevNodes[t]*wA[0])*p0Bc[0];
         SinCosBatch( postscalingArguments, imagPostscalings, realPostscalings );
         {
             R* realBuffer = &realTempWeights1[0];
@@ -552,7 +561,7 @@ FormCheckPotentials
         // Postscale
         for( std::size_t t=0; t<q; ++t )
             postscalingArguments[t] =
-                TwoPi*(x0A[1]+chebyshevNodes[t]*wA[1])*p0Bc[1];
+                SignedTwoPi*(x0A[1]+chebyshevNodes[t]*wA[1])*p0Bc[1];
         SinCosBatch( postscalingArguments, imagPostscalings, realPostscalings );
         for( std::size_t p=0; p<Pow<q,d-2>::val; ++p )
         {
@@ -616,7 +625,7 @@ FormCheckPotentials
             std::vector<R> imagTempWeightStrip( q );
             for( std::size_t t=0; t<q; ++t )
                 postscalingArguments[t] = 
-                    TwoPi*(x0A[j]+chebyshevNodes[t]*wA[j])*p0Bc[j];
+                    SignedTwoPi*(x0A[j]+chebyshevNodes[t]*wA[j])*p0Bc[j];
             SinCosBatch
             ( postscalingArguments, imagPostscalings, realPostscalings );
             for( std::size_t p=0; p<q_to_d/(q_to_j*q); ++p )        

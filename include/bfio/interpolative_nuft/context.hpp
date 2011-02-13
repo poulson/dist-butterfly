@@ -31,6 +31,7 @@ namespace interpolative_nuft {
 template<typename R,std::size_t d,std::size_t q>
 class Context
 {
+    const Direction _direction;
     const std::size_t _N;
     const Box<R,d> _sourceBox;
     const Box<R,d> _targetBox;
@@ -48,9 +49,13 @@ class Context
     
 public:        
     Context
-    ( const std::size_t N,
+    ( const Direction direction,
+      const std::size_t N,
       const Box<R,d>& sourceBox,
       const Box<R,d>& targetBox );
+
+    Direction
+    GetDirection() const;
 
     const std::vector<R>&
     GetChebyshevNodes() const;
@@ -123,14 +128,30 @@ interpolative_nuft::Context<R,d,q>::GenerateOffsetMaps()
     for( std::size_t j=0; j<d; ++j )
     {
         // Form
-        for( std::size_t t=0; t<q; ++t )
+        if( _direction == FORWARD )
         {
-            for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+            for( std::size_t t=0; t<q; ++t )
             {
-                A[t*q+tPrime] = 
-                    ImagExp<R>
-                    ( TwoPi*_chebyshevNodes[t]*_chebyshevNodes[tPrime]*
-                      productWidths[j] );
+                for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                {
+                    A[t*q+tPrime] = 
+                        ImagExp<R>
+                        ( -TwoPi*_chebyshevNodes[t]*_chebyshevNodes[tPrime]*
+                          productWidths[j] );
+                }
+            }
+        }
+        else
+        {
+            for( std::size_t t=0; t<q; ++t )
+            {
+                for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                {
+                    A[t*q+tPrime] = 
+                        ImagExp<R>
+                        ( TwoPi*_chebyshevNodes[t]*_chebyshevNodes[tPrime]*
+                          productWidths[j] );
+                }
             }
         }
         // Factor and invert
@@ -148,18 +169,39 @@ interpolative_nuft::Context<R,d,q>::GenerateOffsetMaps()
     }
 
     // Form the weight recursion offset map
-    for( std::size_t j=0; j<d; ++j )
+    if( _direction == FORWARD )
     {
-        for( std::size_t t=0; t<q; ++t )
+        for( std::size_t j=0; j<d; ++j )
         {
-            for( std::size_t tPrime=0; tPrime<q; ++tPrime ) 
+            for( std::size_t t=0; t<q; ++t )
             {
-                std::complex<R> alpha = 
-                    ImagExp<R>
-                    ( TwoPi*_chebyshevNodes[t]*_chebyshevNodes[tPrime]*
-                      productWidths[j]/2 );
-                _realForwardMaps[j][t*q+tPrime] = std::real( alpha );
-                _imagForwardMaps[j][t*q+tPrime] = std::imag( alpha );
+                for( std::size_t tPrime=0; tPrime<q; ++tPrime ) 
+                {
+                    std::complex<R> alpha = 
+                        ImagExp<R>
+                        ( -TwoPi*_chebyshevNodes[t]*_chebyshevNodes[tPrime]*
+                          productWidths[j]/2 );
+                    _realForwardMaps[j][t*q+tPrime] = std::real( alpha );
+                    _imagForwardMaps[j][t*q+tPrime] = std::imag( alpha );
+                }
+            }
+        }
+    }
+    else
+    {
+        for( std::size_t j=0; j<d; ++j )
+        {
+            for( std::size_t t=0; t<q; ++t )
+            {
+                for( std::size_t tPrime=0; tPrime<q; ++tPrime ) 
+                {
+                    std::complex<R> alpha = 
+                        ImagExp<R>
+                        ( TwoPi*_chebyshevNodes[t]*_chebyshevNodes[tPrime]*
+                          productWidths[j]/2 );
+                    _realForwardMaps[j][t*q+tPrime] = std::real( alpha );
+                    _imagForwardMaps[j][t*q+tPrime] = std::imag( alpha );
+                }
             }
         }
     }
@@ -167,16 +209,22 @@ interpolative_nuft::Context<R,d,q>::GenerateOffsetMaps()
 
 template<typename R,std::size_t d,std::size_t q>
 interpolative_nuft::Context<R,d,q>::Context
-( const std::size_t N,
+( const Direction direction,
+  const std::size_t N,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox ) 
-: _N(N), _sourceBox(sourceBox), _targetBox(targetBox), 
+: _direction(direction), _N(N), _sourceBox(sourceBox), _targetBox(targetBox), 
   _chebyshevNodes( q ), _chebyshevGrid( Pow<q,d>::val )
 {
     GenerateChebyshevNodes();
     GenerateChebyshevGrid();
     GenerateOffsetMaps();
 }
+
+template<typename R,std::size_t d,std::size_t q>
+inline Direction
+interpolative_nuft::Context<R,d,q>::GetDirection() const
+{ return _direction; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const std::vector<R>&

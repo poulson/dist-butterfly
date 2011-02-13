@@ -38,6 +38,8 @@ template<std::size_t x>
 struct Pow<x,0>
 { enum { val = (size_t)1 }; };
 
+enum Direction { FORWARD, ADJOINT };
+
 } // bfio
 
 #endif // BFIO_CONSTANTS_HPP

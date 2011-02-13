@@ -28,7 +28,7 @@
 #include "bfio/structures/weight_grid.hpp"
 #include "bfio/structures/weight_grid_list.hpp"
 
-#include "bfio/functors/phase_functor.hpp"
+#include "bfio/functors/phase.hpp"
 
 #include "bfio/tools/special_functions.hpp"
 
@@ -43,7 +43,7 @@ void
 SourceWeightRecursion
 ( const fio_from_ft::Context<R,1,q>& context,
   const Plan<1>& plan,
-  const PhaseFunctor<R,1>& Phi,
+  const Phase<R,1>& phase,
   const std::size_t level,
   const Array<R,1>& x0A,
   const Array<R,1>& p0B,
@@ -78,20 +78,15 @@ SourceWeightRecursion
 
         // Form the set of p points to evaluate
         {
-            R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
-            const R* RESTRICT sourceChildBuffer = &(sourceChildGrids[c*q][0]);
+            R* RESTRICT pPointsBuffer = &pPoints[0][0];
+            const R* RESTRICT sourceChildBuffer = &sourceChildGrids[c*q][0];
             for( std::size_t tPrime=0; tPrime<q; ++tPrime )
                 pPointsBuffer[tPrime] = 
                     p0B[0] + wB[0]*sourceChildBuffer[tPrime];
         }
 
         // Form the phase factors
-        Phi.BatchEvaluate( xPoint, pPoints, phiResults );
-        {
-            R* RESTRICT phiBuffer = &phiResults[0];
-            for( std::size_t tPrime=0; tPrime<q; ++tPrime )
-                phiBuffer[tPrime] *= TwoPi;
-        }
+        phase.BatchEvaluate( xPoint, pPoints, phiResults );
         SinCosBatch( phiResults, sinResults, cosResults );
 
         WeightGrid<R,1,q> scaledWeightGrid;
@@ -137,17 +132,12 @@ SourceWeightRecursion
     //------------------------------------------------------------------------//
     const std::vector< Array<R,1> >& chebyshevGrid = context.GetChebyshevGrid();
     {
-        R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
-        const R* RESTRICT chebyshevBuffer = &(chebyshevGrid[0][0]);
+        R* RESTRICT pPointsBuffer = &pPoints[0][0];
+        const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
         for( std::size_t t=0; t<q; ++t )
             pPointsBuffer[t] = p0B[0] + wB[0]*chebyshevBuffer[t];
     }
-    Phi.BatchEvaluate( xPoint, pPoints, phiResults );
-    {
-        R* phiBuffer = &phiResults[0];
-        for( std::size_t t=0; t<q; ++t )
-            phiBuffer[t] *= -TwoPi;
-    }
+    phase.BatchEvaluate( xPoint, pPoints, phiResults );
     SinCosBatch( phiResults, sinResults, cosResults );
     {
         R* RESTRICT realBuffer = weightGrid.RealBuffer();
@@ -157,7 +147,7 @@ SourceWeightRecursion
         for( std::size_t t=0; t<q; ++t )
         {
             const R realPhase = cosBuffer[t];
-            const R imagPhase = sinBuffer[t];
+            const R imagPhase = -sinBuffer[t];
             const R realWeight = realBuffer[t];
             const R imagWeight = imagBuffer[t];
             realBuffer[t] = realPhase*realWeight - imagPhase*imagWeight;
@@ -172,7 +162,7 @@ void
 SourceWeightRecursion
 ( const fio_from_ft::Context<R,2,q>& context,
   const Plan<2>& plan,
-  const PhaseFunctor<R,2>& Phi,
+  const Phase<R,2>& phase,
   const std::size_t level,
   const Array<R,2>& x0A,
   const Array<R,2>& p0B,
@@ -207,10 +197,10 @@ SourceWeightRecursion
 
         // Form the set of p points to evaluate
         {
-            R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
+            R* RESTRICT pPointsBuffer = &pPoints[0][0];
             const R* RESTRICT wBBuffer = &wB[0];
             const R* RESTRICT p0Buffer = &p0B[0];
-            const R* RESTRICT sourceChildBuffer = &(sourceChildGrids[c*q*q][0]);
+            const R* RESTRICT sourceChildBuffer = &sourceChildGrids[c*q*q][0];
             for( std::size_t tPrime=0; tPrime<q*q; ++tPrime )
                 for( std::size_t j=0; j<2; ++j )
                     pPointsBuffer[tPrime*2+j] = 
@@ -219,12 +209,7 @@ SourceWeightRecursion
         }
 
         // Form the phase factors
-        Phi.BatchEvaluate( xPoint, pPoints, phiResults );
-        {
-            R* phiBuffer = &phiResults[0];
-            for( std::size_t tPrime=0; tPrime<q*q; ++tPrime )
-                phiBuffer[tPrime] *= TwoPi;
-        }
+        phase.BatchEvaluate( xPoint, pPoints, phiResults );
         SinCosBatch( phiResults, sinResults, cosResults );
 
         WeightGrid<R,2,q> scaledWeightGrid;
@@ -287,21 +272,16 @@ SourceWeightRecursion
     //------------------------------------------------------------------------//
     const std::vector< Array<R,2> >& chebyshevGrid = context.GetChebyshevGrid();
     {
-        R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
+        R* RESTRICT pPointsBuffer = &pPoints[0][0];
         const R* RESTRICT wBBuffer = &wB[0];
         const R* RESTRICT p0Buffer = &p0B[0];
-        const R* RESTRICT chebyshevBuffer = &(chebyshevGrid[0][0]);
+        const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
         for( std::size_t t=0; t<q*q; ++t )
             for( std::size_t j=0; j<2; ++j )
                 pPointsBuffer[t*2+j] = 
                     p0Buffer[j] + wBBuffer[j]*chebyshevBuffer[t*2+j];
     }
-    Phi.BatchEvaluate( xPoint, pPoints, phiResults );
-    {
-        R* phiBuffer = &phiResults[0];
-        for( std::size_t t=0; t<q*q; ++t )
-            phiBuffer[t] *= -TwoPi;
-    }
+    phase.BatchEvaluate( xPoint, pPoints, phiResults );
     SinCosBatch( phiResults, sinResults, cosResults );
     {
         R* RESTRICT realBuffer = weightGrid.RealBuffer();
@@ -311,7 +291,7 @@ SourceWeightRecursion
         for( std::size_t t=0; t<q*q; ++t )
         {
             const R realPhase = cosBuffer[t];
-            const R imagPhase = sinBuffer[t];
+            const R imagPhase = -sinBuffer[t];
             const R realWeight = realBuffer[t];
             const R imagWeight = imagBuffer[t];
             realBuffer[t] = realPhase*realWeight - imagPhase*imagWeight;
@@ -326,7 +306,7 @@ void
 SourceWeightRecursion
 ( const fio_from_ft::Context<R,d,q>& context,
   const Plan<d>& plan,
-  const PhaseFunctor<R,d>& Phi,
+  const Phase<R,d>& phase,
   const std::size_t level,
   const Array<R,d>& x0A,
   const Array<R,d>& p0B,
@@ -363,11 +343,11 @@ SourceWeightRecursion
 
         // Form the set of p points to evaluate
         {
-            R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
+            R* RESTRICT pPointsBuffer = &pPoints[0][0];
             const R* RESTRICT wBBuffer = &wB[0];
             const R* RESTRICT p0BBuffer = &p0B[0];
             const R* RESTRICT sourceChildBuffer = 
-                &(sourceChildGrids[c*q_to_d][0]);
+                &sourceChildGrids[c*q_to_d][0];
             for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
                 for( std::size_t j=0; j<d; ++j )
                     pPointsBuffer[tPrime*d+j] = 
@@ -376,12 +356,7 @@ SourceWeightRecursion
         }
 
         // Form the phase factors
-        Phi.BatchEvaluate( xPoint, pPoints, phiResults );
-        {
-            R* phiBuffer = &phiResults[0];
-            for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
-                phiBuffer[tPrime] *= TwoPi;
-        }
+        phase.BatchEvaluate( xPoint, pPoints, phiResults );
         SinCosBatch( phiResults, sinResults, cosResults );
 
         {
@@ -526,21 +501,16 @@ SourceWeightRecursion
     //------------------------------------------------------------------------//
     const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
     {
-        R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
+        R* RESTRICT pPointsBuffer = &pPoints[0][0];
         const R* RESTRICT wBBuffer = &wB[0];
         const R* RESTRICT p0BBuffer = &p0B[0];
-        const R* RESTRICT chebyshevBuffer = &(chebyshevGrid[0][0]);
+        const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
         for( std::size_t t=0; t<q_to_d; ++t )
             for( std::size_t j=0; j<d; ++j )
                 pPointsBuffer[t*d+j] =  
                     p0BBuffer[j] + wBBuffer[j]*chebyshevBuffer[t*d+j];
     }
-    Phi.BatchEvaluate( xPoint, pPoints, phiResults );
-    {
-        R* phiBuffer = &phiResults[0];
-        for( std::size_t t=0; t<q_to_d; ++t )
-            phiBuffer[t] *= -TwoPi;
-    }
+    phase.BatchEvaluate( xPoint, pPoints, phiResults );
     SinCosBatch( phiResults, sinResults, cosResults );
     {
         R* RESTRICT realBuffer = weightGrid.RealBuffer();
@@ -550,7 +520,7 @@ SourceWeightRecursion
         for( std::size_t t=0; t<q_to_d; ++t )
         {
             const R realPhase = cosBuffer[t];
-            const R imagPhase = sinBuffer[t];
+            const R imagPhase = -sinBuffer[t];
             const R realWeight = realBuffer[t];
             const R imagWeight = imagBuffer[t];
             realBuffer[t] = realPhase*realWeight - imagPhase*imagWeight;

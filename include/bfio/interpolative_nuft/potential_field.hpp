@@ -170,6 +170,9 @@ interpolative_nuft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
     }
     const LRP<R,d,q>& lrp = _LRPs[k];
 
+    const Direction direction = _context.GetDirection();
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+
     C potential = 0;
     for( std::size_t t=0; t<Pow<q,d>::val; ++t )
     {
@@ -181,7 +184,7 @@ interpolative_nuft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
         R dot = 0;
         for( std::size_t j=0; j<d; ++j )
             dot += x[j]*_sourceChebyshevGrid[t][j];
-        potential += ImagExp<R>( TwoPi*dot )*weight;
+        potential += ImagExp<R>( SignedTwoPi*dot )*weight;
     }
     return potential;
 }

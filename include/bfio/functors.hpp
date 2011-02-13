@@ -18,8 +18,8 @@
 #ifndef BFIO_FUNCTORS_HPP
 #define BFIO_FUNCTORS_HPP 1
 
-#include "bfio/functors/amplitude_functor.hpp"
-#include "bfio/functors/phase_functor.hpp"
+#include "bfio/functors/amplitude.hpp"
+#include "bfio/functors/phase.hpp"
 
 #endif // BFIO_FUNCTORS_HPP
 

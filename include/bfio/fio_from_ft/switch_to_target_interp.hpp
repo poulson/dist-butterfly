@@ -39,8 +39,8 @@ void
 SwitchToTargetInterp
 ( const fio_from_ft::Context<R,d,q>& context,
   const Plan<d>& plan,
-  const AmplitudeFunctor<R,d>& Amp,
-  const PhaseFunctor<R,d>& Phi,
+  const Amplitude<R,d>& amplitude,
+  const Phase<R,d>& phase,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
   const Box<R,d>& mySourceBox,
@@ -67,7 +67,7 @@ SwitchToTargetInterp
 
     std::vector<R> oldRealWeights( q_to_d );
     std::vector<R> oldImagWeights( q_to_d );
-    const bool unitAmplitude = Amp.IsUnity();
+    const bool unitAmplitude = amplitude.IsUnity();
     const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
     for( std::size_t i=0; i<(1u<<log2LocalTargetBoxes); ++i, AWalker.Walk() )
@@ -81,10 +81,10 @@ SwitchToTargetInterp
 
         std::vector< Array<R,d> > xPoints( q_to_d );
         {
-            R* RESTRICT xPointsBuffer = &(xPoints[0][0]);
+            R* RESTRICT xPointsBuffer = &xPoints[0][0];
             const R* RESTRICT x0ABuffer = &x0A[0];
             const R* RESTRICT wABuffer = &wA[0];
-            const R* RESTRICT chebyshevBuffer = &(chebyshevGrid[0][0]);
+            const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
             for( std::size_t t=0; t<q_to_d; ++t )
                 for( std::size_t j=0; j<d; ++j )
                     xPointsBuffer[t*d+j] = 
@@ -109,22 +109,17 @@ SwitchToTargetInterp
 
             std::vector< Array<R,d> > pPoints( q_to_d );
             {
-                R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
+                R* RESTRICT pPointsBuffer = &pPoints[0][0];
                 const R* RESTRICT p0BBuffer = &p0B[0];
                 const R* RESTRICT wBBuffer = &wB[0];
-                const R* RESTRICT chebyshevBuffer = &(chebyshevGrid[0][0]);
+                const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
                 for( std::size_t t=0; t<q_to_d; ++t )
                     for( std::size_t j=0; j<d; ++j )
                         pPointsBuffer[t*d+j] = 
                             p0BBuffer[j] + wBBuffer[j]*chebyshevBuffer[t*d+j];
             }
 
-            Phi.BatchEvaluate( xPoints, pPoints, phiResults );
-            {
-                R* phiBuffer = &phiResults[0];
-                for( std::size_t j=0; j<phiResults.size(); ++j )
-                    phiBuffer[j] *= TwoPi;
-            }
+            phase.BatchEvaluate( xPoints, pPoints, phiResults );
             SinCosBatch( phiResults, sinResults, cosResults );
             const std::size_t key = k+(i<<log2LocalSourceBoxes);
 
@@ -162,7 +157,7 @@ SwitchToTargetInterp
             }
             else
             {
-                Amp.BatchEvaluate( xPoints, pPoints, ampResults );
+                amplitude.BatchEvaluate( xPoints, pPoints, ampResults );
                 const C* RESTRICT ampBuffer = &ampResults[0];
                 for( std::size_t t=0; t<q_to_d; ++t )
                 {

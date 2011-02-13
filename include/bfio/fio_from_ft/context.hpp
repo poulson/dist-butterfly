@@ -200,9 +200,10 @@ fio_from_ft::Context<R,d,q>::Lagrange
 ( std::size_t t, const Array<R,d>& p ) const
 {
     R product = static_cast<R>(1);
-    const R* pBuffer = &p[0];
-    const R* chebyshevNodeBuffer = &_chebyshevNodes[0];
-    const std::size_t* chebyshevIndicesBuffer = &(_chebyshevIndices[t][0]);
+    const R* RESTRICT pBuffer = &p[0];
+    const R* RESTRICT chebyshevNodeBuffer = &_chebyshevNodes[0];
+    const std::size_t* RESTRICT chebyshevIndicesBuffer = 
+        &_chebyshevIndices[t][0];
     for( std::size_t j=0; j<d; ++j )
     {
         std::size_t i = chebyshevIndicesBuffer[j];
@@ -232,9 +233,10 @@ fio_from_ft::Context<R,d,q>::LagrangeBatch
     for( std::size_t i=0; i<p.size(); ++i )
         resultsBuffer[i] = 1;
 
-    const R* pBuffer = &(p[0][0]);
-    const R* chebyshevNodeBuffer = &_chebyshevNodes[0];
-    const std::size_t* chebyshevIndicesBuffer = &(_chebyshevIndices[t][0]);
+    const R* RESTRICT pBuffer = &p[0][0];
+    const R* RESTRICT chebyshevNodeBuffer = &_chebyshevNodes[0];
+    const std::size_t* RESTRICT chebyshevIndicesBuffer = 
+        &_chebyshevIndices[t][0];
     for( std::size_t j=0; j<d; ++j )
     {
         std::size_t i = chebyshevIndicesBuffer[j];

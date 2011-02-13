@@ -41,10 +41,11 @@ static const std::size_t q = 12;
 static const std::size_t numAccuracyTestsPerBox = 10;
 
 template<typename R>
-class Oscillatory : public bfio::AmplitudeFunctor<R,d>
+class Oscillatory : public bfio::Amplitude<R,d>
 {
 public:
-    // This is the only routine required to be implemented
+    virtual Oscillatory<R>* Clone() const;
+
     virtual std::complex<R>
     operator() 
     ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const;
@@ -58,10 +59,11 @@ public:
 };
 
 template<typename R>
-class UpWave : public bfio::PhaseFunctor<R,d>
+class UpWave : public bfio::Phase<R,d>
 {
 public:
-    // This is the only routine required to be implemented
+    virtual UpWave<R>* Clone() const;
+
     virtual R 
     operator() 
     ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const;
@@ -73,6 +75,11 @@ public:
       const std::vector< bfio::Array<R,d> >& pPoints,
             std::vector< R                >& results ) const;
 };
+
+template<typename R>
+inline Oscillatory<R>*
+Oscillatory<R>::Clone() const
+{ return new Oscillatory<R>(*this); }
 
 template<typename R>
 inline std::complex<R>
@@ -151,11 +158,16 @@ Oscillatory<R>::BatchEvaluate
 }
 
 template<typename R>
+inline UpWave<R>*
+UpWave<R>::Clone() const
+{ return new UpWave<R>(*this); }
+
+template<typename R>
 inline R
 UpWave<R>::operator() 
 ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
 {
-    return x[0]*p[0]+x[1]*p[1] + 0.5*sqrt(p[0]*p[0]+p[1]*p[1]); 
+    return bfio::TwoPi*(x[0]*p[0]+x[1]*p[1] + 0.5*sqrt(p[0]*p[0]+p[1]*p[1])); 
 }
 
 template<typename R>
@@ -197,11 +209,16 @@ UpWave<R>::BatchEvaluate
         const R* xPointsBuffer = &(xPoints[0][0]);
         const R* pPointsBuffer = &(pPoints[0][0]);
         for( std::size_t i=0; i<xSize; ++i )
+        {
             for( std::size_t j=0; j<pSize; ++j )
+            {
                 resultsBuffer[i*pSize+j] =
                     xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] +
                     xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] +
                     sqrtBuffer[j];
+                resultsBuffer[i*pSize+j] *= bfio::TwoPi;
+            }
+        }
     }
 }
 
@@ -242,7 +259,7 @@ main
         }
 
         // Set up the general strategy for the forward transform
-        bfio::ForwardPlan<d> plan( comm, N, bootstrapSkip );
+        bfio::Plan<d> plan( comm, bfio::FORWARD, N, bootstrapSkip );
         bfio::Box<double,d> mySourceBox = 
             plan.GetMyInitialSourceBox( sourceBox );
 
@@ -265,7 +282,6 @@ main
 
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
-        double L1Sources = 0;
         std::vector< bfio::Source<double,d> > mySources;
         std::vector< bfio::Source<double,d> > globalSources;
         if( testAccuracy || store )
@@ -279,7 +295,6 @@ main
                         sourceBox.widths[j]*bfio::Uniform<double>(); 
                 }
                 globalSources[i].magnitude = 10*(2*bfio::Uniform<double>()-1); 
-                L1Sources += std::abs(globalSources[i].magnitude);
 
                 // Check if we should push this source onto our local list
                 bool isMine = true;
@@ -311,7 +326,6 @@ main
                         bfio::Uniform<double>()*mySourceBox.widths[j];
                 }
                 mySources[i].magnitude = 10*(2*bfio::Uniform<double>()-1);
-                L1Sources += std::abs(mySources[i].magnitude);
             }
         }
 
@@ -345,75 +359,20 @@ main
 #endif
 
         if( testAccuracy )
-        {
-            const bfio::Box<double,d>& myTargetBox = u->GetMyTargetBox();
-            const std::size_t numSubboxes = u->GetNumSubboxes();
-            const std::size_t numTests = numSubboxes*numAccuracyTestsPerBox;
-
-            // Compute error estimates using a constant number of samples within
-            // each box in the resulting approximation of the transform.
-            if( rank == 0 )
-            {
-                std::cout << "Test accuracy with O(N^d) samples..." 
-                          << std::endl;
-            }
-            double myL2ErrorSquared = 0.;
-            double myL2TruthSquared = 0.;
-            double myLinfError = 0.;
-            for( std::size_t k=0; k<numTests; ++k )
-            {
-                // Compute a random point in our process's target box
-                bfio::Array<double,d> x;
-                for( std::size_t j=0; j<d; ++j )
-                    x[j] = myTargetBox.offsets[j] + 
-                           bfio::Uniform<double>()*myTargetBox.widths[j];
-
-                // Evaluate our potential field at x and compare against truth
-                std::complex<double> approx = u->Evaluate( x );
-                std::complex<double> truth(0.,0.);
-                for( std::size_t m=0; m<globalSources.size(); ++m )
-                {
-                    std::complex<double> beta = 
-                        oscillatory( x, globalSources[m].p ) *
-                        bfio::ImagExp
-                        ( bfio::TwoPi*upWave(x,globalSources[m].p) );
-                    truth += beta * globalSources[m].magnitude;
-                }
-                double absError = std::abs(approx-truth);
-                double absTruth = std::abs(truth);
-                myL2ErrorSquared += absError*absError;
-                myL2TruthSquared += absTruth*absTruth;
-                myLinfError = std::max( myLinfError, absError );
-            }
-            double L2ErrorSquared;
-            double L2TruthSquared;
-            double LinfError;
-            MPI_Reduce
-            ( &myL2ErrorSquared, &L2ErrorSquared, 1, MPI_DOUBLE, MPI_SUM, 0, 
-              comm );
-            MPI_Reduce
-            ( &myL2TruthSquared, &L2TruthSquared, 1, MPI_DOUBLE, MPI_SUM, 0,
-              comm );
-            MPI_Reduce
-            ( &myLinfError, &LinfError, 1, MPI_DOUBLE, MPI_MAX, 0, comm );
-            if( rank == 0 )
-            {   
-                std::cout << "---------------------------------------------\n" 
-                          << "Estimate of relative ||e||_2:    " 
-                          << sqrt(L2ErrorSquared/L2TruthSquared) << "\n"
-                          << "Estimate of ||e||_inf:           " 
-                          << LinfError << "\n"
-                          << "||f||_1:                         " 
-                          << L1Sources << "\n"
-                          << "Estimate of ||e||_inf / ||f||_1: "  
-                          << LinfError/L1Sources << "\n" << std::endl;
-            }
-        }
-
+            bfio::fio_from_ft::PrintErrorEstimates( comm, *u, globalSources );
+        
         if( store )
         {
-            bfio::fio_from_ft::WriteVtkXmlPImageData
-            ( comm, N, targetBox, *u, "varUpWave2d" );
+            if( testAccuracy )
+            {
+                bfio::fio_from_ft::WriteVtkXmlPImageData
+                ( comm, N, targetBox, *u, "varUpWave2d", globalSources );
+            }
+            else
+            {
+                bfio::fio_from_ft::WriteVtkXmlPImageData
+                ( comm, N, targetBox, *u, "varUpWave2d" );
+            }
         }
     }
     catch( const std::exception& e )

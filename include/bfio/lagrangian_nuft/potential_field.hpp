@@ -19,7 +19,7 @@
 #define BFIO_LAGRANGIAN_NUFT_POTENTIAL_FIELD_HPP 1
 
 #include "bfio/fio_from_ft/potential_field.hpp"
-#include "bfio/lagrangian_nuft/dot_product.hpp"
+#include "bfio/lagrangian_nuft/ft_phases.hpp"
 
 namespace bfio {
 
@@ -28,7 +28,6 @@ template<typename R,std::size_t d,std::size_t q>
 class PotentialField
 {
     const lagrangian_nuft::Context<R,d,q>& _nuftContext;
-    const lagrangian_nuft::DotProduct<R,d> _dotProduct;
     const fio_from_ft::PotentialField<R,d,q> _fioPotential;
 
 public:
@@ -43,6 +42,8 @@ public:
     // This is the point of the potential field
     std::complex<R> Evaluate( const Array<R,d>& x ) const;
 
+    const Amplitude<R,d>& GetAmplitude() const;
+    const Phase<R,d>& GetPhase() const;
     const Box<R,d>& GetMyTargetBox() const;
     std::size_t GetNumSubboxes() const;
     const Array<R,d>& GetSubboxWidths() const;
@@ -53,12 +54,27 @@ public:
 };
 
 template<typename R,std::size_t d,std::size_t q>
+void PrintErrorEstimates
+( MPI_Comm comm,
+  const PotentialField<R,d,q>& u,
+  const std::vector< Source<R,d> >& globalSources );
+
+template<typename R,std::size_t d,std::size_t q>
 void WriteVtkXmlPImageData
 ( MPI_Comm comm, 
   const std::size_t N,
   const Box<R,d>& targetBox,
   const PotentialField<R,d,q>& u,
   const std::string& basename );
+
+template<typename R,std::size_t d,std::size_t q>
+void WriteVtkXmlPImageData
+( MPI_Comm comm, 
+  const std::size_t N,
+  const Box<R,d>& targetBox,
+  const PotentialField<R,d,q>& u,
+  const std::string& basename,
+  const std::vector< Source<R,d> >& globalSources );
 
 } // lagrangian_nuft
 
@@ -73,10 +89,12 @@ lagrangian_nuft::PotentialField<R,d,q>::PotentialField
   const Array<std::size_t,d>& log2TargetSubboxesPerDim,
   const WeightGridList<R,d,q>& weightGridList )
 : _nuftContext(nuftContext), 
-  _dotProduct(),
   _fioPotential
   ( nuftContext.GetFIOContext(),
-    this->_dotProduct,
+    UnitAmplitude<R,d>(),
+    ( nuftContext.GetDirection()==FORWARD ? 
+      (const FTPhase<R,d>&)lagrangian_nuft::ForwardFTPhase<R,d>() : 
+      (const FTPhase<R,d>&)lagrangian_nuft::AdjointFTPhase<R,d>() ),
     sourceBox,
     targetBox,
     myTargetBoxCoords,
@@ -88,6 +106,16 @@ template<typename R,std::size_t d,std::size_t q>
 std::complex<R>
 lagrangian_nuft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 { return _fioPotential.Evaluate( x ); }
+
+template<typename R,std::size_t d,std::size_t q>
+inline const Amplitude<R,d>&
+lagrangian_nuft::PotentialField<R,d,q>::GetAmplitude() const
+{ return _fioPotential.GetAmplitude(); }
+
+template<typename R,std::size_t d,std::size_t q>
+inline const Phase<R,d>&
+lagrangian_nuft::PotentialField<R,d,q>::GetPhase() const
+{ return _fioPotential.GetPhase(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Box<R,d>&
@@ -126,6 +154,17 @@ lagrangian_nuft::PotentialField<R,d,q>::GetFIOPotentialField() const
 
 template<typename R,std::size_t d,std::size_t q>
 inline void 
+lagrangian_nuft::PrintErrorEstimates
+( MPI_Comm comm,
+  const lagrangian_nuft::PotentialField<R,d,q>& u,
+  const std::vector< Source<R,d> >& globalSources )
+{
+    fio_from_ft::PrintErrorEstimates    
+    ( comm, u.GetFIOPotentialField(), globalSources );
+}
+
+template<typename R,std::size_t d,std::size_t q>
+inline void 
 lagrangian_nuft::WriteVtkXmlPImageData
 ( MPI_Comm comm, 
   const std::size_t N,
@@ -135,6 +174,20 @@ lagrangian_nuft::WriteVtkXmlPImageData
 {
     fio_from_ft::WriteVtkXmlPImageData
     ( comm, N, targetBox, u.GetFIOPotentialField(), basename );
+}
+
+template<typename R,std::size_t d,std::size_t q>
+inline void 
+lagrangian_nuft::WriteVtkXmlPImageData
+( MPI_Comm comm, 
+  const std::size_t N,
+  const Box<R,d>& targetBox,
+  const lagrangian_nuft::PotentialField<R,d,q>& u,
+  const std::string& basename,
+  const std::vector< Source<R,d> >& globalSources )
+{
+    fio_from_ft::WriteVtkXmlPImageData
+    ( comm, N, targetBox, u.GetFIOPotentialField(), basename, globalSources );
 }
 
 } // bfio

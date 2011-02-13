@@ -40,10 +40,11 @@ static const std::size_t q = 5;
 static const std::size_t numAccuracyTestsPerBox = 10;
 
 template<typename R>
-class Fourier : public bfio::PhaseFunctor<R,d>
+class Fourier : public bfio::Phase<R,d>
 {
 public:
-    // This is the only routines that must be implemented
+    virtual Fourier<R>* Clone() const;
+
     virtual R 
     operator()
     ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const;
@@ -56,12 +57,16 @@ public:
             std::vector< R                >& results ) const;
 };
 
-// This is the only routines that must be implemented
+template<typename R>
+inline Fourier<R>*
+Fourier<R>::Clone() const
+{ return new Fourier<R>(*this); }
+
 template<typename R>
 inline R
 Fourier<R>::operator() 
 ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
-{ return x[0]*p[0]+x[1]*p[1]+x[2]*p[2]; }
+{ return -bfio::TwoPi*(x[0]*p[0]+x[1]*p[1]+x[2]*p[2]); }
 
 // We can optionally override the batched application for better efficiency
 template<typename R>
@@ -79,11 +84,16 @@ Fourier<R>::BatchEvaluate
     const R* RESTRICT xPointsBuffer = &(xPoints[0][0]);
     const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
     for( std::size_t i=0; i<xSize; ++i )
+    {
         for( std::size_t j=0; j<pSize; ++j )
+        {
             resultsBuffer[i*pSize+j] = 
                 xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
                 xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] + 
                 xPointsBuffer[i*d+2]*pPointsBuffer[j*d+2];
+            resultsBuffer[i*pSize+j] *= -bfio::TwoPi;
+        }
+    }
 }
 
 int
@@ -123,8 +133,7 @@ main
         }
 
         // Set up the general strategy for the forward transform
-        bfio::ForwardPlan<d> plan( comm, N, bootstrapSkip );
-        //bfio::AdjointPlan<d> plan( comm, N, bootstrapSkip );
+        bfio::Plan<d> plan( comm, bfio::FORWARD, N, bootstrapSkip );
         bfio::Box<double,d> mySourceBox = 
             plan.GetMyInitialSourceBox( sourceBox );
 
@@ -147,7 +156,6 @@ main
 
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
-        double L1Sources = 0;
         std::vector< bfio::Source<double,d> > mySources;
         std::vector< bfio::Source<double,d> > globalSources;
         if( testAccuracy || store )
@@ -161,7 +169,6 @@ main
                         sourceBox.widths[j]*bfio::Uniform<double>(); 
                 }
                 globalSources[i].magnitude = 1.*(2*bfio::Uniform<double>()-1); 
-                L1Sources += std::abs(globalSources[i].magnitude);
 
                 // Check if we should push this source onto our local list
                 bool isMine = true;
@@ -193,7 +200,6 @@ main
                         bfio::Uniform<double>()*mySourceBox.widths[j];
                 }
                 mySources[i].magnitude = 1.*(2*bfio::Uniform<double>()-1);
-                L1Sources += std::abs(mySources[i].magnitude);
             }
         }
 
@@ -201,7 +207,7 @@ main
         if( rank == 0 )
             std::cout << "Creating InterpolativeNUFT context..." << std::endl;
         bfio::interpolative_nuft::Context<double,d,q> 
-            interpolativeNuftContext( N, sourceBox, targetBox );
+            interpolativeNuftContext( bfio::FORWARD, N, sourceBox, targetBox );
 
         // Run with the interpolative NUFT
         std::auto_ptr< 
@@ -228,7 +234,7 @@ main
         if( rank == 0 )
             std::cout << "Creating LagrangianNUFT context..." << std::endl;
         bfio::lagrangian_nuft::Context<double,d,q> 
-            lagrangianNuftContext( N, sourceBox, targetBox );
+            lagrangianNuftContext( bfio::FORWARD, N, sourceBox, targetBox );
 
         // Run with the Lagrangian NUFT
         std::auto_ptr< const bfio::lagrangian_nuft::PotentialField<double,d,q> >
@@ -281,75 +287,22 @@ main
 
         if( testAccuracy )
         {
-            const bfio::Box<double,d>& myTargetBox = u->GetMyTargetBox();
-            const std::size_t numSubboxes = u->GetNumSubboxes();
-            const std::size_t numTests = numSubboxes*numAccuracyTestsPerBox;
-
-            // Compute error estimates using a constant number of samples within
-            // each box in the resulting approximation of the transform.
-            if( rank == 0 )
-            {
-                std::cout << "Testing accuracy with O(N^d) samples..." 
-                          << std::endl;
-            }
-            double myL2ErrorSquared = 0;
-            double myL2TruthSquared = 0;
-            double myLinfError = 0;
-            for( std::size_t k=0; k<numTests; ++k )
-            {
-                // Compute a random point in our process's target box
-                bfio::Array<double,d> x;
-                for( std::size_t j=0; j<d; ++j )
-                    x[j] = myTargetBox.offsets[j] + 
-                           bfio::Uniform<double>()*myTargetBox.widths[j];
-
-                // Evaluate our potential field at x and compare against truth
-                std::complex<double> approx = u->Evaluate( x );
-                std::complex<double> truth(0.,0.);
-                for( std::size_t m=0; m<globalSources.size(); ++m )
-                {
-                    std::complex<double> beta =
-                        bfio::ImagExp
-                        ( bfio::TwoPi*fourier(x,globalSources[m].p) );
-                    truth += beta * globalSources[m].magnitude;
-                }
-                double absError = std::abs(approx-truth);
-                double absTruth = std::abs(truth);
-
-                myL2ErrorSquared += absError*absError;
-                myL2TruthSquared += absTruth*absTruth;
-                myLinfError = std::max( myLinfError, absError );
-            }
-
-            double L2ErrorSquared;
-            double L2TruthSquared;
-            double LinfError;
-            MPI_Reduce
-            ( &myL2ErrorSquared, &L2ErrorSquared, 1, MPI_DOUBLE, MPI_SUM, 0,
-              comm ); 
-            MPI_Reduce
-            ( &myL2TruthSquared, &L2TruthSquared, 1, MPI_DOUBLE, MPI_SUM, 0,
-              comm );
-            MPI_Reduce
-            ( &myLinfError, &LinfError, 1, MPI_DOUBLE, MPI_MAX, 0, comm );
-            if( rank == 0 )
-            {   
-                std::cout << "---------------------------------------------\n" 
-                          << "Estimate of relative ||e||_2:    "
-                          << sqrt(L2ErrorSquared/L2TruthSquared) << "\n"
-                          << "Estimate of ||e||_inf:           "  
-                          << LinfError << "\n"
-                          << "||f||_1:                         "
-                          << L1Sources << "\n"
-                          << "Estimate of ||e||_inf / ||f||_1: "
-                          << LinfError/L1Sources << "\n" << std::endl;
-            }
+            bfio::lagrangian_nuft::PrintErrorEstimates
+            ( comm, *v, globalSources );
         }
-
+        
         if( store )
         {
-            bfio::lagrangian_nuft::WriteVtkXmlPImageData
-            ( comm, N, targetBox, *v, "nuft3d" );
+            if( testAccuracy )
+            {
+                bfio::lagrangian_nuft::WriteVtkXmlPImageData
+                ( comm, N, targetBox, *v, "nuft3d", globalSources );
+            }
+            else
+            {
+                bfio::lagrangian_nuft::WriteVtkXmlPImageData
+                ( comm, N, targetBox, *v, "nuft3d" );
+            }
         }
     }
     catch( const std::exception& e )

@@ -56,6 +56,9 @@ InitializeCheckPotentials
     const std::size_t N = plan.GetN();
     const std::size_t d = 1;
 
+    const Direction direction = context.GetDirection();
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+
     // Store the widths of the source and target boxes
     Array<R,d> wA;
     wA[0] = targetBox.widths[0];
@@ -120,13 +123,13 @@ InitializeCheckPotentials
             FlattenConstrainedHTreeIndex( B, log2LocalSourceBoxesPerDim );
     }
 
-    // Batch evaluate the dot products and multiply by TwoPi
+    // Batch evaluate the dot products and multiply by +-TwoPi
     std::vector<R> phiResults( q*numSources );
     std::memset( &phiResults[0], 0, q*numSources*sizeof(R) );
     Ger
     ( q, numSources, 
-      TwoPi, &xPoints[0][0], 1, &pPoints[0][0], 1, 
-             &phiResults[0], q );
+      SignedTwoPi, &xPoints[0][0], 1, &pPoints[0][0], 1, 
+                   &phiResults[0], q );
 
     // Grab the real and imaginary parts of the phase
     std::vector<R> sinResults;
@@ -174,6 +177,9 @@ InitializeCheckPotentials
     const std::size_t d = 2;
     const std::size_t q_to_d = Pow<q,d>::val;
 
+    const Direction direction = context.GetDirection();
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+
     // Store the widths of the source and target boxes
     Array<R,d> wA;
     for( std::size_t j=0; j<d; ++j )
@@ -243,11 +249,11 @@ InitializeCheckPotentials
             FlattenConstrainedHTreeIndex( B, log2LocalSourceBoxesPerDim );
     }
 
-    // Batch evaluate the dot products and multiply by TwoPi
+    // Batch evaluate the dot products and multiply by +-TwoPi
     std::vector<R> phiResults( q_to_d*numSources );
     Gemm
     ( 'T', 'N', q_to_d, numSources, d,
-      TwoPi, &xPoints[0][0], d, &pPoints[0][0], d,
+      SignedTwoPi, &xPoints[0][0], d, &pPoints[0][0], d,
       (R)0, &phiResults[0], q_to_d );
 
     // Grab the real and imaginary parts of the phase
@@ -295,6 +301,9 @@ InitializeCheckPotentials
     const std::size_t N = plan.GetN();
     const std::size_t q_to_d = Pow<q,d>::val;
 
+    const Direction direction = context.GetDirection();
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+
     // Store the widths of the source and target boxes
     Array<R,d> wA;
     for( std::size_t j=0; j<d; ++j )
@@ -364,11 +373,11 @@ InitializeCheckPotentials
             FlattenConstrainedHTreeIndex( B, log2LocalSourceBoxesPerDim );
     }
 
-    // Batch evaluate the dot products and multiply by TwoPi
+    // Batch evaluate the dot products and multiply by +-TwoPi
     std::vector<R> phiResults( q_to_d*numSources );
     Gemm
     ( 'T', 'N', q_to_d, numSources, d,
-      TwoPi, &xPoints[0][0], d, &pPoints[0][0], d,
+      SignedTwoPi, &xPoints[0][0], d, &pPoints[0][0], d,
       (R)0, &phiResults[0], q_to_d );
 
     // Grab the real and imaginary parts of the phase

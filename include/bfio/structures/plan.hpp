@@ -26,6 +26,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "bfio/constants.hpp"
 #include "bfio/tools/twiddle.hpp"
 #include "mpi.h"
 #ifdef BGP
@@ -35,10 +36,11 @@
 namespace bfio {
 
 template<std::size_t d>
-class Plan
+class PlanBase
 {
 protected:
     MPI_Comm _comm;
+    const Direction _direction;
     const std::size_t _N;
 
     // Does not depend on the problem size
@@ -66,11 +68,12 @@ protected:
     std::vector< std::vector<std::size_t> > _targetDimsToCut;
     std::vector< std::vector<bool       > > _rightSideOfCut;
 
-    virtual void GeneratePlan() = 0;
-    
+    PlanBase
+    ( MPI_Comm comm, Direction direction, std::size_t N, 
+      std::size_t bootstrapSkip );
+
 public:        
-    Plan( MPI_Comm comm, std::size_t N, std::size_t bootstrapSkip );
-    virtual ~Plan();
+    virtual ~PlanBase();
 
     virtual std::size_t 
     LocalToClusterSourceIndex
@@ -81,6 +84,7 @@ public:
     ( std::size_t cLocal ) const = 0;
 
     MPI_Comm GetComm() const;
+    Direction GetDirection() const;
     std::size_t GetN() const;
     std::size_t GetBootstrapSkip() const;
 
@@ -120,14 +124,42 @@ public:
 };
 
 template<std::size_t d>
-class ForwardPlan : public Plan<d>
+class Plan : public PlanBase<d>
 {
+    //---------------------------------//
+    // For forward plans               //
+    //---------------------------------//
     std::size_t _myBootstrapClusterRank;
     std::vector<std::size_t> _myClusterRanks;
-    virtual void GeneratePlan();
+    void GenerateForwardPlan();
+
+    std::size_t
+    ForwardLocalToBootstrapClusterSourceIndex
+    ( std::size_t cLocal ) const;
+
+    std::size_t 
+    ForwardLocalToClusterSourceIndex
+    ( std::size_t level, std::size_t cLocal ) const;
+
+    //---------------------------------//
+    // For adjoint plans               //
+    //---------------------------------//
+    std::size_t _myBootstrapMappedRank;
+    std::vector<std::size_t> _myMappedRanks;
+    void GenerateAdjointPlan();
+
+    std::size_t
+    AdjointLocalToBootstrapClusterSourceIndex
+    ( std::size_t cLocal ) const;
+
+    std::size_t 
+    AdjointLocalToClusterSourceIndex
+    ( std::size_t level, std::size_t cLocal ) const;
+
 public:
-    ForwardPlan
-    ( MPI_Comm comm, std::size_t N, std::size_t bootstrapSkip );
+    Plan
+    ( MPI_Comm comm, Direction direction, std::size_t N, 
+      std::size_t bootstrapSkip );
 
     virtual std::size_t
     LocalToBootstrapClusterSourceIndex
@@ -138,29 +170,13 @@ public:
     ( std::size_t level, std::size_t cLocal ) const;
 };
 
-template<std::size_t d>
-class AdjointPlan : public Plan<d>
-{
-    std::size_t _myBootstrapMappedRank;
-    std::vector<std::size_t> _myMappedRanks;
-    virtual void GeneratePlan();
-public:
-    AdjointPlan
-    ( MPI_Comm comm, std::size_t N, std::size_t bootstrapSkip );
-    
-    virtual std::size_t
-    LocalToBootstrapClusterSourceIndex
-    ( std::size_t cLocal ) const;
-
-    virtual std::size_t 
-    LocalToClusterSourceIndex( std::size_t level, std::size_t cLocal ) const;
-};
-
 // Implementations
     
 template<std::size_t d>
-Plan<d>::Plan( MPI_Comm comm, std::size_t N, std::size_t bootstrapSkip ) 
-: _comm(comm), _N(N), _bootstrapSkip(bootstrapSkip)
+PlanBase<d>::PlanBase
+( MPI_Comm comm, Direction direction, std::size_t N,
+  std::size_t bootstrapSkip ) 
+: _comm(comm), _direction(direction), _N(N), _bootstrapSkip(bootstrapSkip)
 { 
     MPI_Comm_rank( comm, &_rank );
     MPI_Comm_size( comm, &_numProcesses );
@@ -186,7 +202,7 @@ Plan<d>::Plan( MPI_Comm comm, std::size_t N, std::size_t bootstrapSkip )
 }
 
 template<std::size_t d>
-Plan<d>::~Plan()
+PlanBase<d>::~PlanBase()
 {
     MPI_Comm_free( &_bootstrapClusterComm );
     MPI_Group_free( &_bootstrapClusterGroup );
@@ -199,22 +215,27 @@ Plan<d>::~Plan()
 }
 
 template<std::size_t d>
-inline MPI_Comm Plan<d>::GetComm() const 
+inline MPI_Comm PlanBase<d>::GetComm() const 
 { return _comm; }
 
 template<std::size_t d>
+inline Direction
+PlanBase<d>::GetDirection() const
+{ return _direction; }
+
+template<std::size_t d>
 inline std::size_t 
-Plan<d>::GetN() const 
+PlanBase<d>::GetN() const 
 { return _N; }
 
 template<std::size_t d>
 inline std::size_t
-Plan<d>::GetBootstrapSkip() const
+PlanBase<d>::GetBootstrapSkip() const
 { return _bootstrapSkip; }
 
 template<std::size_t d> template<typename R>
 Box<R,d> 
-Plan<d>::GetMyInitialSourceBox( const Box<R,d>& sourceBox ) const
+PlanBase<d>::GetMyInitialSourceBox( const Box<R,d>& sourceBox ) const
 {
     Box<R,d> myInitialSourceBox;
     for( std::size_t j=0; j<d; ++j )
@@ -230,7 +251,7 @@ Plan<d>::GetMyInitialSourceBox( const Box<R,d>& sourceBox ) const
 
 template<std::size_t d> template<typename R>
 Box<R,d> 
-Plan<d>::GetMyFinalTargetBox( const Box<R,d>& targetBox ) const
+PlanBase<d>::GetMyFinalTargetBox( const Box<R,d>& targetBox ) const
 {
     Box<R,d> myFinalTargetBox;
     for( std::size_t j=0; j<d; ++j )
@@ -246,86 +267,89 @@ Plan<d>::GetMyFinalTargetBox( const Box<R,d>& targetBox ) const
 
 template<std::size_t d>
 inline const Array<std::size_t,d>& 
-Plan<d>::GetMyInitialSourceBoxCoords() const
+PlanBase<d>::GetMyInitialSourceBoxCoords() const
 { return _myInitialSourceBoxCoords; }
 
 template<std::size_t d>
 inline const Array<std::size_t,d>& 
-Plan<d>::GetMyFinalTargetBoxCoords() const
+PlanBase<d>::GetMyFinalTargetBoxCoords() const
 { return _myFinalTargetBoxCoords; }
 
 template<std::size_t d>
 inline const Array<std::size_t,d>& 
-Plan<d>::GetLog2InitialSourceBoxesPerDim() const
+PlanBase<d>::GetLog2InitialSourceBoxesPerDim() const
 { return _log2InitialSourceBoxesPerDim; }
 
 template<std::size_t d>
 inline const Array<std::size_t,d>& 
-Plan<d>::GetLog2FinalTargetBoxesPerDim() const
+PlanBase<d>::GetLog2FinalTargetBoxesPerDim() const
 { return _log2FinalTargetBoxesPerDim; }
 
 template<std::size_t d>
 inline MPI_Comm 
-Plan<d>::GetClusterComm( std::size_t level ) const
+PlanBase<d>::GetClusterComm( std::size_t level ) const
 { return _clusterComms[level-1]; }
 
 template<std::size_t d>
 inline MPI_Comm
-Plan<d>::GetBootstrapClusterComm() const
+PlanBase<d>::GetBootstrapClusterComm() const
 { return _bootstrapClusterComm; }
 
 template<std::size_t d>
 inline const std::vector<std::size_t>&
-Plan<d>::GetBootstrapSourceDimsToMerge() const
+PlanBase<d>::GetBootstrapSourceDimsToMerge() const
 { return _bootstrapSourceDimsToMerge; }
 
 template<std::size_t d>
 inline const std::vector<std::size_t>&
-Plan<d>::GetBootstrapTargetDimsToCut() const
+PlanBase<d>::GetBootstrapTargetDimsToCut() const
 { return _bootstrapTargetDimsToCut; }
 
 template<std::size_t d>
 inline const std::vector<bool>& 
-Plan<d>::GetBootstrapRightSideOfCut() const
+PlanBase<d>::GetBootstrapRightSideOfCut() const
 { return _bootstrapRightSideOfCut; }
 
 template<std::size_t d>
 inline std::size_t 
-Plan<d>::GetLog2SubclusterSize( std::size_t level ) const
+PlanBase<d>::GetLog2SubclusterSize( std::size_t level ) const
 { return _log2SubclusterSizes[level-1]; }
 
 template<std::size_t d>
 inline std::size_t
-Plan<d>::GetLog2NumMergingProcesses( std::size_t level ) const
+PlanBase<d>::GetLog2NumMergingProcesses( std::size_t level ) const
 { return _sourceDimsToMerge[level-1].size(); }
 
 template<std::size_t d>
 inline const std::vector<std::size_t>&
-Plan<d>::GetSourceDimsToMerge( std::size_t level ) const
+PlanBase<d>::GetSourceDimsToMerge( std::size_t level ) const
 { return _sourceDimsToMerge[level-1]; }
 
 template<std::size_t d>
 inline const std::vector<std::size_t>& 
-Plan<d>::GetTargetDimsToCut( std::size_t level ) const
+PlanBase<d>::GetTargetDimsToCut( std::size_t level ) const
 { return _targetDimsToCut[level-1]; }
 
 template<std::size_t d>
 inline const std::vector<bool>& 
-Plan<d>::GetRightSideOfCut( std::size_t level ) const
+PlanBase<d>::GetRightSideOfCut( std::size_t level ) const
 { return _rightSideOfCut[level-1]; }
 
 template<std::size_t d>
-ForwardPlan<d>::ForwardPlan
-( MPI_Comm comm, std::size_t N, std::size_t bootstrapSkip )
-: Plan<d>( comm, N, bootstrapSkip )
+Plan<d>::Plan
+( MPI_Comm comm, Direction direction, std::size_t N, std::size_t bootstrapSkip )
+: PlanBase<d>( comm, direction, N, bootstrapSkip )
 { 
-    _myClusterRanks.resize( this->_log2N );
-    GeneratePlan(); 
+
+    if( direction == FORWARD )
+        GenerateForwardPlan();
+    else
+        GenerateAdjointPlan();
 }
 
 template<std::size_t d>
 inline std::size_t
-ForwardPlan<d>::LocalToBootstrapClusterSourceIndex
+Plan<d>::ForwardLocalToBootstrapClusterSourceIndex
 ( std::size_t cLocal ) const
 {
     return (cLocal<<this->_bootstrapSourceDimsToMerge.size()) +
@@ -334,7 +358,7 @@ ForwardPlan<d>::LocalToBootstrapClusterSourceIndex
 
 template<std::size_t d>
 inline std::size_t
-ForwardPlan<d>::LocalToClusterSourceIndex
+Plan<d>::ForwardLocalToClusterSourceIndex
 ( std::size_t level, std::size_t cLocal ) const
 {
     return (cLocal<<this->_sourceDimsToMerge[level-1].size()) +     
@@ -343,9 +367,11 @@ ForwardPlan<d>::LocalToClusterSourceIndex
 
 template<std::size_t d>
 void
-ForwardPlan<d>::GeneratePlan()
+Plan<d>::GenerateForwardPlan()
 {
     std::bitset<8*sizeof(int)> rankBits(this->_rank);
+        
+    _myClusterRanks.resize( this->_log2N );
 
     // Compute the number of source boxes per dimension and our coordinates
     std::size_t nextSourceDimToCut = 0;
@@ -670,17 +696,8 @@ ForwardPlan<d>::GeneratePlan()
 }
 
 template<std::size_t d>
-AdjointPlan<d>::AdjointPlan
-( MPI_Comm comm, std::size_t N, std::size_t bootstrapSkip )
-: Plan<d>( comm, N, bootstrapSkip )
-{ 
-    _myMappedRanks.resize( this->_log2N );
-    GeneratePlan(); 
-}
-
-template<std::size_t d>
 inline std::size_t
-AdjointPlan<d>::LocalToBootstrapClusterSourceIndex
+Plan<d>::AdjointLocalToBootstrapClusterSourceIndex
 ( std::size_t cLocal ) const
 {
     return (this->_myBootstrapMappedRank<<
@@ -690,7 +707,7 @@ AdjointPlan<d>::LocalToBootstrapClusterSourceIndex
 
 template<std::size_t d>
 inline std::size_t
-AdjointPlan<d>::LocalToClusterSourceIndex
+Plan<d>::AdjointLocalToClusterSourceIndex
 ( std::size_t level, std::size_t cLocal ) const
 {
     return (this->_myMappedRanks[level-1]<<
@@ -699,9 +716,10 @@ AdjointPlan<d>::LocalToClusterSourceIndex
 
 template<std::size_t d>
 void
-AdjointPlan<d>::GeneratePlan()
+Plan<d>::GenerateAdjointPlan()
 {
     std::bitset<8*sizeof(int)> rankBits(this->_rank);
+    _myMappedRanks.resize( this->_log2N );
 
     // Compute the number of source boxes per dimension and our coordinates
     std::size_t nextSourceDimToCut = d-1;
@@ -1075,6 +1093,28 @@ AdjointPlan<d>::GeneratePlan()
 #endif
         }
     }
+}
+
+template<std::size_t d>
+inline std::size_t 
+Plan<d>::LocalToClusterSourceIndex
+( std::size_t level, std::size_t cLocal ) const
+{
+    if( this->_direction == FORWARD )
+        return this->ForwardLocalToClusterSourceIndex( level, cLocal );
+    else
+        return this->AdjointLocalToClusterSourceIndex( level, cLocal );
+}
+
+template<std::size_t d>
+inline std::size_t
+Plan<d>::LocalToBootstrapClusterSourceIndex
+( std::size_t cLocal ) const
+{
+    if( this->_direction == FORWARD )
+        return this->ForwardLocalToBootstrapClusterSourceIndex( cLocal );
+    else
+        return this->AdjointLocalToBootstrapClusterSourceIndex( cLocal );
 }
 
 } // bfio

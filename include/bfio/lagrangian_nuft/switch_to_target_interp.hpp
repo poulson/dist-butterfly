@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_LAGRANGIAN_NUFT_SWITCH_TO_TARGET_INTERP_HPP
-#define BFIO_LAGRANGIAN_NUFT_SWITCH_TO_TARGET_INTERP_HPP 1
+#ifndef BFIO_LAGRANGIAN_NUFT_ADJOINT_SWITCH_TO_TARGET_INTERP_HPP
+#define BFIO_LAGRANGIAN_NUFT_ADJOINT_SWITCH_TO_TARGET_INTERP_HPP 1
 
 #include <cstddef>
 #include <complex>
@@ -30,7 +30,6 @@
 #include "bfio/structures/weight_grid_list.hpp"
 
 #include "bfio/lagrangian_nuft/context.hpp"
-#include "bfio/lagrangian_nuft/dot_product.hpp"
 
 namespace bfio {
 namespace lagrangian_nuft {
@@ -55,6 +54,9 @@ SwitchToTargetInterp
     const std::size_t d = 1;
     const fio_from_ft::Context<R,1,q>& fioContext = nuftContext.GetFIOContext();
 
+    const Direction direction = nuftContext.GetDirection();
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+
     // Compute the width of the nodes at level log2N/2
     const std::size_t N = plan.GetN();
     const std::size_t log2N = Log2( N );
@@ -63,14 +65,14 @@ SwitchToTargetInterp
     wA[0] = targetBox.widths[0] / (1<<level);
     wB[0] = sourceBox.widths[0] / (1<<(log2N-level));
 
-    // Get the precomputed grid offset evaluations, exp( TwoPi i (dx,dp) )
+    // Get the precomputed grid offset evaluations, exp( +-TwoPi i (dx,dp) )
     const Array< std::vector<R>, d >& realOffsetEvals = 
         nuftContext.GetRealOffsetEvaluations();
     const Array< std::vector<R>, d >& imagOffsetEvals = 
         nuftContext.GetImagOffsetEvaluations();
 
     // Create space for holding the mixed offset evaluations, i.e., 
-    // exp( TwoPi i (x0,dp) ) and exp( TwoPi i (dx,p0) )
+    // exp( +-TwoPi i (x0,dp) ) and exp( +-TwoPi i (dx,p0) )
     std::vector<R> phaseEvaluations( q );
     std::vector< std::vector<R> > realFixedTargetEvals( d, std::vector<R>(q) );
     std::vector< std::vector<R> > imagFixedTargetEvals( d, std::vector<R>(q) );
@@ -99,9 +101,9 @@ SwitchToTargetInterp
         Array<R,d> x0A;
         x0A[0] = myTargetBox.offsets[0] + (A[0]+0.5)*wA[0];
 
-        // Evaluate exp( TwoPi i (x0,dp) ) 
+        // Evaluate exp( +-TwoPi i (x0,dp) ) 
         for( std::size_t t=0; t<q; ++t )
-            phaseEvaluations[t] = TwoPi*wB[0]*x0A[0]*chebyshevNodes[t];
+            phaseEvaluations[t] = SignedTwoPi*wB[0]*x0A[0]*chebyshevNodes[t];
         SinCosBatch
         ( phaseEvaluations, 
           imagFixedTargetEvals[0], realFixedTargetEvals[0] );
@@ -117,13 +119,13 @@ SwitchToTargetInterp
             Array<R,d> p0B;
             p0B[0] = mySourceBox.offsets[0] + (B[0]+0.5)*wB[0];
 
-            // Ensure that we've evaluated exp( TwoPi i (dx,p0) ) 
+            // Ensure that we've evaluated exp( +-TwoPi i (dx,p0) ) 
             if( i == 0 )
             {
                 for( std::size_t t=0; t<q; ++t )
                 {
                     phaseEvaluations[t] = 
-                        TwoPi*wA[0]*p0B[0]*chebyshevNodes[t];
+                        SignedTwoPi*wA[0]*p0B[0]*chebyshevNodes[t];
                 }
                 SinCosBatch
                 ( phaseEvaluations,
@@ -181,8 +183,9 @@ SwitchToTargetInterp
               (R)+1, &imagTempWeights[0],    q );
 
             // Post process scaling
-            // Apply the exp( TwoPi i (x0,p0) ) and exp( TwoPi i (dx,p0) ) terms
-            R phase = TwoPi*x0A[0]*p0B[0];
+            // Apply the exp( +-TwoPi i (x0,p0) ) and exp( +-TwoPi i (dx,p0) ) 
+            // terms
+            R phase = SignedTwoPi*x0A[0]*p0B[0];
             const R realPhase = cos(phase);
             const R imagPhase = sin(phase);
             std::vector<R> realScalings( q );
@@ -232,6 +235,9 @@ SwitchToTargetInterp
     const std::size_t q_to_d = Pow<q,d>::val;
     const fio_from_ft::Context<R,2,q>& fioContext = nuftContext.GetFIOContext();
 
+    const Direction direction = nuftContext.GetDirection();
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+
     // Compute the width of the nodes at level log2N/2
     const std::size_t N = plan.GetN();
     const std::size_t log2N = Log2( N );
@@ -243,14 +249,14 @@ SwitchToTargetInterp
         wB[j] = sourceBox.widths[j] / (1<<(log2N-level));
     }
 
-    // Get the precomputed grid offset evaluations, exp( TwoPi i (dx,dp) )
+    // Get the precomputed grid offset evaluations, exp( +-TwoPi i (dx,dp) )
     const Array< std::vector<R>, d >& realOffsetEvals = 
         nuftContext.GetRealOffsetEvaluations();
     const Array< std::vector<R>, d >& imagOffsetEvals = 
         nuftContext.GetImagOffsetEvaluations();
 
     // Create space for holding the mixed offset evaluations, i.e., 
-    // exp( TwoPi i (x0,dp) ) and exp( TwoPi i (dx,p0) )
+    // exp( +-TwoPi i (x0,dp) ) and exp( +-TwoPi i (dx,p0) )
     std::vector<R> phaseEvaluations( q );
     std::vector< std::vector<R> > realFixedTargetEvals( d, std::vector<R>(q) );
     std::vector< std::vector<R> > imagFixedTargetEvals( d, std::vector<R>(q) );
@@ -280,11 +286,12 @@ SwitchToTargetInterp
         for( std::size_t j=0; j<d; ++j )
             x0A[j] = myTargetBox.offsets[j] + (A[j]+0.5)*wA[j];
 
-        // Evaluate exp( TwoPi i (x0,dp) ) for each coordinate
+        // Evaluate exp( +-TwoPi i (x0,dp) ) for each coordinate
         for( std::size_t j=0; j<d; ++j )
         {
             for( std::size_t t=0; t<q; ++t )
-                phaseEvaluations[t] = TwoPi*wB[j]*x0A[j]*chebyshevNodes[t];
+                phaseEvaluations[t] = 
+                    SignedTwoPi*wB[j]*x0A[j]*chebyshevNodes[t];
             SinCosBatch
             ( phaseEvaluations, 
               imagFixedTargetEvals[j], realFixedTargetEvals[j] );
@@ -302,7 +309,7 @@ SwitchToTargetInterp
             for( std::size_t j=0; j<d; ++j )
                 p0B[j] = mySourceBox.offsets[j] + (B[j]+0.5)*wB[j];
 
-            // Ensure that we've evaluated exp( TwoPi i (dx,p0) ) for each coord
+            // Evaluate exp( +-TwoPi i (dx,p0) ) for each coord
             if( i == 0 )
             {
                 for( std::size_t j=0; j<d; ++j )
@@ -310,7 +317,7 @@ SwitchToTargetInterp
                     for( std::size_t t=0; t<q; ++t )
                     {
                         phaseEvaluations[t] = 
-                            TwoPi*wA[j]*p0B[j]*chebyshevNodes[t];
+                            SignedTwoPi*wA[j]*p0B[j]*chebyshevNodes[t];
                     }
                     SinCosBatch
                     ( phaseEvaluations,
@@ -419,8 +426,8 @@ SwitchToTargetInterp
 
             // Post process scaling
             //
-            // Apply the exp( TwoPi i (x0,p0) ) term by scaling the 
-            // exp( TwoPi i (dx,p0) ) terms before their application
+            // Apply the exp( +-TwoPi i (x0,p0) ) term by scaling the 
+            // exp( +-TwoPi i (dx,p0) ) terms before their application
             std::size_t q_to_j = 1;
             R* realBuffer = weightGridList[key].RealBuffer();
             R* imagBuffer = weightGridList[key].ImagBuffer();
@@ -428,7 +435,7 @@ SwitchToTargetInterp
             std::vector<R> imagScalings( q );
             for( std::size_t j=0; j<d; ++j )
             {
-                const R phase = TwoPi*x0A[j]*p0B[j]; 
+                const R phase = SignedTwoPi*x0A[j]*p0B[j]; 
                 const R realPhase = cos(phase);
                 const R imagPhase = sin(phase);
                 for( std::size_t t=0; t<q; ++t )
@@ -488,6 +495,9 @@ SwitchToTargetInterp
     const std::size_t q_to_d = Pow<q,d>::val;
     const fio_from_ft::Context<R,d,q>& fioContext = nuftContext.GetFIOContext();
 
+    const Direction direction = nuftContext.GetDirection();
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+
     // Compute the width of the nodes at level log2N/2
     const std::size_t N = plan.GetN();
     const std::size_t log2N = Log2( N );
@@ -499,14 +509,14 @@ SwitchToTargetInterp
         wB[j] = sourceBox.widths[j] / (1<<(log2N-level));
     }
 
-    // Get the precomputed grid offset evaluations, exp( TwoPi i (dx,dp) )
+    // Get the precomputed grid offset evaluations, exp( +-TwoPi i (dx,dp) )
     const Array< std::vector<R>, d >& realOffsetEvals = 
         nuftContext.GetRealOffsetEvaluations();
     const Array< std::vector<R>, d >& imagOffsetEvals = 
         nuftContext.GetImagOffsetEvaluations();
 
     // Create space for holding the mixed offset evaluations, i.e., 
-    // exp( TwoPi i (x0,dp) ) and exp( TwoPi i (dx,p0) )
+    // exp( +-TwoPi i (x0,dp) ) and exp( +-TwoPi i (dx,p0) )
     std::vector<R> phaseEvaluations( q );
     std::vector< std::vector<R> > realFixedTargetEvals( d, std::vector<R>(q) );
     std::vector< std::vector<R> > imagFixedTargetEvals( d, std::vector<R>(q) );
@@ -536,11 +546,11 @@ SwitchToTargetInterp
         for( std::size_t j=0; j<d; ++j )
             x0A[j] = myTargetBox.offsets[j] + (A[j]+0.5)*wA[j];
 
-        // Evaluate exp( TwoPi i (x0,dp) ) for each coordinate
+        // Evaluate exp( +-TwoPi i (x0,dp) ) for each coordinate
         for( std::size_t j=0; j<d; ++j )
         {
             for( std::size_t t=0; t<q; ++t )
-                phaseEvaluations[t] = TwoPi*wB[j]*x0A[j]*chebyshevNodes[t];
+                phaseEvaluations[t] = +-TwoPi*wB[j]*x0A[j]*chebyshevNodes[t];
             SinCosBatch
             ( phaseEvaluations, 
               imagFixedTargetEvals[j], realFixedTargetEvals[j] );
@@ -558,7 +568,7 @@ SwitchToTargetInterp
             for( std::size_t j=0; j<d; ++j )
                 p0B[j] = mySourceBox.offsets[j] + (B[j]+0.5)*wB[j];
 
-            // Ensure that we've evaluated exp( TwoPi i (dx,p0) ) for each coord
+            // Evaluate exp( +-TwoPi i (dx,p0) ) for each coord
             if( i == 0 )
             {
                 for( std::size_t j=0; j<d; ++j )
@@ -566,7 +576,7 @@ SwitchToTargetInterp
                     for( std::size_t t=0; t<q; ++t )
                     {
                         phaseEvaluations[t] = 
-                            TwoPi*wA[j]*p0B[j]*chebyshevNodes[t];
+                            SignedTwoPi*wA[j]*p0B[j]*chebyshevNodes[t];
                     }
                     SinCosBatch
                     ( phaseEvaluations,
@@ -755,8 +765,8 @@ SwitchToTargetInterp
 
             // Post process scaling
             //
-            // Apply the exp( TwoPi i (x0,p0) ) term by scaling the 
-            // exp( TwoPi i (dx,p0) ) terms before their application
+            // Apply the exp( +-TwoPi i (x0,p0) ) term by scaling the 
+            // exp( +-TwoPi i (dx,p0) ) terms before their application
             q_to_j = 1;
             R* realBuffer = weightGridList[key].RealBuffer();
             R* imagBuffer = weightGridList[key].ImagBuffer();
@@ -764,7 +774,7 @@ SwitchToTargetInterp
             std::vector<R> imagScalings( q );
             for( std::size_t j=0; j<d; ++j )
             {
-                const R phase = TwoPi*x0A[j]*p0B[j];
+                const R phase = SignedTwoPi*x0A[j]*p0B[j];
                 const R realPhase = cos(phase);
                 const R imagPhase = sin(phase);
                 for( std::size_t t=0; t<q; ++t )
@@ -807,5 +817,5 @@ SwitchToTargetInterp
 } // lagrangian_nuft
 } // bfio
 
-#endif // BFIO_LAGRANGIAN_NUFT_SWITCH_TO_TARGET_INTERP_HPP
+#endif // BFIO_LAGRANGIAN_NUFT_ADJOINT_SWITCH_TO_TARGET_INTERP_HPP
 

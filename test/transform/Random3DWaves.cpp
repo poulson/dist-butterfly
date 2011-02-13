@@ -36,16 +36,17 @@ static const std::size_t d = 3;
 static const std::size_t q = 5;
 
 template<typename R>
-class UpWave : public bfio::PhaseFunctor<R,d>
+class UpWave : public bfio::Phase<R,d>
 {
     R _t;
 public:
     UpWave();
 
+    virtual UpWave<R>* Clone() const;
+
     void SetTime( const R t );
     R GetTime() const;
 
-    // This is the only routine required to be implemented
     virtual R
     operator() 
     ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const;
@@ -59,16 +60,17 @@ public:
 };
 
 template<typename R>
-class DownWave : public bfio::PhaseFunctor<R,d>
+class DownWave : public bfio::Phase<R,d>
 {
     R _t;
 public:
     DownWave();
 
+    virtual DownWave<R>* Clone() const;
+
     void SetTime( const R t );
     R GetTime() const;
 
-    // This is the only routine required to be implemented
     virtual R
     operator() 
     ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const;
@@ -92,6 +94,16 @@ inline
 DownWave<R>::DownWave() 
 : _t(0) 
 { }
+
+template<typename R>
+inline UpWave<R>*
+UpWave<R>::Clone() const
+{ return new UpWave<R>(*this); }
+
+template<typename R>
+inline DownWave<R>*
+DownWave<R>::Clone() const
+{ return new DownWave<R>(*this); }
 
 template<typename R>
 inline void 
@@ -118,8 +130,10 @@ inline R
 UpWave<R>::operator() 
 ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
 { 
-    return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
-           _t * sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
+    return bfio::TwoPi*( 
+             x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
+             _t * sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2])
+           );
 }
 
 template<typename R>
@@ -127,8 +141,10 @@ inline R
 DownWave<R>::operator() 
 ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
 { 
-    return x[0]*p[0]+x[1]*p[1]+x[2]*p[2] -
-           _t * sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
+    return bfio::TwoPi*(
+             x[0]*p[0]+x[1]*p[1]+x[2]*p[2] -
+             _t * sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2])
+           );
 }
 
 template<typename R>
@@ -171,12 +187,17 @@ UpWave<R>::BatchEvaluate
         const R* RESTRICT xPointsBuffer = &(xPoints[0][0]);
         const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
         for( std::size_t i=0; i<xSize; ++i )
+        {
             for( std::size_t j=0; j<pSize; ++j )
+            {
                 resultsBuffer[i*pSize+j] = 
                     xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
                     xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] +
                     xPointsBuffer[i*d+2]*pPointsBuffer[j*d+2] +
                     sqrtBuffer[j];
+                resultsBuffer[i*pSize+j] *= bfio::TwoPi;
+            }
+        }
     }
 }
 
@@ -220,12 +241,17 @@ DownWave<R>::BatchEvaluate
         const R* xPointsBuffer = &(xPoints[0][0]);
         const R* pPointsBuffer = &(pPoints[0][0]);
         for( std::size_t i=0; i<xSize; ++i )
+        {
             for( std::size_t j=0; j<pSize; ++j )
+            {
                 resultsBuffer[i*pSize+j] = 
                     xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
                     xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] +
                     xPointsBuffer[i*d+2]*pPointsBuffer[j*d+2] -
                     sqrtBuffer[j];
+                resultsBuffer[i*pSize+j] *= bfio::TwoPi;
+            }
+        }
     }
 }
 
@@ -266,7 +292,7 @@ main
         }
 
         // Set up the general strategy for the forward transform
-        bfio::ForwardPlan<d> plan( comm, N, bootstrapSkip );
+        bfio::Plan<d> plan( comm, bfio::FORWARD, N, bootstrapSkip );
         bfio::Box<double,d> mySourceBox = 
             plan.GetMyInitialSourceBox( sourceBox );
 
@@ -356,7 +382,11 @@ main
                 bfio::fio_from_ft::PrintTimings();
 #endif
 
-            // TODO: Gather potentials and then dump to VTK file
+            // Store this timeslice
+            std::ostringstream fileStream;
+            fileStream << "randomWaves-" << i;
+            bfio::fio_from_ft::WriteVtkXmlPImageData
+            ( comm, N, targetBox, *u, fileStream.str() );
         }
     }
     catch( const std::exception& e )
