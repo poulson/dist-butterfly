@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_GENERAL_FIO_SWITCH_TO_TARGET_INTERP_HPP
-#define BFIO_GENERAL_FIO_SWITCH_TO_TARGET_INTERP_HPP 1
+#ifndef BFIO_FIO_FROM_FT_SWITCH_TO_TARGET_INTERP_HPP
+#define BFIO_FIO_FROM_FT_SWITCH_TO_TARGET_INTERP_HPP 1
 
 #include <cstddef>
 #include <complex>
@@ -29,15 +29,15 @@
 #include "bfio/structures/weight_grid.hpp"
 #include "bfio/structures/weight_grid_list.hpp"
 
-#include "bfio/general_fio/context.hpp"
+#include "bfio/fio_from_ft/context.hpp"
 
 namespace bfio {
-namespace general_fio {
+namespace fio_from_ft {
 
 template<typename R,std::size_t d,std::size_t q>
 void
 SwitchToTargetInterp
-( const general_fio::Context<R,d,q>& context,
+( const fio_from_ft::Context<R,d,q>& context,
   const Plan<d>& plan,
   const AmplitudeFunctor<R,d>& Amp,
   const PhaseFunctor<R,d>& Phi,
@@ -187,8 +187,8 @@ SwitchToTargetInterp
     }
 }
 
-} // general_fio
+} // fio_from_ft
 } // bfio
 
-#endif // BFIO_GENERAL_FIO_SWITCH_TO_TARGET_INTERP_HPP
+#endif // BFIO_FIO_FROM_FT_SWITCH_TO_TARGET_INTERP_HPP
 

@@ -18,7 +18,7 @@
 #ifndef BFIO_LAGRANGIAN_NUFT_CONTEXT_HPP
 #define BFIO_LAGRANGIAN_NUFT_CONTEXT_HPP 1
 
-#include "bfio/general_fio/context.hpp"
+#include "bfio/fio_from_ft/context.hpp"
 
 namespace bfio {
 
@@ -26,7 +26,7 @@ namespace lagrangian_nuft {
 template<typename R,std::size_t d,std::size_t q>
 class Context
 {
-    const general_fio::Context<R,d,q> _generalContext;
+    const fio_from_ft::Context<R,d,q> _fioContext;
     const std::size_t _N;
     const Box<R,d> _sourceBox;
     const Box<R,d> _targetBox;
@@ -42,8 +42,8 @@ public:
       const Box<R,d>& sourceBox,
       const Box<R,d>& targetBox );
 
-    const general_fio::Context<R,d,q>&
-    GetGeneralContext() const;
+    const fio_from_ft::Context<R,d,q>&
+    GetFIOContext() const;
 
     const Array< std::vector<R>, d >&
     GetRealOffsetEvaluations() const;
@@ -71,7 +71,7 @@ lagrangian_nuft::Context<R,d,q>::GenerateOffsetEvaluations()
 
     // Form the offset grid evaluations
     std::vector<R> phaseEvaluations(q*q);
-    const std::vector<R>& chebyshevNodes = _generalContext.GetChebyshevNodes();
+    const std::vector<R>& chebyshevNodes = _fioContext.GetChebyshevNodes();
     const R* chebyshevBuffer = &chebyshevNodes[0];
     for( std::size_t j=0; j<d; ++j )
     {
@@ -89,13 +89,13 @@ lagrangian_nuft::Context<R,d,q>::GenerateOffsetEvaluations()
 template<typename R,std::size_t d,std::size_t q>
 lagrangian_nuft::Context<R,d,q>::Context
 ( std::size_t N, const Box<R,d>& sourceBox, const Box<R,d>& targetBox ) 
-: _generalContext(), _N(N), _sourceBox(sourceBox), _targetBox(targetBox)
+: _fioContext(), _N(N), _sourceBox(sourceBox), _targetBox(targetBox)
 { GenerateOffsetEvaluations(); }
 
 template<typename R,std::size_t d,std::size_t q>
-const general_fio::Context<R,d,q>&
-lagrangian_nuft::Context<R,d,q>::GetGeneralContext() const
-{ return _generalContext; }
+const fio_from_ft::Context<R,d,q>&
+lagrangian_nuft::Context<R,d,q>::GetFIOContext() const
+{ return _fioContext; }
 
 template<typename R,std::size_t d,std::size_t q>
 const Array< std::vector<R>, d >&

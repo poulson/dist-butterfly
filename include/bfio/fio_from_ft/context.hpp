@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_GENERAL_FIO_CONTEXT_HPP
-#define BFIO_GENERAL_FIO_CONTEXT_HPP 1
+#ifndef BFIO_FIO_FROM_FT_CONTEXT_HPP
+#define BFIO_FIO_FROM_FT_CONTEXT_HPP 1
 
 #include <memory>
 #include <vector>
@@ -25,7 +25,7 @@
 
 namespace bfio {
 
-namespace general_fio {
+namespace fio_from_ft {
 template<typename R,std::size_t d,std::size_t q>
 class Context
 {
@@ -74,13 +74,13 @@ public:
     const std::vector< Array<R,d> >&
     GetSourceChildGrids() const;
 };
-} // general_fio
+} // fio_from_ft
 
 // Implementations
 
 template<typename R,std::size_t d,std::size_t q>
 void 
-general_fio::Context<R,d,q>::GenerateChebyshevNodes()
+fio_from_ft::Context<R,d,q>::GenerateChebyshevNodes()
 {
     for( std::size_t t=0; t<q; ++t )
         _chebyshevNodes[t] = 0.5*cos(static_cast<R>(t*Pi/(q-1)));
@@ -88,7 +88,7 @@ general_fio::Context<R,d,q>::GenerateChebyshevNodes()
 
 template<typename R,std::size_t d,std::size_t q>
 void 
-general_fio::Context<R,d,q>::GenerateChebyshevIndices()
+fio_from_ft::Context<R,d,q>::GenerateChebyshevIndices()
 {
     const std::size_t q_to_d = _chebyshevIndices.size();
 
@@ -106,7 +106,7 @@ general_fio::Context<R,d,q>::GenerateChebyshevIndices()
 
 template<typename R,std::size_t d,std::size_t q>
 void 
-general_fio::Context<R,d,q>::GenerateChebyshevGrid()
+fio_from_ft::Context<R,d,q>::GenerateChebyshevGrid()
 {
     const std::size_t q_to_d = _chebyshevGrid.size();
 
@@ -124,7 +124,7 @@ general_fio::Context<R,d,q>::GenerateChebyshevGrid()
 
 template<typename R,std::size_t d,std::size_t q>
 void
-general_fio::Context<R,d,q>::GenerateChebyshevMaps()
+fio_from_ft::Context<R,d,q>::GenerateChebyshevMaps()
 {
     // Create 1d Lagrangian evaluation maps being left and right of the center
     for( std::size_t i=0; i<q; ++i )
@@ -139,7 +139,7 @@ general_fio::Context<R,d,q>::GenerateChebyshevMaps()
 
 template<typename R,std::size_t d,std::size_t q>
 void 
-general_fio::Context<R,d,q>::GenerateChildGrids()
+fio_from_ft::Context<R,d,q>::GenerateChildGrids()
 {
     const std::size_t q_to_d = _chebyshevGrid.size();
 
@@ -160,7 +160,7 @@ general_fio::Context<R,d,q>::GenerateChildGrids()
 }
 
 template<typename R,std::size_t d,std::size_t q>
-general_fio::Context<R,d,q>::Context() 
+fio_from_ft::Context<R,d,q>::Context() 
 : _chebyshevNodes( q ),
   _leftChebyshevMap( q*q ),
   _rightChebyshevMap( q*q ),
@@ -177,7 +177,7 @@ general_fio::Context<R,d,q>::Context()
 
 template<typename R,std::size_t d,std::size_t q>
 R
-general_fio::Context<R,d,q>::Lagrange1d
+fio_from_ft::Context<R,d,q>::Lagrange1d
 ( std::size_t i, R p ) const
 {
     R product = static_cast<R>(1);
@@ -196,7 +196,7 @@ general_fio::Context<R,d,q>::Lagrange1d
 
 template<typename R,std::size_t d,std::size_t q>
 R
-general_fio::Context<R,d,q>::Lagrange
+fio_from_ft::Context<R,d,q>::Lagrange
 ( std::size_t t, const Array<R,d>& p ) const
 {
     R product = static_cast<R>(1);
@@ -222,7 +222,7 @@ general_fio::Context<R,d,q>::Lagrange
 
 template<typename R,std::size_t d,std::size_t q>
 void
-general_fio::Context<R,d,q>::LagrangeBatch
+fio_from_ft::Context<R,d,q>::LagrangeBatch
 ( std::size_t t, 
   const std::vector< Array<R,d> >& p, 
         std::vector< R          >& results ) const
@@ -254,35 +254,35 @@ general_fio::Context<R,d,q>::LagrangeBatch
 
 template<typename R,std::size_t d,std::size_t q>
 inline const std::vector<R>&
-general_fio::Context<R,d,q>::GetChebyshevNodes() const
+fio_from_ft::Context<R,d,q>::GetChebyshevNodes() const
 { return _chebyshevNodes; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const std::vector< Array<std::size_t,d> >&
-general_fio::Context<R,d,q>::GetChebyshevIndices() const
+fio_from_ft::Context<R,d,q>::GetChebyshevIndices() const
 { return _chebyshevIndices; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const std::vector< Array<R,d> >&
-general_fio::Context<R,d,q>::GetChebyshevGrid() const
+fio_from_ft::Context<R,d,q>::GetChebyshevGrid() const
 { return _chebyshevGrid; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const std::vector<R>& 
-general_fio::Context<R,d,q>::GetLeftChebyshevMap() const
+fio_from_ft::Context<R,d,q>::GetLeftChebyshevMap() const
 { return _leftChebyshevMap; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const std::vector<R>& 
-general_fio::Context<R,d,q>::GetRightChebyshevMap() const
+fio_from_ft::Context<R,d,q>::GetRightChebyshevMap() const
 { return _rightChebyshevMap; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const std::vector< Array<R,d> >&
-general_fio::Context<R,d,q>::GetSourceChildGrids() const
+fio_from_ft::Context<R,d,q>::GetSourceChildGrids() const
 { return _sourceChildGrids; }
 
 } // bfio
 
-#endif // BFIO_GENERAL_FIO_CONTEXT_HPP
+#endif // BFIO_FIO_FROM_FT_CONTEXT_HPP
 

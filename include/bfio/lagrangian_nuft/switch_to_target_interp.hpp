@@ -53,8 +53,7 @@ SwitchToTargetInterp
 { 
     typedef std::complex<R> C;
     const std::size_t d = 1;
-    const general_fio::Context<R,1,q>& generalContext =
-        nuftContext.GetGeneralContext();
+    const fio_from_ft::Context<R,1,q>& fioContext = nuftContext.GetFIOContext();
 
     // Compute the width of the nodes at level log2N/2
     const std::size_t N = plan.GetN();
@@ -90,7 +89,7 @@ SwitchToTargetInterp
     std::vector<R> realTempWeights( q );
     std::vector<R> imagTempWeights( q );
 
-    const std::vector<R>& chebyshevNodes = generalContext.GetChebyshevNodes();
+    const std::vector<R>& chebyshevNodes = fioContext.GetChebyshevNodes();
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
     for( std::size_t i=0; i<(1u<<log2LocalTargetBoxes); ++i, AWalker.Walk() )
     {
@@ -231,8 +230,7 @@ SwitchToTargetInterp
     typedef std::complex<R> C;
     const std::size_t d = 2;
     const std::size_t q_to_d = Pow<q,d>::val;
-    const general_fio::Context<R,2,q>& generalContext = 
-        nuftContext.GetGeneralContext();
+    const fio_from_ft::Context<R,2,q>& fioContext = nuftContext.GetFIOContext();
 
     // Compute the width of the nodes at level log2N/2
     const std::size_t N = plan.GetN();
@@ -271,7 +269,7 @@ SwitchToTargetInterp
     std::vector<R> realTempWeights( q_to_d );
     std::vector<R> imagTempWeights( q_to_d );
 
-    const std::vector<R>& chebyshevNodes = generalContext.GetChebyshevNodes();
+    const std::vector<R>& chebyshevNodes = fioContext.GetChebyshevNodes();
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
     for( std::size_t i=0; i<(1u<<log2LocalTargetBoxes); ++i, AWalker.Walk() )
     {
@@ -488,8 +486,7 @@ SwitchToTargetInterp
 {
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
-    const general_fio::Context<R,d,q>& generalContext = 
-        nuftContext.GetGeneralContext();
+    const fio_from_ft::Context<R,d,q>& fioContext = nuftContext.GetFIOContext();
 
     // Compute the width of the nodes at level log2N/2
     const std::size_t N = plan.GetN();
@@ -528,7 +525,7 @@ SwitchToTargetInterp
     std::vector<R> realTempWeights( q_to_d );
     std::vector<R> imagTempWeights( q_to_d );
 
-    const std::vector<R>& chebyshevNodes = generalContext.GetChebyshevNodes();
+    const std::vector<R>& chebyshevNodes = fioContext.GetChebyshevNodes();
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
     for( std::size_t i=0; i<(1u<<log2LocalTargetBoxes); ++i, AWalker.Walk() )
     {

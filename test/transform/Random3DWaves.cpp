@@ -312,7 +312,7 @@ main
         // Create the context 
         if( rank == 0 )
             std::cout << "Creating context..." << std::endl;
-        bfio::general_fio::Context<double,d,q> context;
+        bfio::fio_from_ft::Context<double,d,q> context;
 
         // Loop over each timestep, computing in parallel, gathering the 
         // results, and then dumping to file
@@ -324,36 +324,36 @@ main
             downWave.SetTime( t );
 
             std::auto_ptr
-            < const bfio::general_fio::PotentialField<double,d,q> > u;
+            < const bfio::fio_from_ft::PotentialField<double,d,q> > u;
             if( rank == 0 )
             {
                 std::cout << "t=" << t << "\n"
                           << "  Starting upWave transform...";
                 std::cout.flush();
             }
-            u = bfio::GeneralFIO
+            u = bfio::FIOFromFT
             ( context, plan, upWave, sourceBox, targetBox, mySources );
             if( rank == 0 )
                 std::cout << "done" << std::endl;
 #ifdef TIMING
             if( rank == 0 )
-                bfio::general_fio::PrintTimings();
+                bfio::fio_from_ft::PrintTimings();
 #endif
 
             std::auto_ptr
-            < const bfio::general_fio::PotentialField<double,d,q> > v;
+            < const bfio::fio_from_ft::PotentialField<double,d,q> > v;
             if( rank == 0 )
             {
                 std::cout << "  Starting downWave transform...";
                 std::cout.flush();
             }
-            v = bfio::GeneralFIO
+            v = bfio::FIOFromFT
             ( context, plan, downWave, sourceBox, targetBox, mySources );
             if( rank == 0 )
                 std::cout << "done" << std::endl;
 #ifdef TIMING
             if( rank == 0 )
-                bfio::general_fio::PrintTimings();
+                bfio::fio_from_ft::PrintTimings();
 #endif
 
             // TODO: Gather potentials and then dump to VTK file

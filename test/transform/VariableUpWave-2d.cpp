@@ -322,15 +322,15 @@ main
         // Create our context
         if( rank == 0 )
             std::cout << "Creating context..." << std::endl;
-        bfio::general_fio::Context<double,d,q> context;
+        bfio::fio_from_ft::Context<double,d,q> context;
 
         // Run the algorithm
-        std::auto_ptr< const bfio::general_fio::PotentialField<double,d,q> > u;
+        std::auto_ptr< const bfio::fio_from_ft::PotentialField<double,d,q> > u;
         if( rank == 0 )
             std::cout << "Starting transform..." << std::endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        u = bfio::GeneralFIO
+        u = bfio::FIOFromFT
         ( context, plan, oscillatory, upWave, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
@@ -341,7 +341,7 @@ main
         }
 #ifdef TIMING
         if( rank == 0 )
-            bfio::general_fio::PrintTimings();
+            bfio::fio_from_ft::PrintTimings();
 #endif
 
         if( testAccuracy )
@@ -412,7 +412,7 @@ main
 
         if( store )
         {
-            bfio::general_fio::WriteVtkXmlPImageData
+            bfio::fio_from_ft::WriteVtkXmlPImageData
             ( comm, N, targetBox, *u, "varUpWave2d" );
         }
     }

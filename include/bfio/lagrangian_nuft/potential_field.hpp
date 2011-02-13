@@ -18,7 +18,7 @@
 #ifndef BFIO_LAGRANGIAN_NUFT_POTENTIAL_FIELD_HPP
 #define BFIO_LAGRANGIAN_NUFT_POTENTIAL_FIELD_HPP 1
 
-#include "bfio/general_fio/potential_field.hpp"
+#include "bfio/fio_from_ft/potential_field.hpp"
 #include "bfio/lagrangian_nuft/dot_product.hpp"
 
 namespace bfio {
@@ -29,7 +29,7 @@ class PotentialField
 {
     const lagrangian_nuft::Context<R,d,q>& _nuftContext;
     const lagrangian_nuft::DotProduct<R,d> _dotProduct;
-    const general_fio::PotentialField<R,d,q> _generalPotential;
+    const fio_from_ft::PotentialField<R,d,q> _fioPotential;
 
 public:
     PotentialField
@@ -49,7 +49,7 @@ public:
     const Array<std::size_t,d>& GetMyTargetBoxCoords() const;
     const Array<std::size_t,d>& GetLog2SubboxesPerDim() const;
     const Array<std::size_t,d>& GetLog2SubboxesUpToDim() const;
-    const general_fio::PotentialField<R,d,q>& GetGeneralPotentialField() const;
+    const fio_from_ft::PotentialField<R,d,q>& GetFIOPotentialField() const;
 };
 
 template<typename R,std::size_t d,std::size_t q>
@@ -74,8 +74,8 @@ lagrangian_nuft::PotentialField<R,d,q>::PotentialField
   const WeightGridList<R,d,q>& weightGridList )
 : _nuftContext(nuftContext), 
   _dotProduct(),
-  _generalPotential
-  ( nuftContext.GetGeneralContext(),
+  _fioPotential
+  ( nuftContext.GetFIOContext(),
     this->_dotProduct,
     sourceBox,
     targetBox,
@@ -87,42 +87,42 @@ lagrangian_nuft::PotentialField<R,d,q>::PotentialField
 template<typename R,std::size_t d,std::size_t q>
 std::complex<R>
 lagrangian_nuft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
-{ return _generalPotential.Evaluate( x ); }
+{ return _fioPotential.Evaluate( x ); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Box<R,d>&
 lagrangian_nuft::PotentialField<R,d,q>::GetMyTargetBox() const
-{ return _generalPotential.GetMyTargetBox(); }
+{ return _fioPotential.GetMyTargetBox(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline std::size_t
 lagrangian_nuft::PotentialField<R,d,q>::GetNumSubboxes() const
-{ return _generalPotential.GetNumSubboxes(); }
+{ return _fioPotential.GetNumSubboxes(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<R,d>&
 lagrangian_nuft::PotentialField<R,d,q>::GetSubboxWidths() const
-{ return _generalPotential.GetSubboxWidths(); }
+{ return _fioPotential.GetSubboxWidths(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
 lagrangian_nuft::PotentialField<R,d,q>::GetMyTargetBoxCoords() const
-{ return _generalPotential.GetMyTargetBoxCoords(); }
+{ return _fioPotential.GetMyTargetBoxCoords(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
 lagrangian_nuft::PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
-{ return _generalPotential.GetLog2SubboxesPerDim(); }
+{ return _fioPotential.GetLog2SubboxesPerDim(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
 lagrangian_nuft::PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
-{ return _generalPotential.GetLog2SubboxesUpToDim(); }
+{ return _fioPotential.GetLog2SubboxesUpToDim(); }
 
 template<typename R,std::size_t d,std::size_t q>
-const general_fio::PotentialField<R,d,q>& 
-lagrangian_nuft::PotentialField<R,d,q>::GetGeneralPotentialField() const
-{ return _generalPotential; }
+const fio_from_ft::PotentialField<R,d,q>& 
+lagrangian_nuft::PotentialField<R,d,q>::GetFIOPotentialField() const
+{ return _fioPotential; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline void 
@@ -133,8 +133,8 @@ lagrangian_nuft::WriteVtkXmlPImageData
   const lagrangian_nuft::PotentialField<R,d,q>& u,
   const std::string& basename )
 {
-    general_fio::WriteVtkXmlPImageData
-    ( comm, N, targetBox, u.GetGeneralPotentialField(), basename );
+    fio_from_ft::WriteVtkXmlPImageData
+    ( comm, N, targetBox, u.GetFIOPotentialField(), basename );
 }
 
 } // bfio

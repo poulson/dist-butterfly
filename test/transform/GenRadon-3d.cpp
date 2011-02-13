@@ -274,17 +274,17 @@ main
             cout << "Creating context...";
             cout.flush();
         }
-        bfio::general_fio::Context<double,d,q> context;
+        bfio::fio_from_ft::Context<double,d,q> context;
         if( rank == 0 )
             cout << "done." << endl;
 
         // Run the algorithm to generate the potential field
-        auto_ptr< const bfio::general_fio::PotentialField<double,d,q> > u;
+        auto_ptr< const bfio::fio_from_ft::PotentialField<double,d,q> > u;
         if( rank == 0 )
             cout << "Launching transform..." << endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        u = bfio::GeneralFIO
+        u = bfio::FIOFromFT
         ( context, plan, genRadon, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
@@ -292,7 +292,7 @@ main
             cout << "Runtime: " << stopTime-startTime << " seconds.\n" << endl;
 #ifdef TIMING
         if( rank == 0 )
-            bfio::general_fio::PrintTimings();
+            bfio::fio_from_ft::PrintTimings();
 #endif
 
         if( testAccuracy )
@@ -360,7 +360,7 @@ main
 
         if( store )
         {
-            bfio::general_fio::WriteVtkXmlPImageData
+            bfio::fio_from_ft::WriteVtkXmlPImageData
             ( comm, N, targetBox, *u, "genRadon3d" );
         }
     }

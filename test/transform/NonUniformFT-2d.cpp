@@ -255,17 +255,17 @@ main
 
         // Create a general context 
         if( rank == 0 )
-            std::cout << "Creating GeneralFIO context..." << std::endl;
-        bfio::general_fio::Context<double,d,q> generalContext;
+            std::cout << "Creating FIOFromFT context..." << std::endl;
+        bfio::fio_from_ft::Context<double,d,q> fioContext;
 
         // Run with the general algorithm
-        std::auto_ptr< const bfio::general_fio::PotentialField<double,d,q> > w;
+        std::auto_ptr< const bfio::fio_from_ft::PotentialField<double,d,q> > w;
         if( rank == 0 )
-            std::cout << "Starting GeneralFIO transform..." << std::endl;
+            std::cout << "Starting FIOFromFT transform..." << std::endl;
         MPI_Barrier( comm );
         startTime = MPI_Wtime();
-        w = bfio::GeneralFIO
-        ( generalContext, plan, fourier, sourceBox, targetBox, mySources );
+        w = bfio::FIOFromFT
+        ( fioContext, plan, fourier, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         stopTime = MPI_Wtime();
         if( rank == 0 )
@@ -275,7 +275,7 @@ main
         }
 #ifdef TIMING
         if( rank == 0 )
-            bfio::general_fio::PrintTimings();
+            bfio::fio_from_ft::PrintTimings();
 #endif
 
         if( testAccuracy )

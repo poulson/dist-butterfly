@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_GENERAL_FIO_INITIALIZE_WEIGHTS_HPP
-#define BFIO_GENERAL_FIO_INITIALIZE_WEIGHTS_HPP 1
+#ifndef BFIO_FIO_FROM_FT_INITIALIZE_WEIGHTS_HPP
+#define BFIO_FIO_FROM_FT_INITIALIZE_WEIGHTS_HPP 1
 
 #include <cstddef>
 #include <vector>
@@ -35,15 +35,15 @@
 
 #include "bfio/functors/phase_functor.hpp"
 
-#include "bfio/general_fio/context.hpp"
+#include "bfio/fio_from_ft/context.hpp"
 
 namespace bfio {
-namespace general_fio {
+namespace fio_from_ft {
 
 template<typename R,std::size_t d,std::size_t q>
 void
 InitializeWeights
-( const general_fio::Context<R,d,q>& context,
+( const fio_from_ft::Context<R,d,q>& context,
   const Plan<d>& plan,
   const PhaseFunctor<R,d>& Phi,
   const Box<R,d>& sourceBox,
@@ -338,8 +338,8 @@ InitializeWeights
     }
 }
 
-} // general_fio
+} // fio_from_ft
 } // bfio
 
-#endif // BFIO_GENERAL_FIO_INITIALIZE_WEIGHTS_HPP 
+#endif // BFIO_FIO_FROM_FT_INITIALIZE_WEIGHTS_HPP 
 

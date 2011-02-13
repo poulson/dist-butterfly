@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_GENERAL_FIO_HPP
-#define BFIO_GENERAL_FIO_HPP 1
+#ifndef BFIO_FIO_FROM_FT_HPP
+#define BFIO_FIO_FROM_FT_HPP 1
 
 #include <iostream>
 #include <memory>
@@ -27,7 +27,7 @@
 
 #ifdef TIMING
 namespace bfio {
-namespace general_fio {
+namespace fio_from_ft {
 
 static bool alreadyTimed = false;
 
@@ -54,9 +54,9 @@ PrintTimings()
 {
 #ifndef RELEASE
     if( !alreadyTimed )
-	throw std::logic_error("You have not yet run GeneralFIO.");
+	throw std::logic_error("You have not yet run FIOFromFT.");
 #endif
-    std::cout << "GeneralFIO timings:\n"
+    std::cout << "FIOFromFT timings:\n"
 	      << "--------------------------------------------\n"
               << "InitializeWeights:     "
               << initializeWeightsTimer.TotalTime() << " seconds.\n"
@@ -71,25 +71,25 @@ PrintTimings()
               << "Total: " << timer.TotalTime() << " seconds.\n" << std::endl;
 }
 
-} // general_fio
+} // fio_from_ft
 } // bfio
 #endif
 
-#include "bfio/general_fio/context.hpp"
-#include "bfio/general_fio/potential_field.hpp"
+#include "bfio/fio_from_ft/context.hpp"
+#include "bfio/fio_from_ft/potential_field.hpp"
 
-#include "bfio/general_fio/initialize_weights.hpp"
-#include "bfio/general_fio/source_weight_recursion.hpp"
-#include "bfio/general_fio/switch_to_target_interp.hpp"
-#include "bfio/general_fio/target_weight_recursion.hpp"
+#include "bfio/fio_from_ft/initialize_weights.hpp"
+#include "bfio/fio_from_ft/source_weight_recursion.hpp"
+#include "bfio/fio_from_ft/switch_to_target_interp.hpp"
+#include "bfio/fio_from_ft/target_weight_recursion.hpp"
 
 namespace bfio {
-namespace general_fio {
+namespace fio_from_ft {
 
 template<typename R,std::size_t d,std::size_t q>
-std::auto_ptr< const general_fio::PotentialField<R,d,q> >
+std::auto_ptr< const fio_from_ft::PotentialField<R,d,q> >
 transform
-( const general_fio::Context<R,d,q>& context,
+( const fio_from_ft::Context<R,d,q>& context,
   const Plan<d>& plan,
   const AmplitudeFunctor<R,d>& Amp,
   const PhaseFunctor<R,d>& Phi,
@@ -98,8 +98,8 @@ transform
   const std::vector< Source<R,d> >& mySources )
 {
 #ifdef TIMING
-    general_fio::ResetTimers();
-    general_fio::timer.Start();
+    fio_from_ft::ResetTimers();
+    fio_from_ft::timer.Start();
 #endif
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
@@ -159,14 +159,14 @@ transform
     // smooth component of the kernel.
     WeightGridList<R,d,q> weightGridList( 1u<<log2WeightGridSize );
 #ifdef TIMING
-    general_fio::initializeWeightsTimer.Start();
+    fio_from_ft::initializeWeightsTimer.Start();
 #endif
-    general_fio::InitializeWeights
+    fio_from_ft::InitializeWeights
     ( context, plan, Phi, sourceBox, targetBox, mySourceBox, 
       log2LocalSourceBoxes, log2LocalSourceBoxesPerDim, mySources, 
       weightGridList );
 #ifdef TIMING
-    general_fio::initializeWeightsTimer.Stop();
+    fio_from_ft::initializeWeightsTimer.Stop();
 #endif
 
     // Now cut the target domain if necessary
@@ -185,15 +185,15 @@ transform
     if( bootstrapSkip == log2N/2 )
     {
 #ifdef TIMING
-	general_fio::switchToTargetInterpTimer.Start();
+	fio_from_ft::switchToTargetInterpTimer.Start();
 #endif
-        general_fio::SwitchToTargetInterp
+        fio_from_ft::SwitchToTargetInterp
         ( context, plan, Amp, Phi, sourceBox, targetBox, mySourceBox, 
           myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
           log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
           weightGridList );
 #ifdef TIMING
-	general_fio::switchToTargetInterpTimer.Stop();
+	fio_from_ft::switchToTargetInterpTimer.Stop();
 #endif
     }
     for( std::size_t level=bootstrapSkip+1; level<=log2N; ++level )
@@ -258,14 +258,14 @@ transform
                     if( level <= log2N/2 )
                     {
 #ifdef TIMING
-			general_fio::sourceWeightRecursionTimer.Start();
+			fio_from_ft::sourceWeightRecursionTimer.Start();
 #endif
-                        general_fio::SourceWeightRecursion
+                        fio_from_ft::SourceWeightRecursion
                         ( context, plan, Phi, level, x0A, p0B, wB, 
                           parentInteractionOffset, oldWeightGridList,
                           weightGridList[interactionIndex] );
 #ifdef TIMING
-			general_fio::sourceWeightRecursionTimer.Stop();
+			fio_from_ft::sourceWeightRecursionTimer.Stop();
 #endif
                     }
                     else
@@ -283,15 +283,15 @@ transform
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
 #ifdef TIMING
-			general_fio::targetWeightRecursionTimer.Start();
+			fio_from_ft::targetWeightRecursionTimer.Start();
 #endif
-                        general_fio::TargetWeightRecursion
+                        fio_from_ft::TargetWeightRecursion
                         ( context, plan, Phi, level,
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentInteractionOffset, oldWeightGridList, 
                           weightGridList[interactionIndex] );
 #ifdef TIMING
-			general_fio::targetWeightRecursionTimer.Stop();
+			fio_from_ft::targetWeightRecursionTimer.Stop();
 #endif
                     }
                 }
@@ -352,14 +352,14 @@ transform
                 if( level <= log2N/2 )
                 {
 #ifdef TIMING
-		    general_fio::sourceWeightRecursionTimer.Start();
+		    fio_from_ft::sourceWeightRecursionTimer.Start();
 #endif
-                    general_fio::SourceWeightRecursion
+                    fio_from_ft::SourceWeightRecursion
                     ( context, plan, Phi, level, x0A, p0B, wB,
                       parentInteractionOffset, weightGridList,
                       partialWeightGridList[targetIndex] );
 #ifdef TIMING
-		    general_fio::sourceWeightRecursionTimer.Stop();
+		    fio_from_ft::sourceWeightRecursionTimer.Stop();
 #endif
                 }
                 else
@@ -376,22 +376,22 @@ transform
                         ARelativeToAp |= (globalA[j]&1)<<j;
                     }
 #ifdef TIMING
-		    general_fio::targetWeightRecursionTimer.Start();
+		    fio_from_ft::targetWeightRecursionTimer.Start();
 #endif
-                    general_fio::TargetWeightRecursion
+                    fio_from_ft::TargetWeightRecursion
                     ( context, plan, Phi, level,
                       ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                       parentInteractionOffset, weightGridList, 
                       partialWeightGridList[targetIndex] );
 #ifdef TIMING
-		    general_fio::targetWeightRecursionTimer.Stop();
+		    fio_from_ft::targetWeightRecursionTimer.Stop();
 #endif
                 }
             }
 
             // Scatter the summation of the weights
 #ifdef TIMING
-            general_fio::sumScatterTimer.Start();
+            fio_from_ft::sumScatterTimer.Start();
 #endif
             std::vector<int> recvCounts( numMergingProcesses );
             for( std::size_t j=0; j<numMergingProcesses; ++j )
@@ -450,7 +450,7 @@ transform
                   &recvCounts[0], clusterComm );
             }
 #ifdef TIMING
-            general_fio::sumScatterTimer.Stop();
+            fio_from_ft::sumScatterTimer.Stop();
 #endif
 
             const std::vector<std::size_t>& targetDimsToCut = 
@@ -474,40 +474,40 @@ transform
         if( level==log2N/2 )
         {
 #ifdef TIMING
-	    general_fio::switchToTargetInterpTimer.Start();
+	    fio_from_ft::switchToTargetInterpTimer.Start();
 #endif
-            general_fio::SwitchToTargetInterp
+            fio_from_ft::SwitchToTargetInterp
             ( context, plan, Amp, Phi, sourceBox, targetBox, mySourceBox, 
               myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
               log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
               weightGridList );
 #ifdef TIMING
-	    general_fio::switchToTargetInterpTimer.Stop();
+	    fio_from_ft::switchToTargetInterpTimer.Stop();
 #endif
         }
     }
 
-    // Construct the general FIO PotentialField
-    std::auto_ptr< const general_fio::PotentialField<R,d,q> > 
+    // Construct the FIO PotentialField
+    std::auto_ptr< const fio_from_ft::PotentialField<R,d,q> > 
     potentialField( 
-        new general_fio::PotentialField<R,d,q>
+        new fio_from_ft::PotentialField<R,d,q>
             ( context, Phi, sourceBox, myTargetBox, myTargetBoxCoords, 
               log2LocalTargetBoxesPerDim, weightGridList )
     );
 
 #ifdef TIMING
-    general_fio::timer.Stop();
-    general_fio::alreadyTimed = true;
+    fio_from_ft::timer.Stop();
+    fio_from_ft::alreadyTimed = true;
 #endif
     return potentialField;
 }
 
-} // general_fio
+} // fio_from_ft
 
 template<typename R,std::size_t d,std::size_t q>
-std::auto_ptr< const general_fio::PotentialField<R,d,q> >
-GeneralFIO
-( const general_fio::Context<R,d,q>& context,
+std::auto_ptr< const fio_from_ft::PotentialField<R,d,q> >
+FIOFromFT
+( const fio_from_ft::Context<R,d,q>& context,
   const Plan<d>& plan,
   const AmplitudeFunctor<R,d>& Amp,
   const PhaseFunctor<R,d>& Phi,
@@ -515,26 +515,26 @@ GeneralFIO
   const Box<R,d>& targetBox,
   const std::vector< Source<R,d> >& mySources )
 {
-    return general_fio::transform
+    return fio_from_ft::transform
     ( context, plan, Amp, Phi, sourceBox, targetBox, mySources );
 }
 
 template<typename R,std::size_t d,std::size_t q>
-std::auto_ptr< const general_fio::PotentialField<R,d,q> >
-GeneralFIO
-( const general_fio::Context<R,d,q>& context,
+std::auto_ptr< const fio_from_ft::PotentialField<R,d,q> >
+FIOFromFT
+( const fio_from_ft::Context<R,d,q>& context,
   const Plan<d>& plan,
   const PhaseFunctor<R,d>& Phi,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
   const std::vector< Source<R,d> >& mySources )
 {
-    return general_fio::transform
+    return fio_from_ft::transform
     ( context, plan, UnitAmplitude<R,d>(), Phi, sourceBox, targetBox, 
       mySources );
 }
 
 } // bfio
 
-#endif // BFIO_GENERAL_FIO_HPP
+#endif // BFIO_FIO_FROM_FT_HPP
 

@@ -57,8 +57,8 @@ lagrangian_nuft::DotProduct<R,d>::operator()
 ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
 {
     R sum = 0;
-    const R* xBuffer = &x[0];
-    const R* pBuffer = &p[0];
+    const R* RESTRICT xBuffer = &x[0];
+    const R* RESTRICT pBuffer = &p[0];
     for( std::size_t j=0; j<d; ++j )
         sum += xBuffer[j]*pBuffer[j];
     return sum;
@@ -75,10 +75,10 @@ lagrangian_nuft::DotProduct<R,d>::BatchEvaluate
     const std::size_t npPoints = pPoints.size();
     results.resize( nxPoints*npPoints );
 
-    R* resultsBuffer = &results[0];
+    R* RESTRICT resultsBuffer = &results[0];
     std::memset( resultsBuffer, 0, nxPoints*npPoints*sizeof(R) );
-    const R* xPointsBuffer = &(xPoints[0][0]);
-    const R* pPointsBuffer = &(pPoints[0][0]);
+    const R* RESTRICT xPointsBuffer = &(xPoints[0][0]);
+    const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
     for( std::size_t i=0; i<nxPoints; ++i )
         for( std::size_t j=0; j<npPoints; ++j )
             for( std::size_t k=0; k<d; ++k )

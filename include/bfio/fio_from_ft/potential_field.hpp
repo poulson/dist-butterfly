@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_GENERAL_FIO_POTENTIAL_FIELD_HPP
-#define BFIO_GENERAL_FIO_POTENTIAL_FIELD_HPP 1
+#ifndef BFIO_FIO_FROM_FT_POTENTIAL_FIELD_HPP
+#define BFIO_FIO_FROM_FT_POTENTIAL_FIELD_HPP 1
 
 #include <stdexcept>
 #include <complex>
@@ -30,7 +30,7 @@
 #include "bfio/structures/weight_grid.hpp"
 #include "bfio/structures/weight_grid_list.hpp"
 
-#include "bfio/general_fio/context.hpp"
+#include "bfio/fio_from_ft/context.hpp"
 
 #include "bfio/functors/amplitude_functor.hpp"
 #include "bfio/functors/phase_functor.hpp"
@@ -38,11 +38,11 @@
 
 namespace bfio {
 
-namespace general_fio {
+namespace fio_from_ft {
 template<typename R,std::size_t d,std::size_t q>
 class PotentialField
 {
-    const general_fio::Context<R,d,q>& _context;
+    const fio_from_ft::Context<R,d,q>& _context;
     const PhaseFunctor<R,d>& _Phi;
     const Box<R,d> _sourceBox;
     const Box<R,d> _myTargetBox;
@@ -56,7 +56,7 @@ class PotentialField
 
 public:
     PotentialField
-    ( const general_fio::Context<R,d,q>& context,
+    ( const fio_from_ft::Context<R,d,q>& context,
       const PhaseFunctor<R,d>& Phi,
       const Box<R,d>& sourceBox,
       const Box<R,d>& myTargetBox,
@@ -82,13 +82,13 @@ void WriteVtkXmlPImageData
   const PotentialField<R,d,q>& u,
   const std::string& basename );
 
-} // general_fio
+} // fio_from_ft
 
 // Implementations
 
 template<typename R,std::size_t d,std::size_t q>
-general_fio::PotentialField<R,d,q>::PotentialField
-( const general_fio::Context<R,d,q>& context,
+fio_from_ft::PotentialField<R,d,q>::PotentialField
+( const fio_from_ft::Context<R,d,q>& context,
   const PhaseFunctor<R,d>& Phi,
   const Box<R,d>& sourceBox,
   const Box<R,d>& myTargetBox,
@@ -144,7 +144,7 @@ general_fio::PotentialField<R,d,q>::PotentialField
 
 template<typename R,std::size_t d,std::size_t q>
 std::complex<R>
-general_fio::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
+fio_from_ft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 {
     typedef std::complex<R> C;
 
@@ -203,41 +203,41 @@ general_fio::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Box<R,d>&
-general_fio::PotentialField<R,d,q>::GetMyTargetBox() const
+fio_from_ft::PotentialField<R,d,q>::GetMyTargetBox() const
 { return _myTargetBox; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline std::size_t
-general_fio::PotentialField<R,d,q>::GetNumSubboxes() const
+fio_from_ft::PotentialField<R,d,q>::GetNumSubboxes() const
 { return _LRPs.size(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<R,d>&
-general_fio::PotentialField<R,d,q>::GetSubboxWidths() const
+fio_from_ft::PotentialField<R,d,q>::GetSubboxWidths() const
 { return _wA; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
-general_fio::PotentialField<R,d,q>::GetMyTargetBoxCoords() const
+fio_from_ft::PotentialField<R,d,q>::GetMyTargetBoxCoords() const
 { return _myTargetBoxCoords; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
-general_fio::PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
+fio_from_ft::PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
 { return _log2TargetSubboxesPerDim; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
-general_fio::PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
+fio_from_ft::PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
 { return _log2TargetSubboxesUpToDim; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline void
-general_fio::WriteVtkXmlPImageData
+fio_from_ft::WriteVtkXmlPImageData
 ( MPI_Comm comm,
   const std::size_t N,
   const Box<R,d>& targetBox,
-  const general_fio::PotentialField<R,d,q>& u,
+  const fio_from_ft::PotentialField<R,d,q>& u,
   const std::string& basename )
 {
     using namespace std;
@@ -439,5 +439,5 @@ general_fio::WriteVtkXmlPImageData
 
 } // bfio
 
-#endif // BFIO_GENERAL_FIO_POTENTIAL_FIELD_HPP
+#endif // BFIO_FIO_FROM_FT_POTENTIAL_FIELD_HPP
 
