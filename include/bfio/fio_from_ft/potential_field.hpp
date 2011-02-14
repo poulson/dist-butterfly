@@ -651,7 +651,7 @@ fio_from_ft::WriteVtkXmlPImageData
                << "  <PCellData Scalars=\"cell_scalars\">\n"
                << "   <PDataArray type=\"Float32\" Name=\"cell_scalars\"/>\n"
                << "  </PCellData>\n";
-            for( size_t i=0; i<numProcesses; ++i )
+            for( int i=0; i<numProcesses; ++i )
             {
                 os << "  <Piece Extent=\"";
                 for( size_t j=0; j<d; ++j )
