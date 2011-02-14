@@ -826,7 +826,7 @@ Plan<d>::GenerateAdjointPlan()
             std::size_t jReversed = 0;
             for( std::size_t k=0; k<log2NumMergingProcesses; ++k )
                 jReversed |= ((j>>k)&1)<<(log2NumMergingProcesses-1-k);
-            ranks[j] = startRank + jReversed<<log2Stride;
+            ranks[j] = startRank + (jReversed<<log2Stride);
             if( this->_rank == ranks[j] )
                 this->_myBootstrapMappedRank = j;
         }
