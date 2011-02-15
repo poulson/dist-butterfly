@@ -338,7 +338,7 @@ main
         // Create the context 
         if( rank == 0 )
             std::cout << "Creating context..." << std::endl;
-        bfio::fio_from_ft::Context<double,d,q> context;
+        bfio::rfio::Context<double,d,q> context;
 
         // Loop over each timestep, computing in parallel, gathering the 
         // results, and then dumping to file
@@ -350,42 +350,42 @@ main
             downWave.SetTime( t );
 
             std::auto_ptr
-            < const bfio::fio_from_ft::PotentialField<double,d,q> > u;
+            < const bfio::rfio::PotentialField<double,d,q> > u;
             if( rank == 0 )
             {
                 std::cout << "t=" << t << "\n"
                           << "  Starting upWave transform...";
                 std::cout.flush();
             }
-            u = bfio::FIOFromFT
+            u = bfio::ReducedFIO
             ( context, plan, upWave, sourceBox, targetBox, mySources );
             if( rank == 0 )
                 std::cout << "done" << std::endl;
 #ifdef TIMING
             if( rank == 0 )
-                bfio::fio_from_ft::PrintTimings();
+                bfio::rfio::PrintTimings();
 #endif
 
             std::auto_ptr
-            < const bfio::fio_from_ft::PotentialField<double,d,q> > v;
+            < const bfio::rfio::PotentialField<double,d,q> > v;
             if( rank == 0 )
             {
                 std::cout << "  Starting downWave transform...";
                 std::cout.flush();
             }
-            v = bfio::FIOFromFT
+            v = bfio::ReducedFIO
             ( context, plan, downWave, sourceBox, targetBox, mySources );
             if( rank == 0 )
                 std::cout << "done" << std::endl;
 #ifdef TIMING
             if( rank == 0 )
-                bfio::fio_from_ft::PrintTimings();
+                bfio::rfio::PrintTimings();
 #endif
 
             // Store this timeslice
             std::ostringstream fileStream;
             fileStream << "randomWaves-" << i;
-            bfio::fio_from_ft::WriteVtkXmlPImageData
+            bfio::rfio::WriteVtkXmlPImageData
             ( comm, N, targetBox, *u, fileStream.str() );
         }
     }

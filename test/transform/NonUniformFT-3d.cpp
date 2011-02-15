@@ -36,9 +36,6 @@ Usage()
 static const std::size_t d = 3;
 static const std::size_t q = 5;
 
-// If we test the accuracy, define the number of tests to perform per box
-static const std::size_t numAccuracyTestsPerBox = 10;
-
 template<typename R>
 class Fourier : public bfio::Phase<R,d>
 {
@@ -262,17 +259,17 @@ main
 
         // Create an FIO context 
         if( rank == 0 )
-            std::cout << "Creating FIOFromFT context..." << std::endl;
-        bfio::fio_from_ft::Context<double,d,q> fioContext;
+            std::cout << "Creating ReducedFIO context..." << std::endl;
+        bfio::rfio::Context<double,d,q> rfioContext;
 
         // Run the general algorithm
-        std::auto_ptr< const bfio::fio_from_ft::PotentialField<double,d,q> > w;
+        std::auto_ptr< const bfio::rfio::PotentialField<double,d,q> > w;
         if( rank == 0 )
-            std::cout << "Starting FIOFromFT transform..." << std::endl;
+            std::cout << "Starting ReducedFIO transform..." << std::endl;
         MPI_Barrier( comm );
         startTime = MPI_Wtime();
-        w = bfio::FIOFromFT
-        ( fioContext, plan, fourier, sourceBox, targetBox, mySources );
+        w = bfio::ReducedFIO
+        ( rfioContext, plan, fourier, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         stopTime = MPI_Wtime();
         if( rank == 0 )
@@ -282,7 +279,7 @@ main
         }
 #ifdef TIMING
 	if( rank == 0 )
-	    bfio::fio_from_ft::PrintTimings();
+	    bfio::rfio::PrintTimings();
 #endif
 
         if( testAccuracy )

@@ -18,7 +18,7 @@
 #ifndef BFIO_LAGRANGIAN_NUFT_POTENTIAL_FIELD_HPP
 #define BFIO_LAGRANGIAN_NUFT_POTENTIAL_FIELD_HPP 1
 
-#include "bfio/fio_from_ft/potential_field.hpp"
+#include "bfio/rfio/potential_field.hpp"
 #include "bfio/lagrangian_nuft/ft_phases.hpp"
 
 namespace bfio {
@@ -28,7 +28,7 @@ template<typename R,std::size_t d,std::size_t q>
 class PotentialField
 {
     const lagrangian_nuft::Context<R,d,q>& _nuftContext;
-    const fio_from_ft::PotentialField<R,d,q> _fioPotential;
+    const rfio::PotentialField<R,d,q> _rfioPotential;
 
 public:
     PotentialField
@@ -50,7 +50,7 @@ public:
     const Array<std::size_t,d>& GetMyTargetBoxCoords() const;
     const Array<std::size_t,d>& GetLog2SubboxesPerDim() const;
     const Array<std::size_t,d>& GetLog2SubboxesUpToDim() const;
-    const fio_from_ft::PotentialField<R,d,q>& GetFIOPotentialField() const;
+    const rfio::PotentialField<R,d,q>& GetReducedFIOPotentialField() const;
 };
 
 template<typename R,std::size_t d,std::size_t q>
@@ -89,8 +89,8 @@ lagrangian_nuft::PotentialField<R,d,q>::PotentialField
   const Array<std::size_t,d>& log2TargetSubboxesPerDim,
   const WeightGridList<R,d,q>& weightGridList )
 : _nuftContext(nuftContext), 
-  _fioPotential
-  ( nuftContext.GetFIOContext(),
+  _rfioPotential
+  ( nuftContext.GetReducedFIOContext(),
     UnitAmplitude<R,d>(),
     ( nuftContext.GetDirection()==FORWARD ? 
       (const FTPhase<R,d>&)lagrangian_nuft::ForwardFTPhase<R,d>() : 
@@ -105,52 +105,52 @@ lagrangian_nuft::PotentialField<R,d,q>::PotentialField
 template<typename R,std::size_t d,std::size_t q>
 std::complex<R>
 lagrangian_nuft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
-{ return _fioPotential.Evaluate( x ); }
+{ return _rfioPotential.Evaluate( x ); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Amplitude<R,d>&
 lagrangian_nuft::PotentialField<R,d,q>::GetAmplitude() const
-{ return _fioPotential.GetAmplitude(); }
+{ return _rfioPotential.GetAmplitude(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Phase<R,d>&
 lagrangian_nuft::PotentialField<R,d,q>::GetPhase() const
-{ return _fioPotential.GetPhase(); }
+{ return _rfioPotential.GetPhase(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Box<R,d>&
 lagrangian_nuft::PotentialField<R,d,q>::GetMyTargetBox() const
-{ return _fioPotential.GetMyTargetBox(); }
+{ return _rfioPotential.GetMyTargetBox(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline std::size_t
 lagrangian_nuft::PotentialField<R,d,q>::GetNumSubboxes() const
-{ return _fioPotential.GetNumSubboxes(); }
+{ return _rfioPotential.GetNumSubboxes(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<R,d>&
 lagrangian_nuft::PotentialField<R,d,q>::GetSubboxWidths() const
-{ return _fioPotential.GetSubboxWidths(); }
+{ return _rfioPotential.GetSubboxWidths(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
 lagrangian_nuft::PotentialField<R,d,q>::GetMyTargetBoxCoords() const
-{ return _fioPotential.GetMyTargetBoxCoords(); }
+{ return _rfioPotential.GetMyTargetBoxCoords(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
 lagrangian_nuft::PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
-{ return _fioPotential.GetLog2SubboxesPerDim(); }
+{ return _rfioPotential.GetLog2SubboxesPerDim(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
 lagrangian_nuft::PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
-{ return _fioPotential.GetLog2SubboxesUpToDim(); }
+{ return _rfioPotential.GetLog2SubboxesUpToDim(); }
 
 template<typename R,std::size_t d,std::size_t q>
-const fio_from_ft::PotentialField<R,d,q>& 
-lagrangian_nuft::PotentialField<R,d,q>::GetFIOPotentialField() const
-{ return _fioPotential; }
+const rfio::PotentialField<R,d,q>& 
+lagrangian_nuft::PotentialField<R,d,q>::GetReducedFIOPotentialField() const
+{ return _rfioPotential; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline void 
@@ -159,8 +159,8 @@ lagrangian_nuft::PrintErrorEstimates
   const lagrangian_nuft::PotentialField<R,d,q>& u,
   const std::vector< Source<R,d> >& globalSources )
 {
-    fio_from_ft::PrintErrorEstimates    
-    ( comm, u.GetFIOPotentialField(), globalSources );
+    rfio::PrintErrorEstimates    
+    ( comm, u.GetReducedFIOPotentialField(), globalSources );
 }
 
 template<typename R,std::size_t d,std::size_t q>
@@ -172,8 +172,8 @@ lagrangian_nuft::WriteVtkXmlPImageData
   const lagrangian_nuft::PotentialField<R,d,q>& u,
   const std::string& basename )
 {
-    fio_from_ft::WriteVtkXmlPImageData
-    ( comm, N, targetBox, u.GetFIOPotentialField(), basename );
+    rfio::WriteVtkXmlPImageData
+    ( comm, N, targetBox, u.GetReducedFIOPotentialField(), basename );
 }
 
 template<typename R,std::size_t d,std::size_t q>
@@ -186,8 +186,9 @@ lagrangian_nuft::WriteVtkXmlPImageData
   const std::string& basename,
   const std::vector< Source<R,d> >& globalSources )
 {
-    fio_from_ft::WriteVtkXmlPImageData
-    ( comm, N, targetBox, u.GetFIOPotentialField(), basename, globalSources );
+    rfio::WriteVtkXmlPImageData
+    ( comm, N, targetBox, u.GetReducedFIOPotentialField(), basename, 
+      globalSources );
 }
 
 } // bfio

@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_FIO_FROM_FT_INITIALIZE_WEIGHTS_HPP
-#define BFIO_FIO_FROM_FT_INITIALIZE_WEIGHTS_HPP 1
+#ifndef BFIO_RFIO_INITIALIZE_WEIGHTS_HPP
+#define BFIO_RFIO_INITIALIZE_WEIGHTS_HPP 1
 
 #include <cstddef>
 #include <vector>
@@ -35,15 +35,15 @@
 
 #include "bfio/functors/phase.hpp"
 
-#include "bfio/fio_from_ft/context.hpp"
+#include "bfio/rfio/context.hpp"
 
 namespace bfio {
-namespace fio_from_ft {
+namespace rfio {
 
 template<typename R,std::size_t d,std::size_t q>
 void
 InitializeWeights
-( const fio_from_ft::Context<R,d,q>& context,
+( const rfio::Context<R,d,q>& context,
   const Plan<d>& plan,
   const Phase<R,d>& phase,
   const Box<R,d>& sourceBox,
@@ -58,11 +58,11 @@ InitializeWeights
     const std::size_t q_to_d = Pow<q,d>::val;
 
 #ifdef TIMING
-    bfio::Timer computeTimer;
-    bfio::Timer setToPotentialTimer;
-    bfio::Timer preprocessTimer;
-    bfio::Timer lagrangeTimer;
-    bfio::Timer axpyTimer;
+    Timer computeTimer;
+    Timer setToPotentialTimer;
+    Timer preprocessTimer;
+    Timer lagrangeTimer;
+    Timer axpyTimer;
 #endif // TIMING
 
     MPI_Comm comm = plan.GetComm();
@@ -328,8 +328,8 @@ InitializeWeights
     }
 }
 
-} // fio_from_ft
+} // rfio
 } // bfio
 
-#endif // BFIO_FIO_FROM_FT_INITIALIZE_WEIGHTS_HPP 
+#endif // BFIO_RFIO_INITIALIZE_WEIGHTS_HPP 
 

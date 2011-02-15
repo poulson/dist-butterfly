@@ -37,9 +37,6 @@ Usage()
 static const std::size_t d = 2;
 static const std::size_t q = 12;
 
-// Define the number of samples to take from each box if testing accuracy
-static const std::size_t numAccuracyTestsPerBox = 10;
-
 template<typename R>
 class Oscillatory : public bfio::Amplitude<R,d>
 {
@@ -336,15 +333,15 @@ main
         // Create our context
         if( rank == 0 )
             std::cout << "Creating context..." << std::endl;
-        bfio::fio_from_ft::Context<double,d,q> context;
+        bfio::rfio::Context<double,d,q> context;
 
         // Run the algorithm
-        std::auto_ptr< const bfio::fio_from_ft::PotentialField<double,d,q> > u;
+        std::auto_ptr< const bfio::rfio::PotentialField<double,d,q> > u;
         if( rank == 0 )
             std::cout << "Starting transform..." << std::endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        u = bfio::FIOFromFT
+        u = bfio::ReducedFIO
         ( context, plan, oscillatory, upWave, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
@@ -355,22 +352,22 @@ main
         }
 #ifdef TIMING
         if( rank == 0 )
-            bfio::fio_from_ft::PrintTimings();
+            bfio::rfio::PrintTimings();
 #endif
 
         if( testAccuracy )
-            bfio::fio_from_ft::PrintErrorEstimates( comm, *u, globalSources );
+            bfio::rfio::PrintErrorEstimates( comm, *u, globalSources );
         
         if( store )
         {
             if( testAccuracy )
             {
-                bfio::fio_from_ft::WriteVtkXmlPImageData
+                bfio::rfio::WriteVtkXmlPImageData
                 ( comm, N, targetBox, *u, "varUpWave2d", globalSources );
             }
             else
             {
-                bfio::fio_from_ft::WriteVtkXmlPImageData
+                bfio::rfio::WriteVtkXmlPImageData
                 ( comm, N, targetBox, *u, "varUpWave2d" );
             }
         }

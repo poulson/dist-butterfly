@@ -18,7 +18,7 @@
 #ifndef BFIO_LAGRANGIAN_NUFT_CONTEXT_HPP
 #define BFIO_LAGRANGIAN_NUFT_CONTEXT_HPP 1
 
-#include "bfio/fio_from_ft/context.hpp"
+#include "bfio/rfio/context.hpp"
 
 namespace bfio {
 
@@ -26,7 +26,7 @@ namespace lagrangian_nuft {
 template<typename R,std::size_t d,std::size_t q>
 class Context
 {
-    const fio_from_ft::Context<R,d,q> _fioContext;
+    const rfio::Context<R,d,q> _rfioContext;
     const Direction _direction;
     const std::size_t _N;
     const Box<R,d> _sourceBox;
@@ -44,8 +44,8 @@ public:
       const Box<R,d>& sourceBox,
       const Box<R,d>& targetBox );
 
-    const fio_from_ft::Context<R,d,q>&
-    GetFIOContext() const;
+    const rfio::Context<R,d,q>&
+    GetReducedFIOContext() const;
 
     Direction
     GetDirection() const;
@@ -77,7 +77,7 @@ lagrangian_nuft::Context<R,d,q>::GenerateOffsetEvaluations()
     // Form the offset grid evaluations
     const R SignedTwoPi = ( _direction==FORWARD ? -TwoPi : TwoPi ); 
     std::vector<R> phaseEvaluations(q*q);
-    const std::vector<R>& chebyshevNodes = _fioContext.GetChebyshevNodes();
+    const std::vector<R>& chebyshevNodes = _rfioContext.GetChebyshevNodes();
     const R* chebyshevBuffer = &chebyshevNodes[0];
     for( std::size_t j=0; j<d; ++j )
     {
@@ -97,14 +97,14 @@ inline
 lagrangian_nuft::Context<R,d,q>::Context
 ( Direction direction, std::size_t N, 
   const Box<R,d>& sourceBox, const Box<R,d>& targetBox ) 
-: _fioContext(), _direction(direction), _N(N), 
+: _rfioContext(), _direction(direction), _N(N), 
   _sourceBox(sourceBox), _targetBox(targetBox)
 { GenerateOffsetEvaluations(); }
 
 template<typename R,std::size_t d,std::size_t q>
-inline const fio_from_ft::Context<R,d,q>&
-lagrangian_nuft::Context<R,d,q>::GetFIOContext() const
-{ return _fioContext; }
+inline const rfio::Context<R,d,q>&
+lagrangian_nuft::Context<R,d,q>::GetReducedFIOContext() const
+{ return _rfioContext; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline Direction

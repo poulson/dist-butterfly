@@ -38,14 +38,9 @@ Usage()
 static const size_t d = 3;
 static const size_t q = 8;
 
-// If we test the accuracy, define the number of tests to perform per box
-static const size_t numAccuracyTestsPerBox = 10;
-
 template<typename R>    
 class GenRadon : public bfio::Phase<R,d>
 {
-    R c1( const bfio::Array<R,d>& x ) const;
-    R c2( const bfio::Array<R,d>& x ) const;
 public:
     virtual GenRadon<R>* Clone() const;
 
@@ -65,19 +60,11 @@ GenRadon<R>::Clone() const
 { return new GenRadon<R>(*this); }
 
 template<typename R>
-inline R GenRadon<R>::c1( const bfio::Array<R,d>& x ) const
-{ return (2+sin(bfio::TwoPi*x[0])*sin(bfio::TwoPi*x[1]))/3.; }
-
-template<typename R>
-inline R GenRadon<R>::c2( const bfio::Array<R,d>& x ) const
-{ return (2+cos(bfio::TwoPi*x[0])*cos(bfio::TwoPi*x[1]))/3.; }
-
-template<typename R>
 inline R GenRadon<R>::operator()
 ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
 {
-    R a = c1(x)*p[0];
-    R b = c2(x)*p[1];
+    R a = p[0]*(2+sin(bfio::TwoPi*x[0])*sin(bfio::TwoPi*x[1]))/3;
+    R b = p[1]*(2+cos(bfio::TwoPi*x[0])*cos(bfio::TwoPi*x[1]))/3;
     return bfio::TwoPi*(x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + sqrt(a*a+b*b));
 }
 
@@ -281,17 +268,17 @@ main
             cout << "Creating context...";
             cout.flush();
         }
-        bfio::fio_from_ft::Context<double,d,q> context;
+        bfio::rfio::Context<double,d,q> context;
         if( rank == 0 )
             cout << "done." << endl;
 
         // Run the algorithm to generate the potential field
-        auto_ptr< const bfio::fio_from_ft::PotentialField<double,d,q> > u;
+        auto_ptr< const bfio::rfio::PotentialField<double,d,q> > u;
         if( rank == 0 )
             cout << "Launching transform..." << endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        u = bfio::FIOFromFT
+        u = bfio::ReducedFIO
         ( context, plan, genRadon, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
@@ -299,22 +286,22 @@ main
             cout << "Runtime: " << stopTime-startTime << " seconds.\n" << endl;
 #ifdef TIMING
         if( rank == 0 )
-            bfio::fio_from_ft::PrintTimings();
+            bfio::rfio::PrintTimings();
 #endif
 
         if( testAccuracy )
-            bfio::fio_from_ft::PrintErrorEstimates( comm, *u, globalSources );
+            bfio::rfio::PrintErrorEstimates( comm, *u, globalSources );
         
         if( store )
         {
             if( testAccuracy )
             {
-                bfio::fio_from_ft::WriteVtkXmlPImageData
+                bfio::rfio::WriteVtkXmlPImageData
                 ( comm, N, targetBox, *u, "genRadon3d", globalSources );
             }
             else
             {
-                bfio::fio_from_ft::WriteVtkXmlPImageData
+                bfio::rfio::WriteVtkXmlPImageData
                 ( comm, N, targetBox, *u, "genRadon3d" );
             }
         }

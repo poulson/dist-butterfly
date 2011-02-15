@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef BFIO_FIO_FROM_FT_POTENTIAL_FIELD_HPP
-#define BFIO_FIO_FROM_FT_POTENTIAL_FIELD_HPP 1
+#ifndef BFIO_RFIO_POTENTIAL_FIELD_HPP
+#define BFIO_RFIO_POTENTIAL_FIELD_HPP 1
 
 #include <stdexcept>
 #include <complex>
@@ -30,7 +30,7 @@
 #include "bfio/structures/weight_grid.hpp"
 #include "bfio/structures/weight_grid_list.hpp"
 
-#include "bfio/fio_from_ft/context.hpp"
+#include "bfio/rfio/context.hpp"
 
 #include "bfio/functors/amplitude.hpp"
 #include "bfio/functors/phase.hpp"
@@ -38,11 +38,11 @@
 
 namespace bfio {
 
-namespace fio_from_ft {
+namespace rfio {
 template<typename R,std::size_t d,std::size_t q>
 class PotentialField
 {
-    const fio_from_ft::Context<R,d,q>& _context;
+    const rfio::Context<R,d,q>& _context;
     const Amplitude<R,d>* _amplitude;
     const Phase<R,d>* _phase;
     const Box<R,d> _sourceBox;
@@ -57,7 +57,7 @@ class PotentialField
 
 public:
     PotentialField
-    ( const fio_from_ft::Context<R,d,q>& context,
+    ( const rfio::Context<R,d,q>& context,
       const Amplitude<R,d>& amplitude,
       const Phase<R,d>& phase,
       const Box<R,d>& sourceBox,
@@ -104,13 +104,13 @@ void WriteVtkXmlPImageData
   const std::string& basename,
   const std::vector< Source<R,d> >& globalSources );
 
-} // fio_from_ft
+} // rfio
 
 // Implementations
 
 template<typename R,std::size_t d,std::size_t q>
-fio_from_ft::PotentialField<R,d,q>::PotentialField
-( const fio_from_ft::Context<R,d,q>& context,
+rfio::PotentialField<R,d,q>::PotentialField
+( const rfio::Context<R,d,q>& context,
   const Amplitude<R,d>& amplitude,
   const Phase<R,d>& phase,
   const Box<R,d>& sourceBox,
@@ -166,7 +166,7 @@ fio_from_ft::PotentialField<R,d,q>::PotentialField
 }
 
 template<typename R,std::size_t d,std::size_t q>
-fio_from_ft::PotentialField<R,d,q>::~PotentialField()
+rfio::PotentialField<R,d,q>::~PotentialField()
 {
     delete _amplitude;
     delete _phase;
@@ -174,7 +174,7 @@ fio_from_ft::PotentialField<R,d,q>::~PotentialField()
 
 template<typename R,std::size_t d,std::size_t q>
 std::complex<R>
-fio_from_ft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
+rfio::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 {
     typedef std::complex<R> C;
 
@@ -233,46 +233,46 @@ fio_from_ft::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Amplitude<R,d>&
-fio_from_ft::PotentialField<R,d,q>::GetAmplitude() const
+rfio::PotentialField<R,d,q>::GetAmplitude() const
 { return *_amplitude; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Phase<R,d>&
-fio_from_ft::PotentialField<R,d,q>::GetPhase() const
+rfio::PotentialField<R,d,q>::GetPhase() const
 { return *_phase; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Box<R,d>&
-fio_from_ft::PotentialField<R,d,q>::GetMyTargetBox() const
+rfio::PotentialField<R,d,q>::GetMyTargetBox() const
 { return _myTargetBox; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline std::size_t
-fio_from_ft::PotentialField<R,d,q>::GetNumSubboxes() const
+rfio::PotentialField<R,d,q>::GetNumSubboxes() const
 { return _LRPs.size(); }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<R,d>&
-fio_from_ft::PotentialField<R,d,q>::GetSubboxWidths() const
+rfio::PotentialField<R,d,q>::GetSubboxWidths() const
 { return _wA; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
-fio_from_ft::PotentialField<R,d,q>::GetMyTargetBoxCoords() const
+rfio::PotentialField<R,d,q>::GetMyTargetBoxCoords() const
 { return _myTargetBoxCoords; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
-fio_from_ft::PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
+rfio::PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
 { return _log2TargetSubboxesPerDim; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const Array<std::size_t,d>&
-fio_from_ft::PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
+rfio::PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
 { return _log2TargetSubboxesUpToDim; }
 
 template<typename R,std::size_t d,std::size_t q>
-void fio_from_ft::PrintErrorEstimates
+void rfio::PrintErrorEstimates
 ( MPI_Comm comm,
   const PotentialField<R,d,q>& u,
   const std::vector< Source<R,d> >& globalSources )
@@ -361,11 +361,11 @@ void fio_from_ft::PrintErrorEstimates
 // Just write out the real and imag components of the approximation
 template<typename R,std::size_t d,std::size_t q>
 inline void
-fio_from_ft::WriteVtkXmlPImageData
+rfio::WriteVtkXmlPImageData
 ( MPI_Comm comm,
   const std::size_t N,
   const Box<R,d>& targetBox,
-  const fio_from_ft::PotentialField<R,d,q>& u,
+  const rfio::PotentialField<R,d,q>& u,
   const std::string& basename )
 {
     using namespace std;
@@ -563,11 +563,11 @@ fio_from_ft::WriteVtkXmlPImageData
 // and the error.
 template<typename R,std::size_t d,std::size_t q>
 inline void
-fio_from_ft::WriteVtkXmlPImageData
+rfio::WriteVtkXmlPImageData
 ( MPI_Comm comm,
   const std::size_t N,
   const Box<R,d>& targetBox,
-  const fio_from_ft::PotentialField<R,d,q>& u,
+  const rfio::PotentialField<R,d,q>& u,
   const std::string& basename,
   const std::vector< Source<R,d> >& globalSources )
 {
@@ -856,5 +856,5 @@ fio_from_ft::WriteVtkXmlPImageData
 
 } // bfio
 
-#endif // BFIO_FIO_FROM_FT_POTENTIAL_FIELD_HPP
+#endif // BFIO_RFIO_POTENTIAL_FIELD_HPP
 

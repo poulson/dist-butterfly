@@ -79,9 +79,9 @@ PrintTimings()
 #include "bfio/lagrangian_nuft/ft_phases.hpp"
 #include "bfio/lagrangian_nuft/potential_field.hpp"
 
-#include "bfio/fio_from_ft/initialize_weights.hpp"
-#include "bfio/fio_from_ft/source_weight_recursion.hpp"
-#include "bfio/fio_from_ft/target_weight_recursion.hpp"
+#include "bfio/rfio/initialize_weights.hpp"
+#include "bfio/rfio/source_weight_recursion.hpp"
+#include "bfio/rfio/target_weight_recursion.hpp"
 
 #include "bfio/lagrangian_nuft/switch_to_target_interp.hpp"
 
@@ -102,8 +102,8 @@ LagrangianNUFT
 #endif
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
-    const fio_from_ft::Context<R,d,q>& fioContext = 
-        nuftContext.GetFIOContext();
+    const rfio::Context<R,d,q>& rfioContext = 
+        nuftContext.GetReducedFIOContext();
 
     // We will choose the phase function based on the context's direction.
     // We could potentially have the plan direction be different
@@ -163,8 +163,8 @@ LagrangianNUFT
 #ifdef TIMING
     lagrangian_nuft::initializeWeightsTimer.Start();
 #endif
-    fio_from_ft::InitializeWeights
-    ( fioContext, plan, phase, sourceBox, targetBox, mySourceBox, 
+    rfio::InitializeWeights
+    ( rfioContext, plan, phase, sourceBox, targetBox, mySourceBox, 
       log2LocalSourceBoxes, log2LocalSourceBoxesPerDim, mySources, 
       weightGridList );
 #ifdef TIMING
@@ -250,8 +250,8 @@ LagrangianNUFT
 #ifdef TIMING
 			lagrangian_nuft::sourceWeightRecursionTimer.Start();
 #endif
-                        fio_from_ft::SourceWeightRecursion
-                        ( fioContext, plan, phase, level, x0A, p0B, wB,
+                        rfio::SourceWeightRecursion
+                        ( rfioContext, plan, phase, level, x0A, p0B, wB,
                           parentInteractionOffset, oldWeightGridList,
                           weightGridList[interactionIndex] );
 #ifdef TIMING
@@ -275,8 +275,8 @@ LagrangianNUFT
 #ifdef TIMING
 			lagrangian_nuft::targetWeightRecursionTimer.Start();
 #endif
-                        fio_from_ft::TargetWeightRecursion
-                        ( fioContext, plan, phase, level,
+                        rfio::TargetWeightRecursion
+                        ( rfioContext, plan, phase, level,
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentInteractionOffset, oldWeightGridList, 
                           weightGridList[interactionIndex] );
@@ -344,8 +344,8 @@ LagrangianNUFT
 #ifdef TIMING
 		    lagrangian_nuft::sourceWeightRecursionTimer.Start();
 #endif
-                    fio_from_ft::SourceWeightRecursion
-                    ( fioContext, plan, phase, level, x0A, p0B, wB,
+                    rfio::SourceWeightRecursion
+                    ( rfioContext, plan, phase, level, x0A, p0B, wB,
                       parentInteractionOffset, weightGridList,
                       partialWeightGridList[targetIndex] );
 #ifdef TIMING
@@ -368,8 +368,8 @@ LagrangianNUFT
 #ifdef TIMING
 		    lagrangian_nuft::targetWeightRecursionTimer.Start();
 #endif
-                    fio_from_ft::TargetWeightRecursion
-                    ( fioContext, plan, phase, level,
+                    rfio::TargetWeightRecursion
+                    ( rfioContext, plan, phase, level,
                       ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                       parentInteractionOffset, weightGridList, 
                       partialWeightGridList[targetIndex] );

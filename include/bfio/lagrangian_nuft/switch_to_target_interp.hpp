@@ -52,7 +52,8 @@ SwitchToTargetInterp
 { 
     typedef std::complex<R> C;
     const std::size_t d = 1;
-    const fio_from_ft::Context<R,1,q>& fioContext = nuftContext.GetFIOContext();
+    const rfio::Context<R,1,q>& rfioContext = 
+        nuftContext.GetReducedFIOContext();
 
     const Direction direction = nuftContext.GetDirection();
     const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
@@ -91,7 +92,7 @@ SwitchToTargetInterp
     std::vector<R> realTempWeights( q );
     std::vector<R> imagTempWeights( q );
 
-    const std::vector<R>& chebyshevNodes = fioContext.GetChebyshevNodes();
+    const std::vector<R>& chebyshevNodes = rfioContext.GetChebyshevNodes();
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
     for( std::size_t i=0; i<(1u<<log2LocalTargetBoxes); ++i, AWalker.Walk() )
     {
@@ -233,7 +234,8 @@ SwitchToTargetInterp
     typedef std::complex<R> C;
     const std::size_t d = 2;
     const std::size_t q_to_d = Pow<q,d>::val;
-    const fio_from_ft::Context<R,2,q>& fioContext = nuftContext.GetFIOContext();
+    const rfio::Context<R,2,q>& rfioContext = 
+        nuftContext.GetReducedFIOContext();
 
     const Direction direction = nuftContext.GetDirection();
     const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
@@ -275,7 +277,7 @@ SwitchToTargetInterp
     std::vector<R> realTempWeights( q_to_d );
     std::vector<R> imagTempWeights( q_to_d );
 
-    const std::vector<R>& chebyshevNodes = fioContext.GetChebyshevNodes();
+    const std::vector<R>& chebyshevNodes = rfioContext.GetChebyshevNodes();
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
     for( std::size_t i=0; i<(1u<<log2LocalTargetBoxes); ++i, AWalker.Walk() )
     {
@@ -493,7 +495,8 @@ SwitchToTargetInterp
 {
     typedef std::complex<R> C;
     const std::size_t q_to_d = Pow<q,d>::val;
-    const fio_from_ft::Context<R,d,q>& fioContext = nuftContext.GetFIOContext();
+    const rfio::Context<R,d,q>& rfioContext = 
+        nuftContext.GetReducedFIOContext();
 
     const Direction direction = nuftContext.GetDirection();
     const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
@@ -535,7 +538,7 @@ SwitchToTargetInterp
     std::vector<R> realTempWeights( q_to_d );
     std::vector<R> imagTempWeights( q_to_d );
 
-    const std::vector<R>& chebyshevNodes = fioContext.GetChebyshevNodes();
+    const std::vector<R>& chebyshevNodes = rfioContext.GetChebyshevNodes();
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
     for( std::size_t i=0; i<(1u<<log2LocalTargetBoxes); ++i, AWalker.Walk() )
     {

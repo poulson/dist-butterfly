@@ -28,7 +28,7 @@
 #include "bfio/tools.hpp"
 #include "bfio/functors.hpp"
 
-#include "bfio/fio_from_ft.hpp"
+#include "bfio/rfio.hpp"
 #include "bfio/lagrangian_nuft.hpp"
 #include "bfio/interpolative_nuft.hpp"
 
