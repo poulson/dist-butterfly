@@ -24,7 +24,7 @@ using namespace std;
 void 
 Usage()
 {
-    cout << "GenRadon-2d <N> <F> <M> <testAccuracy?> <store?>\n" 
+    cout << "GenRadon-2d <N> <F> <M> <bootstrap> <testAccuracy?> <store?>\n" 
          << "  N: power of 2, the number of boxes in each dimension\n" 
          << "  F: power of 2, boxes per unit length in each source dim\n"
          << "  M: number of random sources to instantiate\n" 

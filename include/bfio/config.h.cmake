@@ -29,5 +29,6 @@
 #cmakedefine MKL
 #cmakedefine ESSL
 #cmakedefine BGP
+#cmakedefine BGP_MPIDO_USE_REDUCESCATTER
 
 #endif /* BFIO_CONFIG_HPP */

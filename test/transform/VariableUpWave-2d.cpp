@@ -23,7 +23,7 @@
 void 
 Usage()
 {
-    std::cout << "VariableUpWave-2d <N> <M> <Amp Alg> <testAccuracy?> "
+    std::cout << "VariableUpWave-2d <N> <M> <bootstrap> <testAccuracy?> "
               << "<store?>\n" 
               << "  N: power of 2, the source spread in each dimension\n" 
               << "  M: number of random sources to instantiate\n" 

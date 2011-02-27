@@ -23,7 +23,8 @@
 void 
 Usage()
 {
-    std::cout << "NonUniformFT-3d <N> <M> <testAccuracy?> <store?>\n" 
+    std::cout << "NonUniformFT-3d <N> <M> <bootstrap> <testAccuracy?> <store?>"
+              << "\n" 
               << "  N: power of 2, the source spread in each dimension\n" 
               << "  M: number of random sources to instantiate\n" 
               << "  bootstrap: level to bootstrap to\n"
@@ -200,6 +201,7 @@ main
             }
         }
 
+        /*
         // Create a context for Interpolative NUFTs
         if( rank == 0 )
             std::cout << "Creating InterpolativeNUFT context..." << std::endl;
@@ -226,6 +228,7 @@ main
 	if( rank == 0 )
 	    bfio::interpolative_nuft::PrintTimings();
 #endif
+        */
 
         // Create a context for NUFTs with Lagrangian interpolation
         if( rank == 0 )
@@ -239,11 +242,13 @@ main
         if( rank == 0 )
             std::cout << "Starting LagrangianNUFT..." << std::endl;
         MPI_Barrier( comm );
-        startTime = MPI_Wtime();
+        //startTime = MPI_Wtime();
+        double startTime = MPI_Wtime();
         v = bfio::LagrangianNUFT
         ( lagrangianNuftContext, plan, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
-        stopTime = MPI_Wtime();
+        //stopTime = MPI_Wtime();
+        double stopTime = MPI_Wtime();
         if( rank == 0 )
         {
             std::cout << "Runtime: " << stopTime-startTime << " seconds.\n"
@@ -254,6 +259,7 @@ main
 	    bfio::lagrangian_nuft::PrintTimings();
 #endif
 
+        /*
         // Set up our phase functor
         Fourier<double> fourier;
 
@@ -281,6 +287,7 @@ main
 	if( rank == 0 )
 	    bfio::rfio::PrintTimings();
 #endif
+        */
 
         if( testAccuracy )
         {

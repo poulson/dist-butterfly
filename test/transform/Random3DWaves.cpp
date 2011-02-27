@@ -22,7 +22,7 @@
 void 
 Usage()
 {
-    std::cout << "Random3DWaves <N> <M> <T> <nT>\n" 
+    std::cout << "Random3DWaves <N> <M> <bootstrap> <T> <nT>\n" 
               << "  N: power of 2, the source spread in each dimension\n" 
               << "  M: number of random sources to instantiate\n" 
               << "  bootstrapSkip: level to bootstrap to\n"

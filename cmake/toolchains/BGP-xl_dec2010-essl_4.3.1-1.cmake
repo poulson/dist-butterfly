@@ -1,5 +1,9 @@
 set(CMAKE_SYSTEM_NAME BlueGeneP-static)
 
+option(BGP "We are on BG/P" ON)
+# We can't activate this on non-cartesian comms, it causes segfaults
+option(BGP_MPIDO_USE_REDUCESCATTER "Avoid known perf bug in reduce-scatter" OFF)
+
 # We need MPI C and CXX compilers
 set(CMAKE_C_COMPILER /bgsys/drivers/ppcfloor/comm/bin/mpixlc_r)
 set(CMAKE_CXX_COMPILER /bgsys/drivers/ppcfloor/comm/bin/mpixlcxx_r)

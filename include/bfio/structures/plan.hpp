@@ -503,16 +503,6 @@ Plan<d>::GenerateForwardPlan()
           this->_bootstrapClusterGroup,
           &(this->_bootstrapClusterComm) );
 
-#ifdef BGP
-# ifdef BGP_MPIDO_USE_REDUCESCATTER
-            MPIX_Set_property
-            ( this->_clusterComms[level-1], MPIDO_USE_REDUCESCATTER, 1 );
-# else
-            MPIX_Set_property
-            ( this->_clusterComms[level-1], MPIDO_USE_REDUCESCATTER, 0 );
-# endif
-#endif
-
         this->_bootstrapSourceDimsToMerge.resize( log2NumMergingProcesses );
         this->_bootstrapTargetDimsToCut.resize( log2NumMergingProcesses );
         this->_bootstrapRightSideOfCut.resize( log2NumMergingProcesses );
@@ -639,7 +629,6 @@ Plan<d>::GenerateForwardPlan()
             ( this->_comm, 
               this->_clusterGroups[level-1],
               &(this->_clusterComms[level-1]) );
-
 #ifdef BGP
 # ifdef BGP_MPIDO_USE_REDUCESCATTER
             MPIX_Set_property
@@ -858,16 +847,6 @@ Plan<d>::GenerateAdjointPlan()
           this->_bootstrapClusterGroup,
           &(this->_bootstrapClusterComm) );
 
-#ifdef BGP
-# ifdef BGP_MPIDO_USE_REDUCESCATTER
-            MPIX_Set_property
-            ( this->_clusterComms[level-1], MPIDO_USE_REDUCESCATTER, 1 );
-# else
-            MPIX_Set_property
-            ( this->_clusterComms[level-1], MPIDO_USE_REDUCESCATTER, 0 );
-# endif
-#endif
-
         this->_bootstrapSourceDimsToMerge.resize( log2NumMergingProcesses );
         this->_bootstrapTargetDimsToCut.resize( log2NumMergingProcesses );
         this->_bootstrapRightSideOfCut.resize( log2NumMergingProcesses );
@@ -928,7 +907,7 @@ Plan<d>::GenerateAdjointPlan()
             ( this->_comm, 
               this->_clusterGroups[level-1], 
               &(this->_clusterComms[level-1]) );
-            
+
             this->_log2SubclusterSizes[level-1] =  0;
 
 #ifndef RELEASE
@@ -1036,7 +1015,6 @@ Plan<d>::GenerateAdjointPlan()
             ( this->_comm, 
               this->_clusterGroups[level-1],
               &(this->_clusterComms[level-1]) );
-
 #ifdef BGP
 # ifdef BGP_MPIDO_USE_REDUCESCATTER
             MPIX_Set_property

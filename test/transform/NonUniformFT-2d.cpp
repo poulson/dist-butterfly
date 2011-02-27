@@ -23,7 +23,8 @@
 void 
 Usage()
 {
-    std::cout << "NonUniformFT-2d <N> <M> <testAccuracy?> <store?>\n" 
+    std::cout << "NonUniformFT-2d <N> <M> <bootstrap> <testAccuracy?> <store?>"
+              << "\n" 
               << "  N: power of 2, the source spread in each dimension\n" 
               << "  M: number of random sources to instantiate\n" 
               << "  bootstrap: level to bootstrap to\n"
