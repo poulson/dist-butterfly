@@ -178,7 +178,7 @@ main
     try 
     {
         // Set our source and target boxes
-        bfio::Box<double,d> sourceBox, targetBox;
+        bfio::Box<float,d> sourceBox, targetBox;
         for( size_t j=0; j<d; ++j )
         {
             sourceBox.offsets[j] = -0.5*(N/F);
@@ -189,7 +189,7 @@ main
 
         // Set up the general strategy for the forward transform
         bfio::Plan<d> plan( comm, bfio::FORWARD, N, bootstrapSkip );
-        bfio::Box<double,d> mySourceBox = 
+        bfio::Box<float,d> mySourceBox = 
             plan.GetMyInitialSourceBox( sourceBox );;
 
         if( rank == 0 )
@@ -211,8 +211,8 @@ main
 
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
-        vector< bfio::Source<double,d> > mySources;
-        vector< bfio::Source<double,d> > globalSources;
+        vector< bfio::Source<float,d> > mySources;
+        vector< bfio::Source<float,d> > globalSources;
         if( testAccuracy || store )
         {
             globalSources.resize( M );
@@ -221,17 +221,17 @@ main
                 for( size_t j=0; j<d; ++j )
                 {
                     globalSources[i].p[j] = sourceBox.offsets[j] + 
-                        sourceBox.widths[j]*bfio::Uniform<double>(); 
+                        sourceBox.widths[j]*bfio::Uniform<float>(); 
                 }
-                globalSources[i].magnitude = 1.*(2*bfio::Uniform<double>()-1); 
+                globalSources[i].magnitude = 1.*(2*bfio::Uniform<float>()-1); 
 
                 // Check if we should push this source onto our local list
                 bool isMine = true;
                 for( size_t j=0; j<d; ++j )
                 {
-                    double u = globalSources[i].p[j];
-                    double start = mySourceBox.offsets[j];
-                    double stop = 
+                    float u = globalSources[i].p[j];
+                    float start = mySourceBox.offsets[j];
+                    float stop = 
                         mySourceBox.offsets[j] + mySourceBox.widths[j];
                     if( u < start || u >= stop )
                         isMine = false;
@@ -252,14 +252,14 @@ main
                 {
                     mySources[i].p[j] = 
                         mySourceBox.offsets[j] + 
-                        bfio::Uniform<double>()*mySourceBox.widths[j];
+                        bfio::Uniform<float>()*mySourceBox.widths[j];
                 }
-                mySources[i].magnitude = 1.*(2*bfio::Uniform<double>()-1);
+                mySources[i].magnitude = 1.*(2*bfio::Uniform<float>()-1);
             }
         }
 
         // Create our phase functor
-        GenRadon<double> genRadon;
+        GenRadon<float> genRadon;
 
         // Create the context that takes care of all of the precomputation
         if( rank == 0 )
@@ -267,12 +267,12 @@ main
             cout << "Creating context...";
             cout.flush();
         }
-        bfio::rfio::Context<double,d,q> context;
+        bfio::rfio::Context<float,d,q> context;
         if( rank == 0 )
             cout << "done." << endl;
 
         // Run the algorithm to generate the potential field
-        auto_ptr< const bfio::rfio::PotentialField<double,d,q> > u;
+        auto_ptr< const bfio::rfio::PotentialField<float,d,q> > u;
         if( rank == 0 )
             cout << "Launching transform..." << endl;
         MPI_Barrier( comm );

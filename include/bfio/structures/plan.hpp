@@ -46,7 +46,6 @@ protected:
     // Does not depend on the problem size
     int _rank;
     int _numProcesses;
-    MPI_Group _group;
     std::size_t _log2NumProcesses;
     std::size_t _log2N;
     Array<std::size_t,d> _myInitialSourceBoxCoords;
@@ -56,12 +55,10 @@ protected:
 
     // Depends on the problem size
     const std::size_t _bootstrapSkip;
-    MPI_Group _bootstrapClusterGroup;
     MPI_Comm _bootstrapClusterComm;
     std::vector<std::size_t> _bootstrapSourceDimsToMerge;
     std::vector<std::size_t> _bootstrapTargetDimsToCut;
     std::vector<bool       > _bootstrapRightSideOfCut;
-    std::vector< MPI_Group                > _clusterGroups;
     std::vector< MPI_Comm                 > _clusterComms;
     std::vector< std::size_t              > _log2SubclusterSizes;
     std::vector< std::vector<std::size_t> > _sourceDimsToMerge;
@@ -159,7 +156,7 @@ class Plan : public PlanBase<d>
 public:
     Plan
     ( MPI_Comm comm, Direction direction, std::size_t N, 
-      std::size_t bootstrapSkip );
+      std::size_t bootstrapSkip=0 );
 
     virtual std::size_t
     LocalToBootstrapClusterSourceIndex
@@ -180,7 +177,6 @@ PlanBase<d>::PlanBase
 { 
     MPI_Comm_rank( comm, &_rank );
     MPI_Comm_size( comm, &_numProcesses );
-    MPI_Comm_group( comm, &_group );
 
     if( ! IsPowerOfTwo(N) )
         throw std::runtime_error("Must use power of 2 problem size");
@@ -193,7 +189,6 @@ PlanBase<d>::PlanBase
     if( bootstrapSkip > _log2N/2 )
         throw std::runtime_error("Cannot bootstrap past the middle switch");
 
-    _clusterGroups.resize( _log2N );
     _clusterComms.resize( _log2N );
     _log2SubclusterSizes.resize( _log2N );
     _sourceDimsToMerge.resize( _log2N );
@@ -205,13 +200,8 @@ template<std::size_t d>
 PlanBase<d>::~PlanBase()
 {
     MPI_Comm_free( &_bootstrapClusterComm );
-    MPI_Group_free( &_bootstrapClusterGroup );
     for( std::size_t level=1; level<=_log2N; ++level )
-    {
         MPI_Comm_free( &_clusterComms[level-1] );
-        MPI_Group_free( &_clusterGroups[level-1] );
-    }
-    MPI_Group_free( &_group );
 }
 
 template<std::size_t d>
@@ -429,16 +419,8 @@ Plan<d>::GenerateForwardPlan()
     {
         this->_myBootstrapClusterRank = 0; 
 
-        MPI_Group_incl
-        ( this->_group,
-          1,
-          &(this->_rank),
-          &(this->_bootstrapClusterGroup) );
-
-        MPI_Comm_create
-        ( this->_comm,
-          this->_bootstrapClusterGroup,
-          &(this->_bootstrapClusterComm) );
+        MPI_Comm_split
+        ( this->_comm, this->_rank, 0, &this->_bootstrapClusterComm );
 
 #ifndef RELEASE
         if( this->_rank == 0 )
@@ -461,7 +443,7 @@ Plan<d>::GenerateForwardPlan()
         }
 #endif
 
-        // Construct the group and communicator for the bootstrap cluster
+        // Construct the communicator for the bootstrap cluster
         const int startRank = this->_rank & ~(numMergingProcesses-1);
         std::vector<int> ranks( numMergingProcesses );
         for( std::size_t j=0; j<numMergingProcesses; ++j )
@@ -482,7 +464,7 @@ Plan<d>::GenerateForwardPlan()
             if( this->_rank == p )
             {
                 std::cout << "  process " << p 
-                          << "'s bootstrap cluster group: ";
+                          << "'s bootstrap cluster ranks: ";
                 for( std::size_t j=0; j<numMergingProcesses; ++j )
                     std::cout << ranks[j] << " ";
                 std::cout << std::endl;
@@ -492,16 +474,9 @@ Plan<d>::GenerateForwardPlan()
         }
 #endif
 
-        MPI_Group_incl
-        ( this->_group,
-          numMergingProcesses,
-          &ranks[0],
-          &(this->_bootstrapClusterGroup) );
-
-        MPI_Comm_create
-        ( this->_comm,
-          this->_bootstrapClusterGroup,
-          &(this->_bootstrapClusterComm) );
+        MPI_Comm_split
+        ( this->_comm, ranks[0], this->_myBootstrapClusterRank, 
+          &this->_bootstrapClusterComm );
 
         this->_bootstrapSourceDimsToMerge.resize( log2NumMergingProcesses );
         this->_bootstrapTargetDimsToCut.resize( log2NumMergingProcesses );
@@ -550,16 +525,8 @@ Plan<d>::GenerateForwardPlan()
 
             this->_myClusterRanks[level-1] = 0;
             
-            MPI_Group_incl
-            ( this->_group, 
-              1, 
-              &(this->_rank), 
-              &(this->_clusterGroups[level-1]) );
-
-            MPI_Comm_create
-            ( this->_comm, 
-              this->_clusterGroups[level-1], 
-              &(this->_clusterComms[level-1]) );
+            MPI_Comm_split
+            ( this->_comm, this->_rank, 0, &this->_clusterComms[level-1] );
             this->_log2SubclusterSizes[level-1] = 0;
 
 #ifndef RELEASE
@@ -587,7 +554,7 @@ Plan<d>::GenerateForwardPlan()
             }
 #endif
 
-            // Construct the group and communicator for our current cluster
+            // Construct the communicator for our current cluster
             const std::size_t log2Stride = numTargetCuts;
             const int startRank = 
                 this->_rank & ~((numMergingProcesses-1)<<log2Stride);
@@ -609,7 +576,7 @@ Plan<d>::GenerateForwardPlan()
             {
                 if( this->_rank == p )
                 {
-                    std::cout << "  process " << p << "'s cluster group: ";
+                    std::cout << "  process " << p << "'s cluster ranks: ";
                     for( std::size_t j=0; j<numMergingProcesses; ++j )
                         std::cout << ranks[j] << " ";
                     std::cout << std::endl;
@@ -618,17 +585,10 @@ Plan<d>::GenerateForwardPlan()
                 usleep( 100000 );
             }
 #endif
+            MPI_Comm_split
+            ( this->_comm, ranks[0], this->_myClusterRanks[level-1],
+              &this->_clusterComms[level-1] );
 
-            MPI_Group_incl
-            ( this->_group, 
-              numMergingProcesses, 
-              &ranks[0], 
-              &(this->_clusterGroups[level-1]) );
-
-            MPI_Comm_create
-            ( this->_comm, 
-              this->_clusterGroups[level-1],
-              &(this->_clusterComms[level-1]) );
 #ifdef BGP
 # ifdef BGP_MPIDO_USE_REDUCESCATTER
             MPIX_Set_property
@@ -769,16 +729,8 @@ Plan<d>::GenerateAdjointPlan()
     {
         this->_myBootstrapMappedRank = 0;
 
-        MPI_Group_incl
-        ( this->_group,
-          1,
-          &(this->_rank),
-          &(this->_bootstrapClusterGroup) );
-
-        MPI_Comm_create
-        ( this->_comm,
-          this->_bootstrapClusterGroup,
-          &(this->_bootstrapClusterComm) );
+        MPI_Comm_split
+        ( this->_comm, this->_rank, 0, &this->_bootstrapClusterComm );
 
 #ifndef RELEASE
         if( this->_rank == 0 )
@@ -801,7 +753,7 @@ Plan<d>::GenerateAdjointPlan()
         }
 #endif
 
-        // Construct the group and communicator for the bootstrap cluster
+        // Construct the communicator for the bootstrap cluster
         const std::size_t log2Stride = 
             this->_log2NumProcesses-log2NumMergingProcesses;
         const int startRank = 
@@ -826,7 +778,7 @@ Plan<d>::GenerateAdjointPlan()
             if( this->_rank == p )
             {
                 std::cout << "  process " << p
-                          << "'s bootstrap cluster group: ";
+                          << "'s bootstrap cluster ranks: ";
                 for( std::size_t j=0; j<numMergingProcesses; ++j )
                     std::cout << ranks[j] << " ";
                 std::cout << std::endl;
@@ -836,16 +788,9 @@ Plan<d>::GenerateAdjointPlan()
         }
 #endif
 
-        MPI_Group_incl
-        ( this->_group,
-          numMergingProcesses,
-          &ranks[0],
-          &(this->_bootstrapClusterGroup) );
-
-        MPI_Comm_create
-        ( this->_comm,
-          this->_bootstrapClusterGroup,
-          &(this->_bootstrapClusterComm) );
+        MPI_Comm_split
+        ( this->_comm, ranks[0], this->_myBootstrapMappedRank, 
+          &this->_bootstrapClusterComm );
 
         this->_bootstrapSourceDimsToMerge.resize( log2NumMergingProcesses );
         this->_bootstrapTargetDimsToCut.resize( log2NumMergingProcesses );
@@ -897,16 +842,8 @@ Plan<d>::GenerateAdjointPlan()
 
             this->_myMappedRanks[level-1] = 0;
 
-            MPI_Group_incl
-            ( this->_group, 
-              1, 
-              &(this->_rank), 
-              &(this->_clusterGroups[level-1]) );
-
-            MPI_Comm_create
-            ( this->_comm, 
-              this->_clusterGroups[level-1], 
-              &(this->_clusterComms[level-1]) );
+            MPI_Comm_split
+            ( this->_comm, this->_rank, 0, &this->_clusterComms[level-1] );
 
             this->_log2SubclusterSizes[level-1] =  0;
 
@@ -935,7 +872,7 @@ Plan<d>::GenerateAdjointPlan()
             }
 #endif
 
-            // Construct the group and communicator for our current cluster
+            // Construct the communicator for our current cluster
             const std::size_t log2Stride = 
                 this->_log2NumProcesses-numTargetCuts-log2NumMergingProcesses;
             const int startRank = 
@@ -972,7 +909,7 @@ Plan<d>::GenerateAdjointPlan()
             {
                 if( this->_rank == p )
                 {
-                    std::cout << "  process " << p << "'s cluster group: ";
+                    std::cout << "  process " << p << "'s cluster ranks: ";
                     for( std::size_t j=0; j<numMergingProcesses; ++j )
                         std::cout << ranks[j] << " ";
                     std::cout << std::endl;
@@ -1005,16 +942,9 @@ Plan<d>::GenerateAdjointPlan()
                 this->_myMappedRanks[level-1] = wrappedRank;
             }
 
-            MPI_Group_incl
-            ( this->_group,
-              numMergingProcesses,
-              &ranks[0],
-              &(this->_clusterGroups[level-1]) );
-
-            MPI_Comm_create
-            ( this->_comm, 
-              this->_clusterGroups[level-1],
-              &(this->_clusterComms[level-1]) );
+            MPI_Comm_split
+            ( this->_comm, ranks[0], this->_myMappedRanks[level-1],
+              &this->_clusterComms[level-1] );
 #ifdef BGP
 # ifdef BGP_MPIDO_USE_REDUCESCATTER
             MPIX_Set_property
