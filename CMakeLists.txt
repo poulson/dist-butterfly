@@ -15,15 +15,11 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.5) # for the new FindMPI module
 project(Butterfly-FIO)
 
 set(BFIO_VERSION_MAJOR 0)
 set(BFIO_VERSION_MINOR 5)
-
-if(NOT (CMAKE_CXX_COMPILER MATCHES "mpi"))
-  message(WARNING "CXX compiler, ${CMAKE_CXX_COMPILER} does not appear to be an MPI compiler. Please manually set it via the environment variable CXX or through the '-DCMAKE_CXX_COMPILER' cmake flag. You should probably also clean this build folder first.")
-endif(NOT (CMAKE_CXX_COMPILER MATCHES "mpi"))
 
 option(RELEASE "Avoid unnecessary assertions for faster runs." ON)
 option(TIMING "Measure and print basic timing info." ON)
@@ -36,7 +32,13 @@ if(APPLE)
 else(APPLE)
   set(CXX_FLAGS "-O3" CACHE STRING "CXX flags")
 endif(APPLE)
-set(CMAKE_CXX_FLAGS "${CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CXX_FLAGS} ${MPI_CXX_COMPILE_FLAGS}")
+
+find_package(MPI)
+if(NOT MPI_CXX_FOUND)
+    message(FATAL_ERROR "A C++ MPI compiler is required but not found")
+endif(NOT MPI_CXX_FOUND)
+include_directories(${MPI_CXX_INCLUDE_PATH})
 
 # Query the size of a void pointer in order to determine whether or not this is
 # a 32-bit system
@@ -214,20 +216,6 @@ file(GLOB_RECURSE BFIO_HEADERS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
      "include/*.h" "include/*.hpp")
 set(BFIO_SRC "${BFIO_HEADERS}")
 
-if(BUILD_TESTS)
-  set(HTREE_TEST_DIR ${PROJECT_SOURCE_DIR}/test/htree)
-  set(HTREE_TESTS ConstrainedHTreeWalker HTreeWalker)
-
-  set(TRANSFORM_TEST_DIR ${PROJECT_SOURCE_DIR}/test/transform)
-  set(TRANSFORM_TESTS GenRadon-2d GenRadon-3d NonUniformFT-2d NonUniformFT-3d 
-                      Random3DWaves UpWave-3d VariableUpWave-2d)
-endif(BUILD_TESTS)
-
-# Create a dummy library in order to be able to force the math libraries
-# to be linked last
-add_library(cmake-dummy-lib STATIC cmake/CMakeDummyFunction.cpp)
-target_link_libraries(cmake-dummy-lib ${MATH_LIBS})
-
 # Copy the headers into the build directory
 set(COPIED_HEADERS "")
 foreach(HEADER ${BFIO_HEADERS})
@@ -242,7 +230,22 @@ endforeach(HEADER)
 # Make sure the BFIO headers can be found
 include_directories("${PROJECT_BINARY_DIR}/include")
 
+if(BUILD_TESTS)
+  set(HTREE_TEST_DIR ${PROJECT_SOURCE_DIR}/test/htree)
+  set(HTREE_TESTS ConstrainedHTreeWalker HTreeWalker)
+
+  set(TRANSFORM_TEST_DIR ${PROJECT_SOURCE_DIR}/test/transform)
+  set(TRANSFORM_TESTS GenRadon-2d GenRadon-3d NonUniformFT-2d NonUniformFT-3d 
+                      Random3DWaves UpWave-3d VariableUpWave-2d)
+endif(BUILD_TESTS)
+
+# Create a dummy library in order to be able to force the math libraries
+# to be linked last
+add_library(cmake-dummy-lib STATIC cmake/CMakeDummyFunction.cpp)
+target_link_libraries(cmake-dummy-lib ${MATH_LIBS} ${MPI_CXX_LIBRARIES})
+
 # Build the test drivers if necessary
+set(MPI_LINK_FLAGS "${MPI_CXX_LINK_FLAGS}")
 if(BUILD_TESTS)
   set(OUTPUT_DIR "${PROJECT_BINARY_DIR}/bin/htree")
   foreach(TEST ${HTREE_TESTS})
@@ -250,7 +253,8 @@ if(BUILD_TESTS)
     target_link_libraries(${TEST} cmake-dummy-lib)
     set_target_properties(${TEST} 
                           PROPERTIES OUTPUT_NAME ${TEST}
-                          RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})
+                          RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
+                          LINK_FLAGS ${MPI_LINK_FLAGS})
   endforeach(TEST)
 
   set(OUTPUT_DIR "${PROJECT_BINARY_DIR}/bin/transform")
@@ -259,7 +263,8 @@ if(BUILD_TESTS)
     target_link_libraries(${TEST} cmake-dummy-lib)
     set_target_properties(${TEST} 
                           PROPERTIES OUTPUT_NAME ${TEST}
-                          RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})
+                          RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
+                          LINK_FLAGS ${MPI_LINK_FLAGS})
   endforeach(TEST)
 endif(BUILD_TESTS)
 

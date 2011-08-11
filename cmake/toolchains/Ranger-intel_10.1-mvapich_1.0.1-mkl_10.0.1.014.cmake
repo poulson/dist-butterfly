@@ -1,6 +1,10 @@
-# We need MPI C and CXX compilers
-set(CMAKE_C_COMPILER /opt/apps/intel10_1/mvapich/1.0.1/bin/mpicc)
-set(CMAKE_CXX_COMPILER /opt/apps/intel10_1/mvapich/1.0.1/bin/mpicxx)
+# Set the serial Intel compilers
+set(CMAKE_C_COMPILER       /opt/apps/intel10_1/cc/bin/icc)
+set(CMAKE_CXX_COMPILER     /opt/apps/intel10_1/cc/bin/icpc)
+
+# Set the MPI wrappers for the C and C++ compilers
+set(MPI_C_COMPILER   /opt/apps/intel10_1/mvapich/1.0.1/bin/mpicc)
+set(MPI_CXX_COMPILER /opt/apps/intel10_1/mvapich/1.0.1/bin/mpicxx)
 
 set(CXX_FLAGS "-O3")
 

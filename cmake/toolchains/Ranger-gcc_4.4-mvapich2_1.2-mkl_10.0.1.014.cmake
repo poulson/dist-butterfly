@@ -1,6 +1,10 @@
-# We need MPI C and CXX compilers
-set(CMAKE_C_COMPILER /opt/apps/gcc4_4/mvapich2/1.2/bin/mpicc)
-set(CMAKE_CXX_COMPILER /opt/apps/gcc4_4/mvapich2/1.2/bin/mpicxx)
+ # Set the serial GCC compilers
+set(CMAKE_C_COMPILER   /opt/apps/gcc_amd/4.4.5/bin/gcc)
+set(CMAKE_CXX_COMPILER /opt/apps/gcc_amd/4.4.5/bin/g++)
+
+# Set the MPI wrappers for the C and C++ compilers
+set(MPI_C_COMPILER   /opt/apps/gcc4_4/mvapich2/1.2/bin/mpicc)
+set(MPI_CXX_COMPILER /opt/apps/gcc4_4/mvapich2/1.2/bin/mpicxx)
 
 set(CXX_FLAGS "-O3")
 
