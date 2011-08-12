@@ -253,8 +253,10 @@ if(BUILD_TESTS)
     target_link_libraries(${TEST} cmake-dummy-lib)
     set_target_properties(${TEST} 
                           PROPERTIES OUTPUT_NAME ${TEST}
-                          RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
-                          LINK_FLAGS ${MPI_LINK_FLAGS})
+                          RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})
+    if(MPI_LINK_FLAGS)
+      set_target_properties(${TEST} LINK_FLAGS ${MPI_LINK_FLAGS})
+    endif(MPI_LINK_FLAGS)
   endforeach(TEST)
 
   set(OUTPUT_DIR "${PROJECT_BINARY_DIR}/bin/transform")
@@ -263,8 +265,10 @@ if(BUILD_TESTS)
     target_link_libraries(${TEST} cmake-dummy-lib)
     set_target_properties(${TEST} 
                           PROPERTIES OUTPUT_NAME ${TEST}
-                          RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
-                          LINK_FLAGS ${MPI_LINK_FLAGS})
+                          RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})
+    if(MPI_LINK_FLAGS)
+      set_target_properties(${TEST} LINK_FLAGS ${MPI_LINK_FLAGS})
+    endif(MPI_LINK_FLAGS)
   endforeach(TEST)
 endif(BUILD_TESTS)
 

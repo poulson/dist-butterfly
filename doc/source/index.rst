@@ -3,45 +3,36 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+For some reason this heading is required
+########################################
+**This is still just the beginnings of documentation, please don't distribute.**
+
 Introduction
-============
+************
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 3
 
-   introduction
+   intro
+
+Using ButterflyFIO
+******************
+
+.. toctree::
+   :maxdepth: 3
+
+   using
 
 Reference
-=========
-
-Constants
----------
+*********
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 3
 
-   reference/constants
-
-Data structures
----------------
-
-.. toctree::
-   :maxdepth: 1
-
-   reference/data/array
-   reference/data/source
-   reference/data/potential
-   reference/data/point_grid
-   reference/data/weight_grid
-
-H-tree utilities
-----------------
-
-.. toctree::
-   :maxdepth: 1
+   reference
 
 Indices and tables
-==================
+******************
 
 * :ref:`genindex`
 * :ref:`modindex`

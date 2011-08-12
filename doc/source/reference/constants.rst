@@ -1,20 +1,26 @@
+---------
+Constants
+---------
 
+"""""""""""
 :math:`\pi`
------------
+"""""""""""
 
 .. c:var:: double Pi
 
    :math:`\pi` rounded to sixteen digits of accuracy.
 
+""""""""""""
 :math:`2\pi`
-------------
+""""""""""""
 
 .. c:var:: double TwoPi
 
    :math:`2\pi` rounded to sixteen digits of accuracy.
 
+"""""""""""""""""""""""""
 Compile-time exponentials
--------------------------
+"""""""""""""""""""""""""
 
 .. cpp:type:: Pow<x,y>
 
