@@ -1,5 +1,6 @@
+^^^^^^^^^^^^^^^^
 class WeightGrid
----------------
+^^^^^^^^^^^^^^^^
 
 .. cpp:class:: WeightGrid<R,d,q>
 

@@ -181,7 +181,7 @@ htmlhelp_basename = 'ButterflyFIOdoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'ButterflyFIO.tex', u'ButterflyFIO Documentation',
+  ('index', 'ButterflyFIO.tex', u'ButterflyFIO Manual',
    u'Jack Poulson', 'manual'),
 ]
 
@@ -214,6 +214,6 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'butterflyfio', u'ButterflyFIO Documentation',
+    ('index', 'butterflyfio', u'ButterflyFIO Manual',
      [u'Jack Poulson'], 1)
 ]

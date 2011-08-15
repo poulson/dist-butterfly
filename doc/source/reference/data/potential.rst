@@ -1,5 +1,6 @@
+^^^^^^^^^^^^^^^^
 struct Potential
-----------------
+^^^^^^^^^^^^^^^^
 
 .. cpp:type:: Potential<R,d>
 

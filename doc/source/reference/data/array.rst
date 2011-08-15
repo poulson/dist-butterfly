@@ -1,5 +1,6 @@
+^^^^^^^^^^^
 class Array
------------
+^^^^^^^^^^^
 
 .. cpp:class:: Array<T,d>
 

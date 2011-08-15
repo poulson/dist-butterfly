@@ -1,5 +1,6 @@
+^^^^^^^^^^^^^^^
 class PointGrid
----------------
+^^^^^^^^^^^^^^^
 
 .. cpp:class:: PointGrid<R,d,q>
 
