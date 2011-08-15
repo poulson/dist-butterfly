@@ -210,6 +210,8 @@ endif(HAVE___restrict__)
 
 configure_file(${CMAKE_SOURCE_DIR}/include/bfio/config.h.cmake
                ${CMAKE_BINARY_DIR}/include/bfio/config.h)
+install(FILES ${CMAKE_BINARY_DIR}/include/bfio/config.h
+        DESTINATION include/bfio)
 
 # We only have header files
 file(GLOB_RECURSE BFIO_HEADERS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} 
@@ -225,6 +227,8 @@ foreach(HEADER ${BFIO_HEADERS})
             ${CMAKE_CURRENT_BINARY_DIR}/${HEADER}
   )
   list(APPEND COPIED_HEADERS "${CMAKE_CURRENT_BINARY_DIR}/${HEADER}")
+  get_filename_component(HEADER_PATH ${HEADER} PATH)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${HEADER} DESTINATION ${HEADER_PATH})
 endforeach(HEADER)
 
 # Make sure the BFIO headers can be found
@@ -253,8 +257,11 @@ if(BUILD_TESTS)
     target_link_libraries(${TEST} cmake-dummy-lib)
     set_target_properties(${TEST} 
                           PROPERTIES OUTPUT_NAME ${TEST}
-                          RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
-                          LINK_FLAGS ${MPI_LINK_FLAGS})
+                          RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})
+    if(MPI_LINK_FLAGS)
+        set_target_properties(${TEST} PROPERTIES LINK_FLAGS ${MPI_LINK_FLAGS})
+    endif(MPI_LINK_FLAGS)
+    install(TARGETS ${TEST} DESTINATION bin/htree)
   endforeach(TEST)
 
   set(OUTPUT_DIR "${PROJECT_BINARY_DIR}/bin/transform")
@@ -263,8 +270,11 @@ if(BUILD_TESTS)
     target_link_libraries(${TEST} cmake-dummy-lib)
     set_target_properties(${TEST} 
                           PROPERTIES OUTPUT_NAME ${TEST}
-                          RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
-                          LINK_FLAGS ${MPI_LINK_FLAGS})
+                          RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})
+    if(MPI_LINK_FLAGS)
+      set_target_properties(${TEST} PROPERTIES LINK_FLAGS ${MPI_LINK_FLAGS})
+    endif(MPI_LINK_FLAGS)
+    install(TARGETS ${TEST} DESTINATION bin/transform)
   endforeach(TEST)
 endif(BUILD_TESTS)
 
