@@ -1,22 +1,13 @@
 /*
-   ButterflyFIO: a distributed-memory fast algorithm for applying FIOs.
-   Copyright (C) 2010-2011 Jack Poulson <jack.poulson@gmail.com>
+   Copyright (C) 2010-2013 Jack Poulson and Lexing Ying
  
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
- 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
- 
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+   This file is part of ButterflyFIO and is under the GNU General Public 
+   License, which can be found in the LICENSE file in the root directory, or at
+   <http://www.gnu.org/licenses/>.
 */
+#pragma once
 #ifndef BFIO_RFIO_TARGET_WEIGHT_RECURSION_HPP
-#define BFIO_RFIO_TARGET_WEIGHT_RECURSION_HPP 1
+#define BFIO_RFIO_TARGET_WEIGHT_RECURSION_HPP
 
 #include <cstddef>
 #include <cstring>
@@ -548,5 +539,4 @@ TargetWeightRecursion
 } // rfio
 } // bfio
 
-#endif // BFIO_RFIO_TARGET_WEIGHT_RECURSION_HPP
-
+#endif // ifndef BFIO_RFIO_TARGET_WEIGHT_RECURSION_HPP
