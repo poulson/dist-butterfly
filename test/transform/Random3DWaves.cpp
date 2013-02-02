@@ -8,22 +8,23 @@
 #include <ctime>
 #include <memory>
 #include "bfio.hpp"
+using namespace std;
 
 void 
 Usage()
 {
-    std::cout << "Random3DWaves <N> <M> <bootstrap> <T> <nT>\n" 
-              << "  N: power of 2, the source spread in each dimension\n" 
-              << "  M: number of random sources to instantiate\n" 
-              << "  bootstrapSkip: level to bootstrap to\n"
-              << "  T: time to simulate to\n" 
-              << "  nT: number of timesteps\n" 
-              << std::endl;
+    cout << "Random3DWaves <N> <M> <bootstrap> <T> <nT>\n" 
+         << "  N: power of 2, the source spread in each dimension\n" 
+         << "  M: number of random sources to instantiate\n" 
+         << "  bootstrapSkip: level to bootstrap to\n"
+         << "  T: time to simulate to\n" 
+         << "  nT: number of timesteps\n" 
+         << endl;
 }
 
 // Define the dimension of the problem and the order of interpolation
-static const std::size_t d = 3;
-static const std::size_t q = 5;
+static const size_t d = 3;
+static const size_t q = 5;
 
 template<typename R>
 class UpWave : public bfio::Phase<R,d>
@@ -38,15 +39,14 @@ public:
     R GetTime() const;
 
     virtual R
-    operator() 
-    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const;
+    operator()( const array<R,d>& x, const array<R,d>& p ) const;
 
     // We can optionally override the batched application for better efficiency
     virtual void
     BatchEvaluate
-    ( const std::vector< bfio::Array<R,d> >& xPoints,
-      const std::vector< bfio::Array<R,d> >& pPoints,
-            std::vector< R                >& results ) const;
+    ( const vector<array<R,d>>& xPoints,
+      const vector<array<R,d>>& pPoints,
+            vector<R         >& results ) const;
 };
 
 template<typename R>
@@ -62,15 +62,14 @@ public:
     R GetTime() const;
 
     virtual R
-    operator() 
-    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const;
+    operator()( const array<R,d>& x, const array<R,d>& p ) const;
     
     // We can optionally override the batched application for better efficiency
     virtual void
     BatchEvaluate
-    ( const std::vector< bfio::Array<R,d> >& xPoints,
-      const std::vector< bfio::Array<R,d> >& pPoints,
-            std::vector< R                >& results ) const;
+    ( const vector<array<R,d>>& xPoints,
+      const vector<array<R,d>>& pPoints,
+            vector<R         >& results ) const;
 };
 
 template<typename R>
@@ -117,8 +116,7 @@ DownWave<R>::GetTime() const
 
 template<typename R>
 inline R
-UpWave<R>::operator() 
-( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
+UpWave<R>::operator()( const array<R,d>& x, const array<R,d>& p ) const
 { 
     return bfio::TwoPi*( 
              x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
@@ -128,8 +126,7 @@ UpWave<R>::operator()
 
 template<typename R>
 inline R
-DownWave<R>::operator() 
-( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
+DownWave<R>::operator()( const array<R,d>& x, const array<R,d>& p ) const
 { 
     return bfio::TwoPi*(
              x[0]*p[0]+x[1]*p[1]+x[2]*p[2] -
@@ -140,32 +137,32 @@ DownWave<R>::operator()
 template<typename R>
 void
 UpWave<R>::BatchEvaluate
-( const std::vector< bfio::Array<R,d> >& xPoints,
-  const std::vector< bfio::Array<R,d> >& pPoints,
-        std::vector< R                >& results ) const
+( const vector<array<R,d>>& xPoints,
+  const vector<array<R,d>>& pPoints,
+        vector<R         >& results ) const
 {
-    const std::size_t xSize = xPoints.size();
-    const std::size_t pSize = pPoints.size();
+    const size_t xSize = xPoints.size();
+    const size_t pSize = pPoints.size();
 
     // Set up the square root arguments
-    std::vector<R> sqrtArguments( pSize );
+    vector<R> sqrtArguments( pSize );
     {
         R* RESTRICT sqrtArgBuffer = &sqrtArguments[0];
         const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
-        for( std::size_t j=0; j<pSize; ++j )
+        for( size_t j=0; j<pSize; ++j )
             sqrtArgBuffer[j] = pPointsBuffer[j*d+0]*pPointsBuffer[j*d+0] +
                                pPointsBuffer[j*d+1]*pPointsBuffer[j*d+1] +
                                pPointsBuffer[j*d+2]*pPointsBuffer[j*d+2];
     }
 
     // Perform the batched square roots
-    std::vector<R> sqrtResults;
+    vector<R> sqrtResults;
     bfio::SqrtBatch( sqrtArguments, sqrtResults );
 
     // Scale the square roots by _t
     {
         R* sqrtBuffer = &sqrtResults[0];
-        for( std::size_t j=0; j<pSize; ++j )
+        for( size_t j=0; j<pSize; ++j )
             sqrtBuffer[j] *= _t;
     }
 
@@ -176,9 +173,9 @@ UpWave<R>::BatchEvaluate
         const R* RESTRICT sqrtBuffer = &sqrtResults[0];
         const R* RESTRICT xPointsBuffer = &(xPoints[0][0]);
         const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
-        for( std::size_t i=0; i<xSize; ++i )
+        for( size_t i=0; i<xSize; ++i )
         {
-            for( std::size_t j=0; j<pSize; ++j )
+            for( size_t j=0; j<pSize; ++j )
             {
                 resultsBuffer[i*pSize+j] = 
                     xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
@@ -194,32 +191,32 @@ UpWave<R>::BatchEvaluate
 template<typename R>
 void
 DownWave<R>::BatchEvaluate
-( const std::vector< bfio::Array<R,d> >& xPoints,
-  const std::vector< bfio::Array<R,d> >& pPoints,
-        std::vector< R                >& results ) const
+( const vector<array<R,d>>& xPoints,
+  const vector<array<R,d>>& pPoints,
+        vector<R         >& results ) const
 {
-    const std::size_t xSize = xPoints.size();
-    const std::size_t pSize = pPoints.size();
+    const size_t xSize = xPoints.size();
+    const size_t pSize = pPoints.size();
 
     // Set up the square root arguments
-    std::vector<R> sqrtArguments( pSize );
+    vector<R> sqrtArguments( pSize );
     {
         R* sqrtArgBuffer = &sqrtArguments[0];
         const R* pPointsBuffer = &(pPoints[0][0]);
-        for( std::size_t j=0; j<pSize; ++j )
+        for( size_t j=0; j<pSize; ++j )
             sqrtArgBuffer[j] = pPointsBuffer[j*d+0]*pPointsBuffer[j*d+0] +
                                pPointsBuffer[j*d+1]*pPointsBuffer[j*d+1] +
                                pPointsBuffer[j*d+2]*pPointsBuffer[j*d+2];
     }
 
     // Perform the batched square roots
-    std::vector<R> sqrtResults;
+    vector<R> sqrtResults;
     bfio::SqrtBatch( sqrtArguments, sqrtResults );
 
     // Scale the square roots by _t
     {
         R* sqrtBuffer = &sqrtResults[0];
-        for( std::size_t j=0; j<pSize; ++j )
+        for( size_t j=0; j<pSize; ++j )
             sqrtBuffer[j] *= _t;
     }
 
@@ -230,9 +227,9 @@ DownWave<R>::BatchEvaluate
         const R* sqrtBuffer = &sqrtResults[0];
         const R* xPointsBuffer = &(xPoints[0][0]);
         const R* pPointsBuffer = &(pPoints[0][0]);
-        for( std::size_t i=0; i<xSize; ++i )
+        for( size_t i=0; i<xSize; ++i )
         {
-            for( std::size_t j=0; j<pSize; ++j )
+            for( size_t j=0; j<pSize; ++j )
             {
                 resultsBuffer[i*pSize+j] = 
                     xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
@@ -263,17 +260,17 @@ main
         MPI_Finalize();
         return 0;
     }
-    const std::size_t N = atoi(argv[1]);
-    const std::size_t M = atoi(argv[2]);
-    const std::size_t bootstrapSkip = atoi(argv[3]);
+    const size_t N = atoi(argv[1]);
+    const size_t M = atoi(argv[2]);
+    const size_t bootstrapSkip = atoi(argv[3]);
     const double T = atof(argv[4]);
-    const std::size_t nT = atoi(argv[5]);
+    const size_t nT = atoi(argv[5]);
 
     try 
     {
         // Define the source and target boxes
         bfio::Box<double,d> sourceBox, targetBox; 
-        for( std::size_t j=0; j<d; ++j )
+        for( size_t j=0; j<d; ++j )
         {
             sourceBox.offsets[j] = -0.5*N;
             sourceBox.widths[j] = N;
@@ -288,14 +285,14 @@ main
 
         if( rank == 0 )
         {
-            std::ostringstream msg;
+            ostringstream msg;
             msg << "Will distribute " << M << " random sources over the source "
                 << "domain, which will be split into " << N
                 << " boxes in each of the " << d << " dimensions and "
                 << "distributed amongst " << numProcesses << " processes. "
                 << "The simulation will be over " << T << " units of time with "
                 << nT << " timesteps.\n";
-            std::cout << msg.str() << std::endl;
+            cout << msg.str() << endl;
         }
 
         // Consistently seed all of the processes' PRNGs
@@ -306,13 +303,13 @@ main
         srand( seed );
 
         // Now generate random sources in our frequency box
-        std::size_t numLocalSources = 
+        size_t numLocalSources = 
             ( rank<(int)(M%numProcesses) 
               ? M/numProcesses+1 : M/numProcesses );
-        std::vector< bfio::Source<double,d> > mySources( numLocalSources );
-        for( std::size_t i=0; i<numLocalSources; ++i )
+        vector<bfio::Source<double,d>> mySources( numLocalSources );
+        for( size_t i=0; i<numLocalSources; ++i )
         {
-            for( std::size_t j=0; j<d; ++j )
+            for( size_t j=0; j<d; ++j )
             {
                 mySources[i].p[j] = 
                     mySourceBox.offsets[j] +
@@ -327,67 +324,62 @@ main
 
         // Create the context 
         if( rank == 0 )
-            std::cout << "Creating context..." << std::endl;
+            cout << "Creating context..." << endl;
         bfio::rfio::Context<double,d,q> context;
 
         // Loop over each timestep, computing in parallel, gathering the 
         // results, and then dumping to file
         double deltaT = T/(nT-1);
-        for( std::size_t i=0; i<nT; ++i )
+        for( size_t i=0; i<nT; ++i )
         {
             const double t = i*deltaT;
             upWave.SetTime( t );
             downWave.SetTime( t );
 
-            std::auto_ptr
-            < const bfio::rfio::PotentialField<double,d,q> > u;
             if( rank == 0 )
             {
-                std::cout << "t=" << t << "\n"
+                cout << "t=" << t << "\n"
                           << "  Starting upWave transform...";
-                std::cout.flush();
+                cout.flush();
             }
-            u = bfio::ReducedFIO
+            auto u = bfio::ReducedFIO
             ( context, plan, upWave, sourceBox, targetBox, mySources );
             if( rank == 0 )
-                std::cout << "done" << std::endl;
+                cout << "done" << endl;
 #ifdef TIMING
             if( rank == 0 )
                 bfio::rfio::PrintTimings();
 #endif
 
-            std::auto_ptr
-            < const bfio::rfio::PotentialField<double,d,q> > v;
             if( rank == 0 )
             {
-                std::cout << "  Starting downWave transform...";
-                std::cout.flush();
+                cout << "  Starting downWave transform...";
+                cout.flush();
             }
-            v = bfio::ReducedFIO
+            auto v = bfio::ReducedFIO
             ( context, plan, downWave, sourceBox, targetBox, mySources );
             if( rank == 0 )
-                std::cout << "done" << std::endl;
+                cout << "done" << endl;
 #ifdef TIMING
             if( rank == 0 )
                 bfio::rfio::PrintTimings();
 #endif
 
             // Store this timeslice
-            std::ostringstream fileStream;
+            ostringstream fileStream;
             fileStream << "randomWaves-" << i;
             bfio::rfio::WriteVtkXmlPImageData
             ( comm, N, targetBox, *u, fileStream.str() );
         }
     }
-    catch( const std::exception& e )
+    catch( const exception& e )
     {
-        std::ostringstream msg;
+        ostringstream msg;
         msg << "Caught exception on process " << rank << ":\n"
             << "   " << e.what();
-        std::cout << msg.str() << std::endl;
+        cout << msg.str() << endl;
     }
 
     MPI_Finalize();
     return 0;
 }
-

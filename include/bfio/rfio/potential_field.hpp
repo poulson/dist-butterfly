@@ -9,12 +9,13 @@
 #ifndef BFIO_RFIO_POTENTIAL_FIELD_HPP
 #define BFIO_RFIO_POTENTIAL_FIELD_HPP
 
-#include <stdexcept>
+#include <array>
 #include <complex>
 #include <fstream>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
-#include "bfio/structures/array.hpp"
 #include "bfio/structures/box.hpp"
 #include "bfio/structures/constrained_htree_walker.hpp"
 #include "bfio/structures/low_rank_potential.hpp"
@@ -29,8 +30,14 @@
 
 namespace bfio {
 
+using std::array;
+using std::complex;
+using std::size_t;
+using std::string;
+using std::vector;
+
 namespace rfio {
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 class PotentialField
 {
     const rfio::Context<R,d,q>& _context;
@@ -38,13 +45,13 @@ class PotentialField
     const Phase<R,d>* _phase;
     const Box<R,d> _sourceBox;
     const Box<R,d> _myTargetBox;
-    const Array<std::size_t,d> _myTargetBoxCoords;
-    const Array<std::size_t,d> _log2TargetSubboxesPerDim;
+    const array<size_t,d> _myTargetBoxCoords;
+    const array<size_t,d> _log2TargetSubboxesPerDim;
 
-    Array<R,d> _wA;
-    Array<R,d> _p0;
-    Array<std::size_t,d> _log2TargetSubboxesUpToDim;
-    std::vector< LRP<R,d,q> > _LRPs;
+    array<R,d> _wA;
+    array<R,d> _p0;
+    array<size_t,d> _log2TargetSubboxesUpToDim;
+    vector<LRP<R,d,q>> _LRPs;
 
 public:
     PotentialField
@@ -53,61 +60,61 @@ public:
       const Phase<R,d>& phase,
       const Box<R,d>& sourceBox,
       const Box<R,d>& myTargetBox,
-      const Array<std::size_t,d>& myTargetBoxCoords,
-      const Array<std::size_t,d>& log2TargetSubboxesPerDim,
+      const array<size_t,d>& myTargetBoxCoords,
+      const array<size_t,d>& log2TargetSubboxesPerDim,
       const WeightGridList<R,d,q>& weightGridList );
 
     ~PotentialField();
 
-    std::complex<R> Evaluate( const Array<R,d>& x ) const;
+    complex<R> Evaluate( const array<R,d>& x ) const;
     // TODO: BatchEvaluate? SafeEvaluate?
 
     const Amplitude<R,d>& GetAmplitude() const;
     const Phase<R,d>& GetPhase() const;
     const Box<R,d>& GetMyTargetBox() const;
-    std::size_t GetNumSubboxes() const;
-    const Array<R,d>& GetSubboxWidths() const;
-    const Array<std::size_t,d>& GetMyTargetBoxCoords() const;
-    const Array<std::size_t,d>& GetLog2SubboxesPerDim() const;
-    const Array<std::size_t,d>& GetLog2SubboxesUpToDim() const;
+    size_t GetNumSubboxes() const;
+    const array<R,d>& GetSubboxWidths() const;
+    const array<size_t,d>& GetMyTargetBoxCoords() const;
+    const array<size_t,d>& GetLog2SubboxesPerDim() const;
+    const array<size_t,d>& GetLog2SubboxesUpToDim() const;
 };
 
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 void PrintErrorEstimates
 ( MPI_Comm comm,
   const PotentialField<R,d,q>& u,
-  const std::vector< Source<R,d> >& globalSources );
+  const vector<Source<R,d>>& globalSources );
 
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 void WriteVtkXmlPImageData
 ( MPI_Comm comm, 
-  const std::size_t N,
+  const size_t N,
   const Box<R,d>& targetBox,
   const PotentialField<R,d,q>& u,
-  const std::string& basename );
+  const string& basename );
 
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 void WriteVtkXmlPImageData
 ( MPI_Comm comm, 
-  const std::size_t N,
+  const size_t N,
   const Box<R,d>& targetBox,
   const PotentialField<R,d,q>& u,
-  const std::string& basename,
-  const std::vector< Source<R,d> >& globalSources );
+  const string& basename,
+  const vector<Source<R,d>>& globalSources );
 
 } // rfio
 
 // Implementations
 
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 rfio::PotentialField<R,d,q>::PotentialField
 ( const rfio::Context<R,d,q>& context,
   const Amplitude<R,d>& amplitude,
   const Phase<R,d>& phase,
   const Box<R,d>& sourceBox,
   const Box<R,d>& myTargetBox,
-  const Array<std::size_t,d>& myTargetBoxCoords,
-  const Array<std::size_t,d>& log2TargetSubboxesPerDim,
+  const array<size_t,d>& myTargetBoxCoords,
+  const array<size_t,d>& log2TargetSubboxesPerDim,
   const WeightGridList<R,d,q>& weightGridList )
 : _context(context), _amplitude(amplitude.Clone()), _phase(phase.Clone()), 
   _sourceBox(sourceBox), _myTargetBox(myTargetBox),
@@ -115,22 +122,22 @@ rfio::PotentialField<R,d,q>::PotentialField
   _log2TargetSubboxesPerDim(log2TargetSubboxesPerDim)
 { 
     // Compute the widths of the target subboxes and the source center
-    for( std::size_t j=0; j<d; ++j )
+    for( size_t j=0; j<d; ++j )
         _wA[j] = myTargetBox.widths[j] / (1<<log2TargetSubboxesPerDim[j]);
-    for( std::size_t j=0; j<d; ++j )
+    for( size_t j=0; j<d; ++j )
         _p0[j] = sourceBox.offsets[j] + sourceBox.widths[j]/2;
 
     // Compute the array of the partial sums
     _log2TargetSubboxesUpToDim[0] = 0;
-    for( std::size_t j=1; j<d; ++j )
+    for( size_t j=1; j<d; ++j )
     {
         _log2TargetSubboxesUpToDim[j] = 
             _log2TargetSubboxesUpToDim[j-1] + log2TargetSubboxesPerDim[j-1];
     }
 
     // Figure out the size of our LRP vector by summing log2TargetSubboxesPerDim
-    std::size_t log2TargetSubboxes = 0;
-    for( std::size_t j=0; j<d; ++j )
+    size_t log2TargetSubboxes = 0;
+    for( size_t j=0; j<d; ++j )
         log2TargetSubboxes += log2TargetSubboxesPerDim[j];
     _LRPs.resize( 1<<log2TargetSubboxes );
 
@@ -138,39 +145,39 @@ rfio::PotentialField<R,d,q>::PotentialField
     // HTree described by log2TargetSubboxesPerDim. We will unroll it 
     // lexographically into the LRP vector.
     ConstrainedHTreeWalker<d> AWalker( log2TargetSubboxesPerDim );
-    for( std::size_t targetIndex=0; 
+    for( size_t targetIndex=0; 
          targetIndex<_LRPs.size(); 
          ++targetIndex, AWalker.Walk() )
     {
-        const Array<std::size_t,d> A = AWalker.State();
+        const array<size_t,d> A = AWalker.State();
 
         // Unroll the indices of A into its lexographic position
-        std::size_t k=0; 
-        for( std::size_t j=0; j<d; ++j )
+        size_t k=0; 
+        for( size_t j=0; j<d; ++j )
             k += A[j] << _log2TargetSubboxesUpToDim[j];
 
         // Now fill the k'th LRP index
-        for( std::size_t j=0; j<d; ++j )
+        for( size_t j=0; j<d; ++j )
             _LRPs[k].x0[j] = myTargetBox.offsets[j] + (A[j]+0.5)*_wA[j];
         _LRPs[k].weightGrid = weightGridList[targetIndex];
     }
 }
 
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 rfio::PotentialField<R,d,q>::~PotentialField()
 {
     delete _amplitude;
     delete _phase;
 }
 
-template<typename R,std::size_t d,std::size_t q>
-std::complex<R>
-rfio::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
+template<typename R,size_t d,size_t q>
+complex<R>
+rfio::PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
 {
-    typedef std::complex<R> C;
+    typedef complex<R> C;
 
 #ifndef RELEASE
-    for( std::size_t j=0; j<d; ++j )
+    for( size_t j=0; j<d; ++j )
     {
         if( x[j] < _myTargetBox.offsets[j] || 
             x[j] > _myTargetBox.offsets[j]+_myTargetBox.widths[j] )
@@ -182,29 +189,28 @@ rfio::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
 #endif
 
     // Compute the lexographic position of the LRP to use for evaluation
-    std::size_t k = 0;
-    for( std::size_t j=0; j<d; ++j )
+    size_t k = 0;
+    for( size_t j=0; j<d; ++j )
     {
-        std::size_t owningIndex = 
-            static_cast<std::size_t>((x[j]-_myTargetBox.offsets[j])/_wA[j]);
+        size_t owningIndex = size_t((x[j]-_myTargetBox.offsets[j])/_wA[j]);
         k += owningIndex << _log2TargetSubboxesUpToDim[j];
     }
 
     // Convert x to the reference domain of [-1/2,+1/2]^d for box k
     const LRP<R,d,q>& lrp = _LRPs[k];
-    Array<R,d> xRef;
-    for( std::size_t j=0; j<d; ++j )
+    array<R,d> xRef;
+    for( size_t j=0; j<d; ++j )
         xRef[j] = (x[j]-lrp.x0[j])/_wA[j];
 
-    const std::vector< Array<R,d> >& chebyshevGrid = 
+    const vector<array<R,d>>& chebyshevGrid = 
         _context.GetChebyshevGrid();
     R realValue = 0;
     R imagValue = 0;
-    for( std::size_t t=0; t<Pow<q,d>::val; ++t )
+    for( size_t t=0; t<Pow<q,d>::val; ++t )
     {
         // Construct the t'th translated Chebyshev gridpoint
-        Array<R,d> xt;
-        for( std::size_t j=0; j<d; ++j )
+        array<R,d> xt;
+        for( size_t j=0; j<d; ++j )
             xt[j] = lrp.x0[j] + _wA[j]*chebyshevGrid[t][j];
 
         const C beta = ImagExp<R>( -_phase->operator()(xt,_p0) );
@@ -222,53 +228,53 @@ rfio::PotentialField<R,d,q>::Evaluate( const Array<R,d>& x ) const
     return C( realPotential, imagPotential );
 }
 
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 inline const Amplitude<R,d>&
 rfio::PotentialField<R,d,q>::GetAmplitude() const
 { return *_amplitude; }
 
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 inline const Phase<R,d>&
 rfio::PotentialField<R,d,q>::GetPhase() const
 { return *_phase; }
 
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 inline const Box<R,d>&
 rfio::PotentialField<R,d,q>::GetMyTargetBox() const
 { return _myTargetBox; }
 
-template<typename R,std::size_t d,std::size_t q>
-inline std::size_t
+template<typename R,size_t d,size_t q>
+inline size_t
 rfio::PotentialField<R,d,q>::GetNumSubboxes() const
 { return _LRPs.size(); }
 
-template<typename R,std::size_t d,std::size_t q>
-inline const Array<R,d>&
+template<typename R,size_t d,size_t q>
+inline const array<R,d>&
 rfio::PotentialField<R,d,q>::GetSubboxWidths() const
 { return _wA; }
 
-template<typename R,std::size_t d,std::size_t q>
-inline const Array<std::size_t,d>&
+template<typename R,size_t d,size_t q>
+inline const array<size_t,d>&
 rfio::PotentialField<R,d,q>::GetMyTargetBoxCoords() const
 { return _myTargetBoxCoords; }
 
-template<typename R,std::size_t d,std::size_t q>
-inline const Array<std::size_t,d>&
+template<typename R,size_t d,size_t q>
+inline const array<size_t,d>&
 rfio::PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
 { return _log2TargetSubboxesPerDim; }
 
-template<typename R,std::size_t d,std::size_t q>
-inline const Array<std::size_t,d>&
+template<typename R,size_t d,size_t q>
+inline const array<size_t,d>&
 rfio::PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
 { return _log2TargetSubboxesUpToDim; }
 
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 void rfio::PrintErrorEstimates
 ( MPI_Comm comm,
   const PotentialField<R,d,q>& u,
-  const std::vector< Source<R,d> >& globalSources )
+  const vector<Source<R,d>>& globalSources )
 {
-    const std::size_t numAccuracyTestsPerBox = 10;
+    const size_t numAccuracyTestsPerBox = 10;
 
     int rank;
     MPI_Comm_rank( comm, &rank );
@@ -276,8 +282,8 @@ void rfio::PrintErrorEstimates
     const Amplitude<R,d>& amplitude = u.GetAmplitude();
     const Phase<R,d>& phase = u.GetPhase();
     const Box<R,d>& myTargetBox = u.GetMyTargetBox();
-    const std::size_t numSubboxes = u.GetNumSubboxes();
-    const std::size_t numTests = numSubboxes*numAccuracyTestsPerBox;
+    const size_t numSubboxes = u.GetNumSubboxes();
+    const size_t numTests = numSubboxes*numAccuracyTestsPerBox;
 
     // Compute error estimates using a constant number of samples within
     // each box in the resulting approximation of the transform.
@@ -292,26 +298,26 @@ void rfio::PrintErrorEstimates
     }
     // Compute the L1 norm of the sources
     double L1Sources = 0.;
-    const std::size_t numSources = globalSources.size();
-    for( std::size_t m=0; m<numSources; ++m )
+    const size_t numSources = globalSources.size();
+    for( size_t m=0; m<numSources; ++m )
         L1Sources += abs(globalSources[m].magnitude);
     double myL2ErrorSquared = 0.;
     double myL2TruthSquared = 0.;
     double myLinfError = 0.;
-    for( std::size_t k=0; k<numTests; ++k )
+    for( size_t k=0; k<numTests; ++k )
     {
         // Compute a random point in our process's target box
-        Array<R,d> x;
-        for( std::size_t j=0; j<d; ++j )
+        array<R,d> x;
+        for( size_t j=0; j<d; ++j )
             x[j] = myTargetBox.offsets[j] +
                    Uniform<R>()*myTargetBox.widths[j];
 
         // Evaluate our potential field at x and compare against truth
-        std::complex<R> approx = u.Evaluate( x );
-        std::complex<R> truth(0.,0.);
-        for( std::size_t m=0; m<numSources; ++m )
+        complex<R> approx = u.Evaluate( x );
+        complex<R> truth(0.,0.);
+        for( size_t m=0; m<numSources; ++m )
         {
-            std::complex<R> beta =
+            complex<R> beta =
                 amplitude( x, globalSources[m].p ) *
                 ImagExp( phase(x,globalSources[m].p) );
             truth += beta * globalSources[m].magnitude;
@@ -350,19 +356,19 @@ void rfio::PrintErrorEstimates
 }
 
 // Just write out the real and imag components of the approximation
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 inline void
 rfio::WriteVtkXmlPImageData
 ( MPI_Comm comm,
-  const std::size_t N,
+  const size_t N,
   const Box<R,d>& targetBox,
   const rfio::PotentialField<R,d,q>& u,
-  const std::string& basename )
+  const string& basename )
 {
     using namespace std;
 
-    const std::size_t numSamplesPerBoxDim = 4;
-    const std::size_t numSamplesPerBox = Pow<numSamplesPerBoxDim,d>::val;
+    const size_t numSamplesPerBoxDim = 4;
+    const size_t numSamplesPerBox = Pow<numSamplesPerBoxDim,d>::val;
 
     int rank, numProcesses;
     MPI_Comm_rank( comm, &rank );
@@ -371,17 +377,17 @@ rfio::WriteVtkXmlPImageData
     if( d <= 3 )
     {
         const Box<R,d>& myTargetBox = u.GetMyTargetBox();
-        const Array<R,d>& wA = u.GetSubboxWidths();
-        const Array<size_t,d>& log2SubboxesPerDim = u.GetLog2SubboxesPerDim();
+        const array<R,d>& wA = u.GetSubboxWidths();
+        const array<size_t,d>& log2SubboxesPerDim = u.GetLog2SubboxesPerDim();
         const size_t numSubboxes = u.GetNumSubboxes();
         const size_t numSamples = numSamplesPerBox*numSubboxes;
 
         // Gather the target box coordinates to the root to write the 
         // Piece Extent data.
-        Array<size_t,d> myCoordsArray = u.GetMyTargetBoxCoords();
+        array<size_t,d> myCoordsarray = u.GetMyTargetBoxCoords();
         vector<int> myCoords(d);
         for( size_t j=0; j<d; ++j )
-            myCoords[j] = myCoordsArray[j]; // convert size_t -> int
+            myCoords[j] = myCoordsarray[j]; // convert size_t -> int
         vector<int> coords(1);
         if( rank == 0 )
             coords.resize(d*numProcesses);
@@ -499,7 +505,7 @@ rfio::WriteVtkXmlPImageData
         realFile << os.str();
         imagFile << os.str();
         os.clear(); os.str("");
-        Array<size_t,d> numSamplesUpToDim;
+        array<size_t,d> numSamplesUpToDim;
         for( size_t j=0; j<d; ++j )
         {
             numSamplesUpToDim[j] = 1;
@@ -512,20 +518,20 @@ rfio::WriteVtkXmlPImageData
         for( size_t k=0; k<numSamples; ++k )
         {
             // Extract our indices in each dimension
-            Array<size_t,d> coords;
+            array<size_t,d> coords;
             for( size_t j=0; j<d; ++j )
                 coords[j] = (k/numSamplesUpToDim[j]) %
                             (numSamplesPerBoxDim<<log2SubboxesPerDim[j]);
 
             // Compute the location of our sample
-            Array<R,d> x;
+            array<R,d> x;
             for( size_t j=0; j<d; ++j )
                 x[j] = myTargetBox.offsets[j] +
                        coords[j]*wA[j]/numSamplesPerBoxDim;
             complex<R> approx = u.Evaluate( x );
             realFile << (float)real(approx) << " ";
             imagFile << (float)imag(approx) << " ";
-            if( k % numSamplesPerBox == 0 )
+            if( (k+1) % numSamplesPerBox == 0 )
             {
                 realFile << "\n";
                 imagFile << "\n";
@@ -552,20 +558,20 @@ rfio::WriteVtkXmlPImageData
 
 // Write out the real and imag components of the truth, the approximation,
 // and the error.
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 inline void
 rfio::WriteVtkXmlPImageData
 ( MPI_Comm comm,
-  const std::size_t N,
+  const size_t N,
   const Box<R,d>& targetBox,
   const rfio::PotentialField<R,d,q>& u,
-  const std::string& basename,
-  const std::vector< Source<R,d> >& globalSources )
+  const string& basename,
+  const vector<Source<R,d>>& globalSources )
 {
     using namespace std;
 
-    const std::size_t numSamplesPerBoxDim = 4;
-    const std::size_t numSamplesPerBox = Pow<numSamplesPerBoxDim,d>::val;
+    const size_t numSamplesPerBoxDim = 4;
+    const size_t numSamplesPerBox = Pow<numSamplesPerBoxDim,d>::val;
 
     const Amplitude<R,d>& amplitude = u.GetAmplitude();
     const Phase<R,d>& phase = u.GetPhase();
@@ -577,17 +583,17 @@ rfio::WriteVtkXmlPImageData
     if( d <= 3 )
     {
         const Box<R,d>& myTargetBox = u.GetMyTargetBox();
-        const Array<R,d>& wA = u.GetSubboxWidths();
-        const Array<size_t,d>& log2SubboxesPerDim = u.GetLog2SubboxesPerDim();
+        const array<R,d>& wA = u.GetSubboxWidths();
+        const array<size_t,d>& log2SubboxesPerDim = u.GetLog2SubboxesPerDim();
         const size_t numSubboxes = u.GetNumSubboxes();
         const size_t numSamples = numSamplesPerBox*numSubboxes;
 
         // Gather the target box coordinates to the root to write the 
         // Piece Extent data.
-        Array<size_t,d> myCoordsArray = u.GetMyTargetBoxCoords();
+        array<size_t,d> myCoordsarray = u.GetMyTargetBoxCoords();
         vector<int> myCoords(d);
         for( size_t j=0; j<d; ++j )
-            myCoords[j] = myCoordsArray[j]; // convert size_t -> int
+            myCoords[j] = myCoordsarray[j]; // convert size_t -> int
         vector<int> coords(1);
         if( rank == 0 )
             coords.resize(d*numProcesses);
@@ -763,7 +769,7 @@ rfio::WriteVtkXmlPImageData
         realErrorFile << os.str();
         imagErrorFile << os.str();
         os.clear(); os.str("");
-        Array<size_t,d> numSamplesUpToDim;
+        array<size_t,d> numSamplesUpToDim;
         for( size_t j=0; j<d; ++j )
         {
             numSamplesUpToDim[j] = 1;
@@ -773,17 +779,17 @@ rfio::WriteVtkXmlPImageData
                     numSamplesPerBoxDim << log2SubboxesPerDim[i];
             }
         }
-        const std::size_t numSources = globalSources.size();
+        const size_t numSources = globalSources.size();
         for( size_t k=0; k<numSamples; ++k )
         {
             // Extract our indices in each dimension
-            Array<size_t,d> coords;
+            array<size_t,d> coords;
             for( size_t j=0; j<d; ++j )
                 coords[j] = (k/numSamplesUpToDim[j]) %
                             (numSamplesPerBoxDim<<log2SubboxesPerDim[j]);
 
             // Compute the location of our sample
-            Array<R,d> x;
+            array<R,d> x;
             for( size_t j=0; j<d; ++j )
                 x[j] = myTargetBox.offsets[j] +
                        coords[j]*wA[j]/numSamplesPerBoxDim;
@@ -793,7 +799,7 @@ rfio::WriteVtkXmlPImageData
 
             // Compute the 'exact' answer
             complex<R> truth(0,0);
-            for( std::size_t m=0; m<numSources; ++m )
+            for( size_t m=0; m<numSources; ++m )
             {
                 complex<R> beta = 
                     ImagExp<R>( phase(x,globalSources[m].p) );
@@ -808,7 +814,7 @@ rfio::WriteVtkXmlPImageData
             imagApproxFile << (float)imag(approx) << " ";
             realErrorFile << (float)abs(real(error)) << " ";
             imagErrorFile << (float)abs(imag(error)) << " ";
-            if( k % numSamplesPerBox == 0 )
+            if( (k+1) % numSamplesPerBox == 0 )
             {
                 realTruthFile << "\n";
                 imagTruthFile << "\n";

@@ -9,12 +9,12 @@
 #ifndef BFIO_INTERPOLATIVE_NUFT_FORM_EQUIVALENT_SOURCES_HPP
 #define BFIO_INTERPOLATIVE_NUFT_FORM_EQUIVALENT_SOURCES_HPP
 
+#include <array>
 #include <cstddef>
 #include <vector>
 
 #include "bfio/constants.hpp"
 
-#include "bfio/structures/array.hpp"
 #include "bfio/structures/box.hpp"
 #include "bfio/structures/constrained_htree_walker.hpp"
 #include "bfio/structures/plan.hpp"
@@ -27,84 +27,87 @@
 #include "bfio/interpolative_nuft/context.hpp"
 
 namespace bfio {
+
+using std::array;
+using std::memset;
+using std::size_t;
+using std::vector;
+
 namespace interpolative_nuft {
 
 // 1d specialization
-template<typename R,std::size_t q>
+template<typename R,size_t q>
 void
 FormEquivalentSources
 ( const interpolative_nuft::Context<R,1,q>& context,
   const Plan<1>& plan,
   const Box<R,1>& mySourceBox,
   const Box<R,1>& myTargetBox,
-  const std::size_t log2LocalSourceBoxes,
-  const std::size_t log2LocalTargetBoxes,
-  const Array<std::size_t,1>& log2LocalSourceBoxesPerDim,
-  const Array<std::size_t,1>& log2LocalTargetBoxesPerDim,
+  const size_t log2LocalSourceBoxes,
+  const size_t log2LocalTargetBoxes,
+  const array<size_t,1>& log2LocalSourceBoxesPerDim,
+  const array<size_t,1>& log2LocalTargetBoxesPerDim,
         WeightGridList<R,1,q>& weightGridList )
 {
-    const std::size_t d = 1;
-    const std::vector<R>& chebyshevNodes = context.GetChebyshevNodes();
-    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
+    const size_t d = 1;
+    const vector<R>& chebyshevNodes = context.GetChebyshevNodes();
+    const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
 
     const Direction direction = context.GetDirection();
     const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
 
     // Store the widths of the source and target boxes
-    Array<R,d> wA;
+    array<R,d> wA;
     wA[0] = myTargetBox.widths[0] / (1<<log2LocalTargetBoxesPerDim[0]);
-    Array<R,d> wB;
+    array<R,d> wB;
     wB[0] = mySourceBox.widths[0] / (1<<log2LocalSourceBoxesPerDim[0]);
 
     // Iterate over the box pairs, applying M^-1 using the tensor product 
     // structure
-    std::vector<R> realTempWeights( q );
-    std::vector<R> imagTempWeights( q );
-    std::vector<R> scalingArguments( q );
-    std::vector<R> realPrescalings( q );
-    std::vector<R> imagPrescalings( q );
-    std::vector<R> realPostscalings( q );
-    std::vector<R> imagPostscalings( q );
+    vector<R> realTempWeights( q ), imagTempWeights( q );
+    vector<R> scalingArguments( q );
+    vector<R> realPrescalings( q ), imagPrescalings( q ),
+              realPostscalings( q ), imagPostscalings( q );
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
-    for( std::size_t targetIndex=0;
+    for( size_t targetIndex=0;
          targetIndex<(1u<<log2LocalTargetBoxes);
          ++targetIndex, AWalker.Walk() )
     {
-        const Array<std::size_t,d> A = AWalker.State();
+        const array<size_t,d> A = AWalker.State();
 
         // Translate the local integer coordinates into the target center
-        Array<R,d> x0;
+        array<R,d> x0;
         x0[0] = myTargetBox.offsets[0] + (A[0]+0.5)*wB[0];
 
         // Store the chebyshev grid on A
-        std::vector< Array<R,d> > xPoints( q );
-        for( std::size_t t=0; t<q; ++t )
+        vector<array<R,d>> xPoints( q );
+        for( size_t t=0; t<q; ++t )
             xPoints[t][0] = x0[0] + chebyshevGrid[t][0]*wA[0];
 
         // Compute the postscalings for all of the pairs interacting with A
-        for( std::size_t t=0; t<q; ++t )
+        for( size_t t=0; t<q; ++t )
             scalingArguments[t] = -SignedTwoPi*x0[0]*chebyshevNodes[t]*wB[0];
         SinCosBatch( scalingArguments, imagPostscalings, realPostscalings );
 
         ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
-        for( std::size_t sourceIndex=0;
+        for( size_t sourceIndex=0;
              sourceIndex<(1u<<log2LocalSourceBoxes);
              ++sourceIndex, BWalker.Walk() )
         {
-            const Array<std::size_t,d> B = BWalker.State();
-            const std::size_t interactionIndex = 
+            const array<size_t,d> B = BWalker.State();
+            const size_t interactionIndex = 
                 sourceIndex + (targetIndex<<log2LocalSourceBoxes);
             WeightGrid<R,d,q>& weightGrid = weightGridList[interactionIndex];
 
             // Translate the local integer coordinates into the source center
-            Array<R,d> p0;
+            array<R,d> p0;
             p0[0] = mySourceBox.offsets[0] + (B[0]+0.5)*wB[0];
 
             //----------------------------------------------------------------//
             // Solve against the first dimension                              //
             //----------------------------------------------------------------//
             // Prescale
-            for( std::size_t t=0; t<q; ++t )
+            for( size_t t=0; t<q; ++t )
                 scalingArguments[t] = 
                     -SignedTwoPi*(x0[0]+chebyshevNodes[t]*wA[0])*p0[0];
             SinCosBatch( scalingArguments, imagPrescalings, realPrescalings );
@@ -113,7 +116,7 @@ FormEquivalentSources
                 R* imagBuffer = weightGrid.ImagBuffer();
                 const R* realScalingBuffer = &realPrescalings[0];
                 const R* imagScalingBuffer = &imagPrescalings[0];
-                for( std::size_t t=0; t<q; ++t )
+                for( size_t t=0; t<q; ++t )
                 {
                     const R realWeight = realBuffer[t];
                     const R imagWeight = imagBuffer[t];
@@ -127,9 +130,9 @@ FormEquivalentSources
             }
             // Transform with the inverse
             {
-                const std::vector<R>& realInverseMap = 
+                const vector<R>& realInverseMap = 
                     context.GetRealInverseMap( 0 );
-                const std::vector<R>& imagInverseMap = 
+                const vector<R>& imagInverseMap = 
                     context.GetImagInverseMap( 0 );
                 // Form the real part
                 Gemv
@@ -162,7 +165,7 @@ FormEquivalentSources
                 const R* imagReadBuffer = &imagTempWeights[0];
                 const R* realScalingBuffer = &realPostscalings[0];
                 const R* imagScalingBuffer = &imagPostscalings[0];
-                for( std::size_t t=0; t<q; ++t )
+                for( size_t t=0; t<q; ++t )
                 {
                     const R realWeight = realReadBuffer[t];
                     const R imagWeight = imagReadBuffer[t];
@@ -179,96 +182,93 @@ FormEquivalentSources
 }
 
 // 2d specialization
-template<typename R,std::size_t q>
+template<typename R,size_t q>
 void
 FormEquivalentSources
 ( const interpolative_nuft::Context<R,2,q>& context,
   const Plan<2>& plan,
   const Box<R,2>& mySourceBox,
   const Box<R,2>& myTargetBox,
-  const std::size_t log2LocalSourceBoxes,
-  const std::size_t log2LocalTargetBoxes,
-  const Array<std::size_t,2>& log2LocalSourceBoxesPerDim,
-  const Array<std::size_t,2>& log2LocalTargetBoxesPerDim,
+  const size_t log2LocalSourceBoxes,
+  const size_t log2LocalTargetBoxes,
+  const array<size_t,2>& log2LocalSourceBoxesPerDim,
+  const array<size_t,2>& log2LocalTargetBoxesPerDim,
         WeightGridList<R,2,q>& weightGridList )
 {
-    const std::size_t d = 2;
-    const std::size_t q_to_d = Pow<q,d>::val;
-    const std::vector<R>& chebyshevNodes = context.GetChebyshevNodes();
-    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
+    const size_t d = 2;
+    const size_t q_to_d = Pow<q,d>::val;
+    const vector<R>& chebyshevNodes = context.GetChebyshevNodes();
+    const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
 
     const Direction direction = context.GetDirection();
     const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
 
     // Store the widths of the source and target boxes
-    Array<R,d> wA;
-    for( std::size_t j=0; j<d; ++j )
+    array<R,d> wA;
+    for( size_t j=0; j<d; ++j )
         wA[j] = myTargetBox.widths[j] / (1<<log2LocalTargetBoxesPerDim[j]);
-    Array<R,d> wB;
-    for( std::size_t j=0; j<d; ++j )
+    array<R,d> wB;
+    for( size_t j=0; j<d; ++j )
         wB[j] = mySourceBox.widths[j] / (1<<log2LocalSourceBoxesPerDim[j]);
 
     // Iterate over the box pairs, applying M^-1 using the tensor product 
     // structure
-    std::vector<R> realTempWeights( q_to_d );
-    std::vector<R> imagTempWeights( q_to_d );
-    std::vector<R> scalingArguments( q );
-    std::vector<R> realPrescalings( q );
-    std::vector<R> imagPrescalings( q );
-    Array<std::vector<R>,d> realPostscalings;
-    Array<std::vector<R>,d> imagPostscalings;
-    for( std::size_t j=0; j<d; ++j )
+    vector<R> realTempWeights( q_to_d ), imagTempWeights( q_to_d );
+    vector<R> scalingArguments( q );
+    vector<R> realPrescalings( q ), imagPrescalings( q );
+    array<vector<R>,d> realPostscalings, imagPostscalings;
+    for( size_t j=0; j<d; ++j )
     {
         realPostscalings[j].resize(q);
         imagPostscalings[j].resize(q);
     }
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
-    for( std::size_t targetIndex=0;
+    for( size_t targetIndex=0;
          targetIndex<(1u<<log2LocalTargetBoxes);
          ++targetIndex, AWalker.Walk() )
     {
-        const Array<std::size_t,d> A = AWalker.State();
+        const array<size_t,d> A = AWalker.State();
 
         // Translate the local integer coordinates into the target center
-        Array<R,d> x0;
-        for( std::size_t j=0; j<d; ++j )
+        array<R,d> x0;
+        for( size_t j=0; j<d; ++j )
             x0[j] = myTargetBox.offsets[j] + (A[j]+0.5)*wA[j];
 
         // Store the chebyshev grid on A
-        std::vector< Array<R,d> > xPoints( q_to_d );
-        for( std::size_t t=0; t<q_to_d; ++t )
-            for( std::size_t j=0; j<d; ++j )
+        vector<array<R,d>> xPoints( q_to_d );
+        for( size_t t=0; t<q_to_d; ++t )
+            for( size_t j=0; j<d; ++j )
                 xPoints[t][j] = x0[j] + chebyshevGrid[t][j]*wA[j];
 
         // Store the postscalings for all interactions with A
-        for( std::size_t j=0; j<d; ++j )
+        for( size_t j=0; j<d; ++j )
         {
-            for( std::size_t t=0; t<q; ++t )
+            for( size_t t=0; t<q; ++t )
                 scalingArguments[t] = -SignedTwoPi*x0[j]*chebyshevNodes[t]*wB[j];
             SinCosBatch
             ( scalingArguments, imagPostscalings[j], realPostscalings[j] );
         }
 
         ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
-        for( std::size_t sourceIndex=0;
+        for( size_t sourceIndex=0;
              sourceIndex<(1u<<log2LocalSourceBoxes);
              ++sourceIndex, BWalker.Walk() )
         {
-            const Array<std::size_t,d> B = BWalker.State();
-            const std::size_t interactionIndex = 
+            const array<size_t,d> B = BWalker.State();
+            const size_t interactionIndex = 
                 sourceIndex + (targetIndex<<log2LocalSourceBoxes);
             WeightGrid<R,d,q>& weightGrid = weightGridList[interactionIndex];
 
             // Translate the local integer coordinates into the source center
-            Array<R,d> p0;
-            for( std::size_t j=0; j<d; ++j )
+            array<R,d> p0;
+            for( size_t j=0; j<d; ++j )
                 p0[j] = mySourceBox.offsets[j] + (B[j]+0.5)*wB[j];
 
             //----------------------------------------------------------------//
             // Solve against the first dimension                              //
             //----------------------------------------------------------------//
             // Prescale
-            for( std::size_t t=0; t<q; ++t )
+            for( size_t t=0; t<q; ++t )
                 scalingArguments[t] = 
                     -SignedTwoPi*(x0[0]+chebyshevNodes[t]*wA[0])*p0[0];
             SinCosBatch( scalingArguments, imagPrescalings, realPrescalings );
@@ -277,9 +277,9 @@ FormEquivalentSources
                 R* imagBuffer = weightGrid.ImagBuffer();
                 const R* realScalingBuffer = &realPrescalings[0];
                 const R* imagScalingBuffer = &imagPrescalings[0];
-                for( std::size_t t=0; t<q; ++t )
+                for( size_t t=0; t<q; ++t )
                 {
-                    for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                    for( size_t tPrime=0; tPrime<q; ++tPrime )
                     {
                         const R realWeight = realBuffer[t*q+tPrime];
                         const R imagWeight = imagBuffer[t*q+tPrime];
@@ -294,9 +294,9 @@ FormEquivalentSources
             }
             // Transform with the inverse
             {
-                const std::vector<R>& realInverseMap = 
+                const vector<R>& realInverseMap = 
                     context.GetRealInverseMap( 0 );
-                const std::vector<R>& imagInverseMap = 
+                const vector<R>& imagInverseMap = 
                     context.GetImagInverseMap( 0 );
                 // Form the real part
                 Gemm
@@ -327,9 +327,9 @@ FormEquivalentSources
                 R* imagBuffer = &imagTempWeights[0];
                 const R* realScalingBuffer = &realPostscalings[0][0];
                 const R* imagScalingBuffer = &imagPostscalings[0][0];
-                for( std::size_t t=0; t<q; ++t )
+                for( size_t t=0; t<q; ++t )
                 {
-                    for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                    for( size_t tPrime=0; tPrime<q; ++tPrime )
                     {
                         const R realWeight = realBuffer[t*q+tPrime];
                         const R imagWeight = imagBuffer[t*q+tPrime];
@@ -347,7 +347,7 @@ FormEquivalentSources
             // Solve against the second dimension                             //
             //----------------------------------------------------------------//
             // Prescale
-            for( std::size_t t=0; t<q; ++t )
+            for( size_t t=0; t<q; ++t )
                 scalingArguments[t] = 
                     -SignedTwoPi*(x0[1]+chebyshevNodes[t]*wA[1])*p0[1];
             SinCosBatch( scalingArguments, imagPrescalings, realPrescalings );
@@ -356,9 +356,9 @@ FormEquivalentSources
                 R* imagBuffer = &imagTempWeights[0];
                 const R* realScalingBuffer = &realPrescalings[0];
                 const R* imagScalingBuffer = &imagPrescalings[0];
-                for( std::size_t w=0; w<q; ++w )
+                for( size_t w=0; w<q; ++w )
                 {
-                    for( std::size_t t=0; t<q; ++t )
+                    for( size_t t=0; t<q; ++t )
                     {
                         const R realWeight = realBuffer[w+t*q];
                         const R imagWeight = imagBuffer[w+t*q];
@@ -373,9 +373,9 @@ FormEquivalentSources
             }
             // Transform with the inverse
             {
-                const std::vector<R>& realInverseMap = 
+                const vector<R>& realInverseMap = 
                     context.GetRealInverseMap( 1 );
-                const std::vector<R>& imagInverseMap = 
+                const vector<R>& imagInverseMap = 
                     context.GetImagInverseMap( 1 );
                 // Form the real part
                 Gemm
@@ -406,9 +406,9 @@ FormEquivalentSources
                 R* imagBuffer = weightGrid.ImagBuffer();
                 const R* realScalingBuffer = &realPostscalings[1][0];
                 const R* imagScalingBuffer = &imagPostscalings[1][0];
-                for( std::size_t w=0; w<q; ++w )
+                for( size_t w=0; w<q; ++w )
                 {
-                    for( std::size_t t=0; t<q; ++t )
+                    for( size_t t=0; t<q; ++t )
                     {
                         const R realWeight = realBuffer[w+t*q];
                         const R imagWeight = imagBuffer[w+t*q];
@@ -426,97 +426,93 @@ FormEquivalentSources
 }
 
 // Fallback for 3d and above
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 void
 FormEquivalentSources
 ( const interpolative_nuft::Context<R,d,q>& context,
   const Plan<d>& plan,
   const Box<R,d>& mySourceBox,
   const Box<R,d>& myTargetBox,
-  const std::size_t log2LocalSourceBoxes,
-  const std::size_t log2LocalTargetBoxes,
-  const Array<std::size_t,d>& log2LocalSourceBoxesPerDim,
-  const Array<std::size_t,d>& log2LocalTargetBoxesPerDim,
+  const size_t log2LocalSourceBoxes,
+  const size_t log2LocalTargetBoxes,
+  const array<size_t,d>& log2LocalSourceBoxesPerDim,
+  const array<size_t,d>& log2LocalTargetBoxesPerDim,
         WeightGridList<R,d,q>& weightGridList )
 {
-    const std::size_t q_to_d = Pow<q,d>::val;
-    const std::vector<R>& chebyshevNodes = context.GetChebyshevNodes();
-    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
+    const size_t q_to_d = Pow<q,d>::val;
+    const vector<R>& chebyshevNodes = context.GetChebyshevNodes();
+    const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
 
     const Direction direction = context.GetDirection();
     const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
 
     // Store the widths of the source and target boxes
-    Array<R,d> wA;
-    for( std::size_t j=0; j<d; ++j )
+    array<R,d> wA;
+    for( size_t j=0; j<d; ++j )
         wA[j] = myTargetBox.widths[j] / (1<<log2LocalTargetBoxesPerDim[j]);;
-    Array<R,d> wB;
-    for( std::size_t j=0; j<d; ++j )
+    array<R,d> wB;
+    for( size_t j=0; j<d; ++j )
         wB[j] = mySourceBox.widths[j] / (1<<log2LocalSourceBoxesPerDim[j]);
 
     // Iterate over the box pairs, applying M^-1 using the tensor product 
     // structure
-    std::vector<R> scalingArguments( q );
-    std::vector<R> realPrescalings( q );
-    std::vector<R> imagPrescalings( q );
-    Array<std::vector<R>,d> realPostscalings;
-    Array<std::vector<R>,d> imagPostscalings;
-    for( std::size_t j=0; j<d; ++j )
+    vector<R> scalingArguments( q );
+    vector<R> realPrescalings( q ), imagPrescalings( q );
+    array<vector<R>,d> realPostscalings, imagPostscalings;
+    for( size_t j=0; j<d; ++j )
     {
         realPostscalings[j].resize(q);
         imagPostscalings[j].resize(q);
     }
-    std::vector<R> realTempWeights0( q_to_d );
-    std::vector<R> imagTempWeights0( q_to_d );
-    std::vector<R> realTempWeights1( q_to_d );
-    std::vector<R> imagTempWeights1( q_to_d );
+    vector<R> realTempWeights0( q_to_d ), imagTempWeights0( q_to_d ),
+              realTempWeights1( q_to_d ), imagTempWeights1( q_to_d );
     ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
-    for( std::size_t targetIndex=0;
+    for( size_t targetIndex=0;
          targetIndex<(1u<<log2LocalTargetBoxes);
          ++targetIndex, AWalker.Walk() )
     {
-        const Array<std::size_t,d> A = AWalker.State();
+        const array<size_t,d> A = AWalker.State();
 
         // Translate the local integer coordinates into the target center
-        Array<R,d> x0;
-        for( std::size_t j=0; j<d; ++j )
+        array<R,d> x0;
+        for( size_t j=0; j<d; ++j )
             x0[j] = myTargetBox.offsets[j] + (A[j]+0.5)*wA[j];
 
         // Store the chebyshev grid on A
-        std::vector< Array<R,d> > xPoints( q_to_d );
-        for( std::size_t t=0; t<q_to_d; ++t )
-            for( std::size_t j=0; j<d; ++j )
+        vector<array<R,d>> xPoints( q_to_d );
+        for( size_t t=0; t<q_to_d; ++t )
+            for( size_t j=0; j<d; ++j )
                 xPoints[t][j] = x0[j] + chebyshevGrid[t][j]*wA[j];
 
         // Store the postscalings for all interactions with A
-        for( std::size_t j=0; j<d; ++j )
+        for( size_t j=0; j<d; ++j )
         {
-            for( std::size_t t=0; t<q; ++t )
+            for( size_t t=0; t<q; ++t )
                 scalingArguments[t] = -SignedTwoPi*x0[j]*chebyshevNodes[t]*wB[j];
             SinCosBatch
             ( scalingArguments, imagPostscalings[j], realPostscalings[j] );
         }
 
         ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
-        for( std::size_t sourceIndex=0;
+        for( size_t sourceIndex=0;
              sourceIndex<(1u<<log2LocalSourceBoxes);
              ++sourceIndex, BWalker.Walk() )
         {
-            const Array<std::size_t,d> B = BWalker.State();
-            const std::size_t interactionIndex = 
+            const array<size_t,d> B = BWalker.State();
+            const size_t interactionIndex = 
                 sourceIndex + (targetIndex<<log2LocalSourceBoxes);
             WeightGrid<R,d,q>& weightGrid = weightGridList[interactionIndex];
 
             // Translate the local integer coordinates into the source center
-            Array<R,d> p0;
-            for( std::size_t j=0; j<d; ++j )
+            array<R,d> p0;
+            for( size_t j=0; j<d; ++j )
                 p0[j] = mySourceBox.offsets[j] + (B[j]+0.5)*wB[j];
 
             //----------------------------------------------------------------//
             // Solve against the first dimension                              //
             //----------------------------------------------------------------//
             // Prescale
-            for( std::size_t t=0; t<q; ++t )
+            for( size_t t=0; t<q; ++t )
                 scalingArguments[t] = 
                     -SignedTwoPi*(x0[0]+chebyshevNodes[t]*wA[0])*p0[0];
             SinCosBatch( scalingArguments, imagPrescalings, realPrescalings );
@@ -525,9 +521,9 @@ FormEquivalentSources
                 R* imagBuffer = weightGrid.ImagBuffer();
                 const R* realScalingBuffer = &realPrescalings[0];
                 const R* imagScalingBuffer = &imagPrescalings[0];
-                for( std::size_t t=0; t<Pow<q,d-1>::val; ++t )
+                for( size_t t=0; t<Pow<q,d-1>::val; ++t )
                 {
-                    for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                    for( size_t tPrime=0; tPrime<q; ++tPrime )
                     {
                         const R realWeight = realBuffer[t*q+tPrime];
                         const R imagWeight = imagBuffer[t*q+tPrime];
@@ -542,9 +538,9 @@ FormEquivalentSources
             }
             // Transform with the inverse
             {
-                const std::vector<R>& realInverseMap = 
+                const vector<R>& realInverseMap = 
                     context.GetRealInverseMap( 0 );
-                const std::vector<R>& imagInverseMap = 
+                const vector<R>& imagInverseMap = 
                     context.GetImagInverseMap( 0 );
                 // Form the real part
                 Gemm
@@ -575,9 +571,9 @@ FormEquivalentSources
                 R* imagBuffer = &imagTempWeights0[0];
                 const R* realScalingBuffer = &realPostscalings[0][0];
                 const R* imagScalingBuffer = &imagPostscalings[0][0];
-                for( std::size_t t=0; t<Pow<q,d-1>::val; ++t )
+                for( size_t t=0; t<Pow<q,d-1>::val; ++t )
                 {
-                    for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                    for( size_t tPrime=0; tPrime<q; ++tPrime )
                     {
                         const R realWeight = realBuffer[t*q+tPrime];
                         const R imagWeight = imagBuffer[t*q+tPrime];
@@ -595,20 +591,20 @@ FormEquivalentSources
             // Solve against the second dimension                             //
             //----------------------------------------------------------------//
             // Prescale
-            for( std::size_t t=0; t<q; ++t )
+            for( size_t t=0; t<q; ++t )
                 scalingArguments[t] = 
                     -SignedTwoPi*(x0[1]+chebyshevNodes[t]*wA[1])*p0[1];
             SinCosBatch( scalingArguments, imagPrescalings, realPrescalings );
-            for( std::size_t p=0; p<Pow<q,d-2>::val; ++p )
+            for( size_t p=0; p<Pow<q,d-2>::val; ++p )
             {
-                const std::size_t offset = p*q*q;
+                const size_t offset = p*q*q;
                 R* offsetRealBuffer = &realTempWeights0[offset];
                 R* offsetImagBuffer = &imagTempWeights0[offset];
                 const R* realScalingBuffer = &realPrescalings[0];
                 const R* imagScalingBuffer = &imagPrescalings[0];
-                for( std::size_t w=0; w<q; ++w )
+                for( size_t w=0; w<q; ++w )
                 {
-                    for( std::size_t t=0; t<q; ++t )
+                    for( size_t t=0; t<q; ++t )
                     {
                         const R realWeight = offsetRealBuffer[w+t*q];
                         const R imagWeight = offsetImagBuffer[w+t*q];
@@ -623,11 +619,11 @@ FormEquivalentSources
             }
             // Transform with the inverse
             {
-                const std::vector<R>& realInverseMap = 
+                const vector<R>& realInverseMap = 
                     context.GetRealInverseMap( 1 );
-                const std::vector<R>& imagInverseMap = 
+                const vector<R>& imagInverseMap = 
                     context.GetImagInverseMap( 1 );
-                for( std::size_t w=0; w<Pow<q,d-2>::val; ++w )
+                for( size_t w=0; w<Pow<q,d-2>::val; ++w )
                 {
                     // Form the real part
                     Gemm
@@ -655,16 +651,16 @@ FormEquivalentSources
                 }
             }
             // Postscale
-            for( std::size_t p=0; p<Pow<q,d-2>::val; ++p )
+            for( size_t p=0; p<Pow<q,d-2>::val; ++p )
             {
-                const std::size_t offset = p*q*q;
+                const size_t offset = p*q*q;
                 R* offsetRealBuffer = &realTempWeights1[offset];
                 R* offsetImagBuffer = &imagTempWeights1[offset];
                 const R* realScalingBuffer = &realPostscalings[1][0];
                 const R* imagScalingBuffer = &imagPostscalings[1][0];
-                for( std::size_t w=0; w<q; ++w )
+                for( size_t w=0; w<q; ++w )
                 {
-                    for( std::size_t t=0; t<q; ++t )
+                    for( size_t t=0; t<q; ++t )
                     {
                         const R realWeight = offsetRealBuffer[w+t*q];
                         const R imagWeight = offsetImagBuffer[w+t*q];
@@ -681,10 +677,10 @@ FormEquivalentSources
             //----------------------------------------------------------------//
             // Solve against the remaining dimensions                         //
             //----------------------------------------------------------------//
-            std::size_t q_to_j = q*q;
-            for( std::size_t j=2; j<d; ++j )
+            size_t q_to_j = q*q;
+            for( size_t j=2; j<d; ++j )
             {
-                const std::size_t stride = q_to_j;
+                const size_t stride = q_to_j;
 
                 R* realWriteBuffer = 
                     ( j==d-1 ? weightGrid.RealBuffer()
@@ -699,25 +695,25 @@ FormEquivalentSources
                 R* imagReadBuffer = 
                     ( j&1 ? &imagTempWeights0[0] : &imagTempWeights1[0] );
 
-                const std::vector<R>& realInverseMap = 
+                const vector<R>& realInverseMap = 
                     context.GetRealInverseMap( j );
-                const std::vector<R>& imagInverseMap = 
+                const vector<R>& imagInverseMap = 
                     context.GetImagInverseMap( j );
                 const R* realInverseBuffer = &realInverseMap[0];
                 const R* imagInverseBuffer = &imagInverseMap[0];
 
-                std::memset( realWriteBuffer, 0, q_to_d*sizeof(R) );
-                std::memset( imagWriteBuffer, 0, q_to_d*sizeof(R) );
+                memset( realWriteBuffer, 0, q_to_d*sizeof(R) );
+                memset( imagWriteBuffer, 0, q_to_d*sizeof(R) );
 
                 // Prescale, transform, and postscale
-                for( std::size_t t=0; t<q; ++t )
+                for( size_t t=0; t<q; ++t )
                     scalingArguments[t] = 
                         -SignedTwoPi*(x0[j]+chebyshevNodes[t]*wA[j])*p0[j];
                 SinCosBatch
                 ( scalingArguments, imagPrescalings, realPrescalings );
-                for( std::size_t p=0; p<q_to_d/(q_to_j*q); ++p )
+                for( size_t p=0; p<q_to_d/(q_to_j*q); ++p )
                 {
-                    const std::size_t offset = p*(q_to_j*q);
+                    const size_t offset = p*(q_to_j*q);
                     R* offsetRealReadBuffer = &realReadBuffer[offset];
                     R* offsetImagReadBuffer = &imagReadBuffer[offset];
                     R* offsetRealWriteBuffer = &realWriteBuffer[offset];
@@ -726,10 +722,10 @@ FormEquivalentSources
                     const R* imagPrescalingBuffer = &imagPrescalings[0];
                     const R* realPostscalingBuffer = &realPostscalings[j][0];
                     const R* imagPostscalingBuffer = &imagPostscalings[j][0];
-                    for( std::size_t w=0; w<q_to_j; ++w )
+                    for( size_t w=0; w<q_to_j; ++w )
                     {
                         // Prescale
-                        for( std::size_t t=0; t<q; ++t )
+                        for( size_t t=0; t<q; ++t )
                         {
                             const R realWeight = 
                                 offsetRealReadBuffer[w+t*stride];
@@ -743,9 +739,9 @@ FormEquivalentSources
                                 imagWeight*realScaling + realWeight*imagScaling;
                         }
                         // Transform
-                        for( std::size_t t=0; t<q; ++t )
+                        for( size_t t=0; t<q; ++t )
                         {
-                            for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                            for( size_t tPrime=0; tPrime<q; ++tPrime )
                             {
                                 offsetRealWriteBuffer[w+t*stride] +=
                                     realInverseBuffer[t+tPrime*q] * 
@@ -763,7 +759,7 @@ FormEquivalentSources
                             }
                         }
                         // Postscale
-                        for( std::size_t t=0; t<q; ++t )
+                        for( size_t t=0; t<q; ++t )
                         {
                             const R realWeight = 
                                 offsetRealWriteBuffer[w+t*stride];

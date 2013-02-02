@@ -6,22 +6,22 @@
    <http://www.gnu.org/licenses/>.
 */
 #include "bfio.hpp"
+using namespace std;
 
 namespace {
 void 
 Usage()
 {
-    std::cout << "HTreeWalker <N>\n"
-              << "  N: the number of indices of the HTree to iterate over\n" 
-              << std::endl;
+    cout << "HTreeWalker <N>\n"
+         << "  N: the number of indices of the HTree to iterate over\n" 
+         << endl;
 }
 } // anonymous namespace
 
-static const std::size_t d = 2;
+static const size_t d = 2;
 
 int
-main
-( int argc, char* argv[] )
+main( int argc, char* argv[] )
 {
     int rank;
     MPI_Init( &argc, &argv );
@@ -34,33 +34,32 @@ main
         MPI_Finalize();
         return 0;
     }
-    const std::size_t N = atoi(argv[1]);
+    const size_t N = atoi(argv[1]);
 
     try
     {
         if( rank == 0 )
         {
             bfio::HTreeWalker<d> walker;
-            for( std::size_t i=0; i<N; ++i, walker.Walk() )
+            for( size_t i=0; i<N; ++i, walker.Walk() )
             {
-                const bfio::Array<std::size_t,d> A = walker.State();
+                const array<size_t,d> A = walker.State();
                 const size_t k = bfio::FlattenHTreeIndex( A );
-                std::cout << i << ": ";
-                for( std::size_t j=0; j<d; ++j )
-                    std::cout << A[j] << " ";
-                std::cout << "; flattened=" << k << std::endl;
+                cout << i << ": ";
+                for( size_t j=0; j<d; ++j )
+                    cout << A[j] << " ";
+                cout << "; flattened=" << k << endl;
             }
         }
     }
-    catch( const std::exception& e )
+    catch( const exception& e )
     {
-        std::ostringstream msg;
+        ostringstream msg;
         msg << "Caught exception on process " << rank << ":\n"
             << "   " << e.what();
-        std::cout << msg.str() << std::endl;
+        cout << msg.str() << endl;
     }
 
     MPI_Finalize();
     return 0;
 }
-

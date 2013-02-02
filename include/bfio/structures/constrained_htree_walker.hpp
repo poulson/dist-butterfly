@@ -9,55 +9,58 @@
 #ifndef BFIO_STRUCTURES_CONSTRAINED_HTREE_WALKER_HPP
 #define BFIO_STRUCTURES_CONSTRAINED_HTREE_WALKER_HPP
 
+#include <array>
 #include <cstddef>
 #include <stdexcept>
-#include "bfio/structures/array.hpp"
+
 #include "bfio/tools/twiddle.hpp"
 
 namespace bfio {
 
+using std::array;
+using std::size_t;
+
 // Constrained HTree Walker
-template<std::size_t d>
+template<size_t d>
 class ConstrainedHTreeWalker
 {
     bool _overflowed;
-    std::size_t _firstOpenDim;
-    std::size_t _nextZeroDim;
-    std::size_t _nextZeroLevel;
-    Array<std::size_t,d> _state;
-    Array<std::size_t,d> _log2BoxesPerDim;
+    size_t _firstOpenDim;
+    size_t _nextZeroDim;
+    size_t _nextZeroLevel;
+    array<size_t,d> _state;
+    array<size_t,d> _log2BoxesPerDim;
 public:
-    ConstrainedHTreeWalker
-    ( const Array<std::size_t,d>& log2BoxesPerDim );
-
+    ConstrainedHTreeWalker( const array<size_t,d>& log2BoxesPerDim );
     ~ConstrainedHTreeWalker();
 
-    Array<std::size_t,d> State() const;
+    array<size_t,d> State() const;
 
     void Walk();
 };
 
 // Implementations
 
-template<std::size_t d>
+template<size_t d>
 ConstrainedHTreeWalker<d>::ConstrainedHTreeWalker
-( const Array<std::size_t,d>& log2BoxesPerDim ) 
-: _overflowed(false), _nextZeroLevel(0), _state(0),
+( const array<size_t,d>& log2BoxesPerDim ) 
+: _overflowed(false), _nextZeroLevel(0),
   _log2BoxesPerDim(log2BoxesPerDim) 
 {
+    _state.fill(0);
     for( _firstOpenDim=0; _firstOpenDim<d; ++_firstOpenDim )
         if( log2BoxesPerDim[_firstOpenDim] != 0 )
             break;
     _nextZeroDim = _firstOpenDim;
 }
 
-template<std::size_t d>
+template<size_t d>
 inline
 ConstrainedHTreeWalker<d>::~ConstrainedHTreeWalker() 
 { }
 
-template<std::size_t d>
-inline Array<std::size_t,d> 
+template<size_t d>
+inline array<size_t,d> 
 ConstrainedHTreeWalker<d>::State() const
 { 
 #ifndef RELEASE
@@ -67,7 +70,7 @@ ConstrainedHTreeWalker<d>::State() const
     return _state; 
 }
 
-template<std::size_t d>
+template<size_t d>
 void 
 ConstrainedHTreeWalker<d>::Walk()
 {
@@ -79,24 +82,24 @@ ConstrainedHTreeWalker<d>::Walk()
     }
 #endif
 
-    const std::size_t zeroDim = _nextZeroDim;
-    const std::size_t zeroLevel = _nextZeroLevel;
+    const size_t zeroDim = _nextZeroDim;
+    const size_t zeroLevel = _nextZeroLevel;
 
     if( zeroDim == _firstOpenDim )
     {
         // Zero the first (zeroLevel-1) bits of all coordinates
         // and then increment at level zeroLevel
-        for( std::size_t j=0; j<d; ++j )
+        for( size_t j=0; j<d; ++j )
             _state[j] &= ~((1u<<zeroLevel)-1);
         _state[zeroDim] |= 1u<<zeroLevel;
 
         // Set up for the next walk
         // We need to find the dimension with the first unconstrained
         // zero bit.
-        std::size_t minDim = d;
-        std::size_t minTrailingOnes = sizeof(std::size_t)*8+1; 
-        Array<std::size_t,d> numberOfTrailingOnes;
-        for( std::size_t j=0; j<d; ++j )
+        size_t minDim = d;
+        size_t minTrailingOnes = sizeof(size_t)*8+1; 
+        array<size_t,d> numberOfTrailingOnes;
+        for( size_t j=0; j<d; ++j )
         {
             numberOfTrailingOnes[j] = NumberOfTrailingOnes( _state[j] );
             if( (numberOfTrailingOnes[j] < minTrailingOnes) &&
@@ -111,9 +114,9 @@ ConstrainedHTreeWalker<d>::Walk()
     }
     else
     {
-        for( std::size_t j=0; j<=zeroDim; ++j )
+        for( size_t j=0; j<=zeroDim; ++j )
             _state[j] &= ~((1u<<(zeroLevel+1))-1);
-        for( std::size_t j=zeroDim+1; j<d; ++j )
+        for( size_t j=zeroDim+1; j<d; ++j )
             _state[j] &= ~((1u<<zeroLevel)-1);
         _state[zeroDim] |= 1u<<zeroLevel;
 

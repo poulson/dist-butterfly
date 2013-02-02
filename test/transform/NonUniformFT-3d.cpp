@@ -9,23 +9,23 @@
 #include <fstream>
 #include <memory>
 #include "bfio.hpp"
+using namespace std;
 
 void 
 Usage()
 {
-    std::cout << "NonUniformFT-3d <N> <M> <bootstrap> <testAccuracy?> <store?>"
-              << "\n" 
-              << "  N: power of 2, the source spread in each dimension\n" 
-              << "  M: number of random sources to instantiate\n" 
-              << "  bootstrap: level to bootstrap to\n"
-              << "  testAccuracy?: tests accuracy iff 1\n" 
-              << "  store?: creates data files iff 1\n" 
-              << std::endl;
+    cout << "NonUniformFT-3d <N> <M> <bootstrap> <testAccuracy?> <store?>\n"
+         << "  N: power of 2, the source spread in each dimension\n" 
+         << "  M: number of random sources to instantiate\n" 
+         << "  bootstrap: level to bootstrap to\n"
+         << "  testAccuracy?: tests accuracy iff 1\n" 
+         << "  store?: creates data files iff 1\n" 
+         << endl;
 }
 
 // Define the dimension of the problem and the order of interpolation
-static const std::size_t d = 3;
-static const std::size_t q = 5;
+static const size_t d = 3;
+static const size_t q = 5;
 
 template<typename R>
 class Fourier : public bfio::Phase<R,d>
@@ -34,15 +34,14 @@ public:
     virtual Fourier<R>* Clone() const;
 
     virtual R 
-    operator()
-    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const;
+    operator()( const array<R,d>& x, const array<R,d>& p ) const;
 
     // We can optionally override the batched application for better efficiency
     virtual void
     BatchEvaluate
-    ( const std::vector< bfio::Array<R,d> >& xPoints,
-      const std::vector< bfio::Array<R,d> >& pPoints,
-            std::vector< R                >& results ) const;
+    ( const vector<array<R,d>>& xPoints,
+      const vector<array<R,d>>& pPoints,
+            vector<R         >& results ) const;
 };
 
 template<typename R>
@@ -52,28 +51,27 @@ Fourier<R>::Clone() const
 
 template<typename R>
 inline R
-Fourier<R>::operator() 
-( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
+Fourier<R>::operator()( const array<R,d>& x, const array<R,d>& p ) const
 { return -bfio::TwoPi*(x[0]*p[0]+x[1]*p[1]+x[2]*p[2]); }
 
 // We can optionally override the batched application for better efficiency
 template<typename R>
 void
 Fourier<R>::BatchEvaluate
-( const std::vector< bfio::Array<R,d> >& xPoints,
-  const std::vector< bfio::Array<R,d> >& pPoints,
-        std::vector< R                >& results ) const
+( const vector<array<R,d>>& xPoints,
+  const vector<array<R,d>>& pPoints,
+        vector<R         >& results ) const
 {
-    const std::size_t xSize = xPoints.size();
-    const std::size_t pSize = pPoints.size();
+    const size_t xSize = xPoints.size();
+    const size_t pSize = pPoints.size();
     results.resize( xSize*pSize );
 
     R* RESTRICT resultsBuffer = &results[0];
     const R* RESTRICT xPointsBuffer = &(xPoints[0][0]);
     const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
-    for( std::size_t i=0; i<xSize; ++i )
+    for( size_t i=0; i<xSize; ++i )
     {
-        for( std::size_t j=0; j<pSize; ++j )
+        for( size_t j=0; j<pSize; ++j )
         {
             resultsBuffer[i*pSize+j] = 
                 xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
@@ -102,9 +100,9 @@ main
         MPI_Finalize();
         return 0;
     }
-    const std::size_t N = atoi(argv[1]);
-    const std::size_t M = atoi(argv[2]);
-    const std::size_t bootstrapSkip = atoi(argv[3]);
+    const size_t N = atoi(argv[1]);
+    const size_t M = atoi(argv[2]);
+    const size_t bootstrapSkip = atoi(argv[3]);
     const bool testAccuracy = atoi(argv[4]);
     const bool store = atoi(argv[5]);
 
@@ -112,7 +110,7 @@ main
     {
         // Set our source and target boxes
         bfio::Box<double,d> sourceBox, targetBox;
-        for( std::size_t j=0; j<d; ++j )
+        for( size_t j=0; j<d; ++j )
         {
             sourceBox.offsets[j] = -0.5*N;
             sourceBox.widths[j] = N;
@@ -127,12 +125,12 @@ main
 
         if( rank == 0 )
         {
-            std::ostringstream msg;
+            ostringstream msg;
             msg << "Will distribute " << M << " random sources over the source "
                 << "domain, which will be split into " << N 
                 << " boxes in each of the " << d << " dimensions and "
                 << "distributed amongst " << numProcesses << " processes.\n";
-            std::cout << msg.str() << std::endl;
+            cout << msg.str() << endl;
         }
 
         // Consistently randomly seed all of the processes' PRNG.
@@ -144,14 +142,14 @@ main
 
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
-        std::vector< bfio::Source<double,d> > mySources;
-        std::vector< bfio::Source<double,d> > globalSources;
+        vector<bfio::Source<double,d>> mySources;
+        vector<bfio::Source<double,d>> globalSources;
         if( testAccuracy || store )
         {
             globalSources.resize( M );
-            for( std::size_t i=0; i<M; ++i )
+            for( size_t i=0; i<M; ++i )
             {
-                for( std::size_t j=0; j<d; ++j )
+                for( size_t j=0; j<d; ++j )
                 {
                     globalSources[i].p[j] = sourceBox.offsets[j] + 
                         sourceBox.widths[j]*bfio::Uniform<double>(); 
@@ -160,7 +158,7 @@ main
 
                 // Check if we should push this source onto our local list
                 bool isMine = true;
-                for( std::size_t j=0; j<d; ++j )
+                for( size_t j=0; j<d; ++j )
                 {
                     double u = globalSources[i].p[j];
                     double start = mySourceBox.offsets[j];
@@ -175,13 +173,13 @@ main
         }
         else
         {
-            std::size_t numLocalSources = 
+            size_t numLocalSources = 
                 ( rank<(int)(M%numProcesses) 
                   ? M/numProcesses+1 : M/numProcesses );
             mySources.resize( numLocalSources );
-            for( std::size_t i=0; i<numLocalSources; ++i )
+            for( size_t i=0; i<numLocalSources; ++i )
             {
-                for( std::size_t j=0; j<d; ++j )
+                for( size_t j=0; j<d; ++j )
                 {
                     mySources[i].p[j] = 
                         mySourceBox.offsets[j] + 
@@ -194,26 +192,21 @@ main
         /*
         // Create a context for Interpolative NUFTs
         if( rank == 0 )
-            std::cout << "Creating InterpolativeNUFT context..." << std::endl;
+            cout << "Creating InterpolativeNUFT context..." << endl;
         bfio::interpolative_nuft::Context<double,d,q> 
             interpolativeNuftContext( bfio::FORWARD, N, sourceBox, targetBox );
 
         // Run with the interpolative NUFT
-        std::auto_ptr< 
-            const bfio::interpolative_nuft::PotentialField<double,d,q> > u;
         if( rank == 0 )
-            std::cout << "Starting InterpolativeNUFT..." << std::endl;
+            cout << "Starting InterpolativeNUFT..." << endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        u = bfio::InterpolativeNUFT
+        auto u = bfio::InterpolativeNUFT
         ( interpolativeNuftContext, plan, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
         if( rank == 0 )
-        {
-            std::cout << "Runtime: " << stopTime-startTime << " seconds.\n"
-                      << std::endl;
-        }
+            cout << "Runtime: " << stopTime-startTime << " seconds.\n" << endl;
 #ifdef TIMING
 	if( rank == 0 )
 	    bfio::interpolative_nuft::PrintTimings();
@@ -222,28 +215,23 @@ main
 
         // Create a context for NUFTs with Lagrangian interpolation
         if( rank == 0 )
-            std::cout << "Creating LagrangianNUFT context..." << std::endl;
+            cout << "Creating LagrangianNUFT context..." << endl;
         bfio::lagrangian_nuft::Context<double,d,q> 
             lagrangianNuftContext( bfio::FORWARD, N, sourceBox, targetBox );
 
         // Run with the Lagrangian NUFT
-        std::auto_ptr< const bfio::lagrangian_nuft::PotentialField<double,d,q> >
-            v;
         if( rank == 0 )
-            std::cout << "Starting LagrangianNUFT..." << std::endl;
+            cout << "Starting LagrangianNUFT..." << endl;
         MPI_Barrier( comm );
         //startTime = MPI_Wtime();
         double startTime = MPI_Wtime();
-        v = bfio::LagrangianNUFT
+        auto v = bfio::LagrangianNUFT
         ( lagrangianNuftContext, plan, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         //stopTime = MPI_Wtime();
         double stopTime = MPI_Wtime();
         if( rank == 0 )
-        {
-            std::cout << "Runtime: " << stopTime-startTime << " seconds.\n"
-                      << std::endl;
-        }
+            cout << "Runtime: " << stopTime-startTime << " seconds.\n" << endl;
 #ifdef TIMING
 	if( rank == 0 )
 	    bfio::lagrangian_nuft::PrintTimings();
@@ -255,24 +243,20 @@ main
 
         // Create an FIO context 
         if( rank == 0 )
-            std::cout << "Creating ReducedFIO context..." << std::endl;
+            cout << "Creating ReducedFIO context..." << endl;
         bfio::rfio::Context<double,d,q> rfioContext;
 
         // Run the general algorithm
-        std::auto_ptr< const bfio::rfio::PotentialField<double,d,q> > w;
         if( rank == 0 )
-            std::cout << "Starting ReducedFIO transform..." << std::endl;
+            cout << "Starting ReducedFIO transform..." << endl;
         MPI_Barrier( comm );
         startTime = MPI_Wtime();
-        w = bfio::ReducedFIO
+        auto w = bfio::ReducedFIO
         ( rfioContext, plan, fourier, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         stopTime = MPI_Wtime();
         if( rank == 0 )
-        {
-            std::cout << "Runtime: " << stopTime-startTime << " seconds.\n" 
-                      << std::endl;
-        }
+            cout << "Runtime: " << stopTime-startTime << " seconds.\n" << endl;
 #ifdef TIMING
 	if( rank == 0 )
 	    bfio::rfio::PrintTimings();
@@ -299,15 +283,14 @@ main
             }
         }
     }
-    catch( const std::exception& e )
+    catch( const exception& e )
     {
-        std::ostringstream msg;
+        ostringstream msg;
         msg << "Caught exception on process " << rank << ":\n"
             << "   " << e.what();
-        std::cout << msg.str() << std::endl;
+        cout << msg.str() << endl;
     }
 
     MPI_Finalize();
     return 0;
 }
-

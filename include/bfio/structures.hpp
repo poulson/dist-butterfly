@@ -9,7 +9,6 @@
 #ifndef BFIO_STRUCTURES_HPP
 #define BFIO_STRUCTURES_HPP
 
-#include "bfio/structures/array.hpp"
 #include "bfio/structures/box.hpp"
 #include "bfio/structures/constrained_htree_walker.hpp"
 #include "bfio/structures/htree_walker.hpp"

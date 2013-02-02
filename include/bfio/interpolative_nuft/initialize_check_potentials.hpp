@@ -9,12 +9,12 @@
 #ifndef BFIO_NUFT_INITIALIZE_CHECK_POTENTIALS_HPP
 #define BFIO_NUFT_INITIALIZE_CHECK_POTENTIALS_HPP
 
+#include <array>
 #include <cstddef>
 #include <vector>
 
 #include "bfio/constants.hpp"
 
-#include "bfio/structures/array.hpp"
 #include "bfio/structures/box.hpp"
 #include "bfio/structures/constrained_htree_walker.hpp"
 #include "bfio/structures/plan.hpp"
@@ -28,10 +28,16 @@
 #include "bfio/interpolative_nuft/context.hpp"
 
 namespace bfio {
+
+using std::array;
+using std::memset;
+using std::size_t;
+using std::vector;
+
 namespace interpolative_nuft {
 
 // 1d specialization
-template<typename R,std::size_t q>
+template<typename R,size_t q>
 void
 InitializeCheckPotentials
 ( const interpolative_nuft::Context<R,1,q>& context,
@@ -39,46 +45,46 @@ InitializeCheckPotentials
   const Box<R,1>& sourceBox,
   const Box<R,1>& targetBox,
   const Box<R,1>& mySourceBox,
-  const std::size_t log2LocalSourceBoxes,
-  const Array<std::size_t,1>& log2LocalSourceBoxesPerDim,
-  const std::vector< Source<R,1> >& mySources,
+  const size_t log2LocalSourceBoxes,
+  const array<size_t,1>& log2LocalSourceBoxesPerDim,
+  const vector<Source<R,1>>& mySources,
         WeightGridList<R,1,q>& weightGridList )
 {
-    const std::size_t N = plan.GetN();
-    const std::size_t d = 1;
+    const size_t N = plan.GetN();
+    const size_t d = 1;
 
     const Direction direction = context.GetDirection();
     const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
 
     // Store the widths of the source and target boxes
-    Array<R,d> wA;
+    array<R,d> wA;
     wA[0] = targetBox.widths[0];
-    Array<R,d> wB;
+    array<R,d> wB;
     wB[0] = sourceBox.widths[0] / N;
 
     // Compute the center of the target box
-    Array<R,d> x0;
+    array<R,d> x0;
     x0[0] = targetBox.offsets[0] + wA[0]/2;
 
     // Store the Chebyshev grid on the target box
-    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
-    std::vector< Array<R,d> > xPoints( q );
-    for( std::size_t t=0; t<q; ++t )
+    const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
+    vector<array<R,d>> xPoints( q );
+    for( size_t t=0; t<q; ++t )
         xPoints[t][0] = x0[0] + chebyshevGrid[t][0]*wA[0];
 
     // Compute the unscaled weights for each local box by looping over our
     // sources and sorting them into the appropriate local box one at a time.
     // We throw an error if a source is outside of our source box.
-    const std::size_t numSources = mySources.size();
-    std::vector< Array<R,d> > pPoints( numSources );
-    std::vector<std::size_t> flattenedSourceBoxIndices( numSources );
-    for( std::size_t s=0; s<numSources; ++s )
+    const size_t numSources = mySources.size();
+    vector<array<R,d>> pPoints( numSources );
+    vector<size_t> flattenedSourceBoxIndices( numSources );
+    for( size_t s=0; s<numSources; ++s )
     {
-        const Array<R,d>& p = mySources[s].p;
+        const array<R,d>& p = mySources[s].p;
         pPoints[s] = p;
 
         // Determine which local box we're in (if any)
-        Array<std::size_t,d> B;
+        array<size_t,d> B;
         {
             R leftBound = mySourceBox.offsets[0];
             R rightBound = leftBound + mySourceBox.widths[0];
@@ -93,7 +99,7 @@ InitializeCheckPotentials
 
             // We must be in the box, so bitwise determine the coord. index
             B[0] = 0;
-            for( std::size_t k=log2LocalSourceBoxesPerDim[0]; k>0; --k )
+            for( size_t k=log2LocalSourceBoxesPerDim[0]; k>0; --k )
             {
                 const R middle = (rightBound+leftBound)/2.;
                 if( p[0] < middle )
@@ -115,24 +121,23 @@ InitializeCheckPotentials
     }
 
     // Batch evaluate the dot products and multiply by +-TwoPi
-    std::vector<R> phiResults( q*numSources );
-    std::memset( &phiResults[0], 0, q*numSources*sizeof(R) );
+    vector<R> phiResults( q*numSources );
+    memset( &phiResults[0], 0, q*numSources*sizeof(R) );
     Ger
     ( q, numSources, 
       SignedTwoPi, &xPoints[0][0], 1, &pPoints[0][0], 1, 
                    &phiResults[0], q );
 
     // Grab the real and imaginary parts of the phase
-    std::vector<R> sinResults;
-    std::vector<R> cosResults;
+    vector<R> sinResults, cosResults;
     SinCosBatch( phiResults, sinResults, cosResults );
 
     // Form the potentials from each box B on the chebyshev grid of A
-    std::memset
+    memset
     ( weightGridList.Buffer(), 0, weightGridList.Length()*2*q*sizeof(R) );
-    for( std::size_t s=0; s<numSources; ++s )
+    for( size_t s=0; s<numSources; ++s )
     {
-        const std::size_t sourceIndex = flattenedSourceBoxIndices[s];
+        const size_t sourceIndex = flattenedSourceBoxIndices[s];
 
         R* realBuffer = weightGridList[sourceIndex].RealBuffer();
         R* imagBuffer = weightGridList[sourceIndex].ImagBuffer();
@@ -140,7 +145,7 @@ InitializeCheckPotentials
         const R imagMagnitude = std::imag( mySources[s].magnitude );
         const R* thisCosBuffer = &cosResults[q*s];
         const R* thisSinBuffer = &sinResults[q*s];
-        for( std::size_t t=0; t<q; ++t )
+        for( size_t t=0; t<q; ++t )
         {
             const R realPhase = thisCosBuffer[t];
             const R imagPhase = thisSinBuffer[t];
@@ -151,7 +156,7 @@ InitializeCheckPotentials
 }
 
 // 2d specialization
-template<typename R,std::size_t q>
+template<typename R,size_t q>
 void
 InitializeCheckPotentials
 ( const interpolative_nuft::Context<R,2,q>& context,
@@ -159,52 +164,52 @@ InitializeCheckPotentials
   const Box<R,2>& sourceBox,
   const Box<R,2>& targetBox,
   const Box<R,2>& mySourceBox,
-  const std::size_t log2LocalSourceBoxes,
-  const Array<std::size_t,2>& log2LocalSourceBoxesPerDim,
-  const std::vector< Source<R,2> >& mySources,
+  const size_t log2LocalSourceBoxes,
+  const array<size_t,2>& log2LocalSourceBoxesPerDim,
+  const vector<Source<R,2>>& mySources,
         WeightGridList<R,2,q>& weightGridList )
 {
-    const std::size_t N = plan.GetN();
-    const std::size_t d = 2;
-    const std::size_t q_to_d = Pow<q,d>::val;
+    const size_t N = plan.GetN();
+    const size_t d = 2;
+    const size_t q_to_d = Pow<q,d>::val;
 
     const Direction direction = context.GetDirection();
     const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
 
     // Store the widths of the source and target boxes
-    Array<R,d> wA;
-    for( std::size_t j=0; j<d; ++j )
+    array<R,d> wA;
+    for( size_t j=0; j<d; ++j )
         wA[j] = targetBox.widths[j];
-    Array<R,d> wB;
-    for( std::size_t j=0; j<d; ++j )
+    array<R,d> wB;
+    for( size_t j=0; j<d; ++j )
         wB[j] = sourceBox.widths[j] / N;
 
     // Compute the center of the target box
-    Array<R,d> x0;
-    for( std::size_t j=0; j<d; ++j )
+    array<R,d> x0;
+    for( size_t j=0; j<d; ++j )
         x0[j] = targetBox.offsets[j] + wA[j]/2;
 
     // Store the Chebyshev grid on the target box
-    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
-    std::vector< Array<R,d> > xPoints( q_to_d );
-    for( std::size_t t=0; t<q_to_d; ++t )
-        for( std::size_t j=0; j<d; ++j )
+    const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
+    vector<array<R,d>> xPoints( q_to_d );
+    for( size_t t=0; t<q_to_d; ++t )
+        for( size_t j=0; j<d; ++j )
             xPoints[t][j] = x0[j] + chebyshevGrid[t][j]*wA[j];
 
     // Compute the unscaled weights for each local box by looping over our
     // sources and sorting them into the appropriate local box one at a time.
     // We throw an error if a source is outside of our source box.
-    const std::size_t numSources = mySources.size();
-    std::vector< Array<R,d> > pPoints( numSources );
-    std::vector<std::size_t> flattenedSourceBoxIndices( numSources );
-    for( std::size_t s=0; s<numSources; ++s )
+    const size_t numSources = mySources.size();
+    vector<array<R,d>> pPoints( numSources );
+    vector<size_t> flattenedSourceBoxIndices( numSources );
+    for( size_t s=0; s<numSources; ++s )
     {
-        const Array<R,d>& p = mySources[s].p;
+        const array<R,d>& p = mySources[s].p;
         pPoints[s] = p;
 
         // Determine which local box we're in (if any)
-        Array<std::size_t,d> B;
-        for( std::size_t j=0; j<d; ++j )
+        array<size_t,d> B;
+        for( size_t j=0; j<d; ++j )
         {
             R leftBound = mySourceBox.offsets[j];
             R rightBound = leftBound + mySourceBox.widths[j];
@@ -219,7 +224,7 @@ InitializeCheckPotentials
 
             // We must be in the box, so bitwise determine the coord. index
             B[j] = 0;
-            for( std::size_t k=log2LocalSourceBoxesPerDim[j]; k>0; --k )
+            for( size_t k=log2LocalSourceBoxesPerDim[j]; k>0; --k )
             {
                 const R middle = (rightBound+leftBound)/2.;
                 if( p[j] < middle )
@@ -241,23 +246,22 @@ InitializeCheckPotentials
     }
 
     // Batch evaluate the dot products and multiply by +-TwoPi
-    std::vector<R> phiResults( q_to_d*numSources );
+    vector<R> phiResults( q_to_d*numSources );
     Gemm
     ( 'T', 'N', q_to_d, numSources, d,
       SignedTwoPi, &xPoints[0][0], d, &pPoints[0][0], d,
       (R)0, &phiResults[0], q_to_d );
 
     // Grab the real and imaginary parts of the phase
-    std::vector<R> sinResults;
-    std::vector<R> cosResults;
+    vector<R> sinResults, cosResults;
     SinCosBatch( phiResults, sinResults, cosResults );
 
     // Form the potentials from each box B on the chebyshev grid of A
-    std::memset
+    memset
     ( weightGridList.Buffer(), 0, weightGridList.Length()*2*q_to_d*sizeof(R) );
-    for( std::size_t s=0; s<numSources; ++s )
+    for( size_t s=0; s<numSources; ++s )
     {
-        const std::size_t sourceIndex = flattenedSourceBoxIndices[s];
+        const size_t sourceIndex = flattenedSourceBoxIndices[s];
 
         R* realBuffer = weightGridList[sourceIndex].RealBuffer();
         R* imagBuffer = weightGridList[sourceIndex].ImagBuffer();
@@ -265,7 +269,7 @@ InitializeCheckPotentials
         const R imagMagnitude = std::imag( mySources[s].magnitude );
         const R* thisCosBuffer = &cosResults[q_to_d*s];
         const R* thisSinBuffer = &sinResults[q_to_d*s];
-        for( std::size_t t=0; t<q_to_d; ++t )
+        for( size_t t=0; t<q_to_d; ++t )
         {
             const R realPhase = thisCosBuffer[t];
             const R imagPhase = thisSinBuffer[t];
@@ -276,7 +280,7 @@ InitializeCheckPotentials
 }
 
 // Fallback for 3d and above
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 void
 InitializeCheckPotentials
 ( const interpolative_nuft::Context<R,d,q>& context,
@@ -284,51 +288,51 @@ InitializeCheckPotentials
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
   const Box<R,d>& mySourceBox,
-  const std::size_t log2LocalSourceBoxes,
-  const Array<std::size_t,d>& log2LocalSourceBoxesPerDim,
-  const std::vector< Source<R,d> >& mySources,
+  const size_t log2LocalSourceBoxes,
+  const array<size_t,d>& log2LocalSourceBoxesPerDim,
+  const vector<Source<R,d>>& mySources,
         WeightGridList<R,d,q>& weightGridList )
 {
-    const std::size_t N = plan.GetN();
-    const std::size_t q_to_d = Pow<q,d>::val;
+    const size_t N = plan.GetN();
+    const size_t q_to_d = Pow<q,d>::val;
 
     const Direction direction = context.GetDirection();
     const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
 
     // Store the widths of the source and target boxes
-    Array<R,d> wA;
-    for( std::size_t j=0; j<d; ++j )
+    array<R,d> wA;
+    for( size_t j=0; j<d; ++j )
         wA[j] = targetBox.widths[j];
-    Array<R,d> wB;
-    for( std::size_t j=0; j<d; ++j )
+    array<R,d> wB;
+    for( size_t j=0; j<d; ++j )
         wB[j] = sourceBox.widths[j] / N;
 
     // Compute the center of the target box
-    Array<R,d> x0;
-    for( std::size_t j=0; j<d; ++j )
+    array<R,d> x0;
+    for( size_t j=0; j<d; ++j )
         x0[j] = targetBox.offsets[j] + wA[j]/2;
 
     // Store the Chebyshev grid on the target box
-    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
-    std::vector< Array<R,d> > xPoints( q_to_d );
-    for( std::size_t t=0; t<q_to_d; ++t )
-        for( std::size_t j=0; j<d; ++j )
+    const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
+    vector<array<R,d>> xPoints( q_to_d );
+    for( size_t t=0; t<q_to_d; ++t )
+        for( size_t j=0; j<d; ++j )
             xPoints[t][j] = x0[j] + chebyshevGrid[t][j]*wA[j];
 
     // Compute the unscaled weights for each local box by looping over our
     // sources and sorting them into the appropriate local box one at a time.
     // We throw an error if a source is outside of our source box.
-    const std::size_t numSources = mySources.size();
-    std::vector< Array<R,d> > pPoints( numSources );
-    std::vector<std::size_t> flattenedSourceBoxIndices( numSources );
-    for( std::size_t s=0; s<numSources; ++s )
+    const size_t numSources = mySources.size();
+    vector<array<R,d>> pPoints( numSources );
+    vector<size_t> flattenedSourceBoxIndices( numSources );
+    for( size_t s=0; s<numSources; ++s )
     {
-        const Array<R,d>& p = mySources[s].p;
+        const array<R,d>& p = mySources[s].p;
         pPoints[s] = p;
 
         // Determine which local box we're in (if any)
-        Array<std::size_t,d> B;
-        for( std::size_t j=0; j<d; ++j )
+        array<size_t,d> B;
+        for( size_t j=0; j<d; ++j )
         {
             R leftBound = mySourceBox.offsets[j];
             R rightBound = leftBound + mySourceBox.widths[j];
@@ -343,7 +347,7 @@ InitializeCheckPotentials
 
             // We must be in the box, so bitwise determine the coord. index
             B[j] = 0;
-            for( std::size_t k=log2LocalSourceBoxesPerDim[j]; k>0; --k )
+            for( size_t k=log2LocalSourceBoxesPerDim[j]; k>0; --k )
             {
                 const R middle = (rightBound+leftBound)/2.;
                 if( p[j] < middle )
@@ -365,23 +369,22 @@ InitializeCheckPotentials
     }
 
     // Batch evaluate the dot products and multiply by +-TwoPi
-    std::vector<R> phiResults( q_to_d*numSources );
+    vector<R> phiResults( q_to_d*numSources );
     Gemm
     ( 'T', 'N', q_to_d, numSources, d,
       SignedTwoPi, &xPoints[0][0], d, &pPoints[0][0], d,
       (R)0, &phiResults[0], q_to_d );
 
     // Grab the real and imaginary parts of the phase
-    std::vector<R> sinResults;
-    std::vector<R> cosResults;
+    vector<R> sinResults, cosResults;
     SinCosBatch( phiResults, sinResults, cosResults );
 
     // Form the potentials from each box B on the chebyshev grid of A
-    std::memset
+    memset
     ( weightGridList.Buffer(), 0, weightGridList.Length()*2*q_to_d*sizeof(R) );
-    for( std::size_t s=0; s<numSources; ++s )
+    for( size_t s=0; s<numSources; ++s )
     {
-        const std::size_t sourceIndex = flattenedSourceBoxIndices[s];
+        const size_t sourceIndex = flattenedSourceBoxIndices[s];
 
         R* realBuffer = weightGridList[sourceIndex].RealBuffer();
         R* imagBuffer = weightGridList[sourceIndex].ImagBuffer();
@@ -389,7 +392,7 @@ InitializeCheckPotentials
         const R imagMagnitude = std::imag( mySources[s].magnitude );
         const R* thisCosBuffer = &cosResults[q_to_d*s];
         const R* thisSinBuffer = &sinResults[q_to_d*s];
-        for( std::size_t t=0; t<q_to_d; ++t )
+        for( size_t t=0; t<q_to_d; ++t )
         {
             const R realPhase = thisCosBuffer[t];
             const R imagPhase = thisSinBuffer[t];

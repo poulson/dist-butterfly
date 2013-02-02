@@ -9,13 +9,13 @@
 #ifndef BFIO_INTERPOLATIVE_NUFT_FORM_CHECK_POTENTIALS_HPP
 #define BFIO_INTERPOLATIVE_NUFT_FORM_CHECK_POTENTIALS_HPP
 
+#include <array>
 #include <cstddef>
 #include <cstring>
 #include <vector>
 
 #include "bfio/constants.hpp"
 
-#include "bfio/structures/array.hpp"
 #include "bfio/structures/weight_grid.hpp"
 #include "bfio/structures/weight_grid_list.hpp"
 
@@ -24,53 +24,56 @@
 #include "bfio/interpolative_nuft/context.hpp"
 
 namespace bfio {
+
+using std::array;
+using std::memset;
+using std::size_t;
+using std::vector;
+
 namespace interpolative_nuft {
 
 // 1d specialization
-template<typename R,std::size_t q>
+template<typename R,size_t q>
 void
 FormCheckPotentials
 ( const interpolative_nuft::Context<R,1,q>& context,
   const Plan<1>& plan,
-  const std::size_t level,
-  const Array<std::vector<R>,1>& realPrescalings,
-  const Array<std::vector<R>,1>& imagPrescalings,
-  const Array<R,1>& x0A,
-  const Array<R,1>& p0B,
-  const Array<R,1>& wA,
-  const Array<R,1>& wB,
-  const std::size_t parentInteractionOffset,
+  const size_t level,
+  const array<vector<R>,1>& realPrescalings,
+  const array<vector<R>,1>& imagPrescalings,
+  const array<R,1>& x0A,
+  const array<R,1>& p0B,
+  const array<R,1>& wA,
+  const array<R,1>& wB,
+  const size_t parentInteractionOffset,
   const WeightGridList<R,1,q>& oldWeightGridList,
         WeightGrid<R,1,q>& weightGrid )
 {
-    const std::size_t d = 1;
-    std::memset( weightGrid.Buffer(), 0, 2*q*sizeof(R) );
+    const size_t d = 1;
+    memset( weightGrid.Buffer(), 0, 2*q*sizeof(R) );
 
     const Direction direction = context.GetDirection();
     const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
 
-    const std::size_t log2NumMergingProcesses = 
+    const size_t log2NumMergingProcesses = 
         plan.GetLog2NumMergingProcesses( level );
-    const std::vector<R>& chebyshevNodes = context.GetChebyshevNodes();
+    const vector<R>& chebyshevNodes = context.GetChebyshevNodes();
 
-    std::vector<R> realTempWeights0( q );
-    std::vector<R> imagTempWeights0( q );
-    std::vector<R> realTempWeights1( q );
-    std::vector<R> imagTempWeights1( q );
-    std::vector<R> postscalingArguments( q );
-    std::vector<R> realPostscalings( q );
-    std::vector<R> imagPostscalings( q );
-    for( std::size_t cLocal=0;
+    vector<R> realTempWeights0( q ), imagTempWeights0( q ),
+              realTempWeights1( q ), imagTempWeights1( q );
+    vector<R> postscalingArguments( q );
+    vector<R> realPostscalings( q ), imagPostscalings( q );
+    for( size_t cLocal=0;
          cLocal<(1u<<(1-log2NumMergingProcesses));
          ++cLocal )
     {
-        const std::size_t interactionIndex = parentInteractionOffset + cLocal;
-        const std::size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
+        const size_t interactionIndex = parentInteractionOffset + cLocal;
+        const size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
         const WeightGrid<R,d,q>& oldWeightGrid = 
             oldWeightGridList[interactionIndex];
 
         // Find the center of child c
-        Array<R,d> p0Bc;
+        array<R,d> p0Bc;
         p0Bc[0] = p0B[0] + ( c&1 ? wB[0]/4 : -wB[0]/4 );
 
         // Prescaling
@@ -81,7 +84,7 @@ FormCheckPotentials
             const R* imagReadBuffer = oldWeightGrid.ImagBuffer();
             const R* realScalingBuffer = &realPrescalings[0][0];
             const R* imagScalingBuffer = &imagPrescalings[0][0];
-            for( std::size_t t=0; t<q; ++t )
+            for( size_t t=0; t<q; ++t )
             {
                 const R realWeight = realReadBuffer[t];
                 const R imagWeight = imagReadBuffer[t];
@@ -95,9 +98,9 @@ FormCheckPotentials
         }
         // Apply forward map
         {
-            const std::vector<R>& realForwardMap = 
+            const vector<R>& realForwardMap = 
                 context.GetRealForwardMap( 0 );
-            const std::vector<R>& imagForwardMap = 
+            const vector<R>& imagForwardMap = 
                 context.GetImagForwardMap( 0 );
             // Form the real part
             Gemv
@@ -123,7 +126,7 @@ FormCheckPotentials
               (R)1, &imagTempWeights1[0], 1 );
         }
         // Postscaling
-        for( std::size_t t=0; t<q; ++t )
+        for( size_t t=0; t<q; ++t )
             postscalingArguments[t] = 
                 -SignedTwoPi*(x0A[0]+chebyshevNodes[t]*wA[0])*p0Bc[0];
         SinCosBatch( postscalingArguments, imagPostscalings, realPostscalings );
@@ -134,7 +137,7 @@ FormCheckPotentials
             const R* imagReadBuffer = &imagTempWeights1[0];
             const R* realScalingBuffer = &realPostscalings[0];
             const R* imagScalingBuffer = &imagPostscalings[0];
-            for( std::size_t t=0; t<q; ++t )
+            for( size_t t=0; t<q; ++t )
             {
                 const R realWeight = realReadBuffer[t];
                 const R imagWeight = imagReadBuffer[t];
@@ -150,52 +153,49 @@ FormCheckPotentials
 }
 
 // 2d specialization
-template<typename R,std::size_t q>
+template<typename R,size_t q>
 void
 FormCheckPotentials
 ( const interpolative_nuft::Context<R,2,q>& context,
   const Plan<2>& plan,
-  const std::size_t level,
-  const Array<std::vector<R>,2>& realPrescalings,
-  const Array<std::vector<R>,2>& imagPrescalings,
-  const Array<R,2>& x0A,
-  const Array<R,2>& p0B,
-  const Array<R,2>& wA,
-  const Array<R,2>& wB,
-  const std::size_t parentInteractionOffset,
+  const size_t level,
+  const array<vector<R>,2>& realPrescalings,
+  const array<vector<R>,2>& imagPrescalings,
+  const array<R,2>& x0A,
+  const array<R,2>& p0B,
+  const array<R,2>& wA,
+  const array<R,2>& wB,
+  const size_t parentInteractionOffset,
   const WeightGridList<R,2,q>& oldWeightGridList,
         WeightGrid<R,2,q>& weightGrid )
 {
-    const std::size_t d = 2;
-    const std::size_t q_to_d = q*q;
-    std::memset( weightGrid.Buffer(), 0, 2*q_to_d*sizeof(R) );
+    const size_t d = 2;
+    const size_t q_to_d = q*q;
+    memset( weightGrid.Buffer(), 0, 2*q_to_d*sizeof(R) );
 
     const Direction direction = context.GetDirection();
     const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
 
-    const std::size_t log2NumMergingProcesses = 
+    const size_t log2NumMergingProcesses = 
         plan.GetLog2NumMergingProcesses( level );
-    const std::vector<R>& chebyshevNodes = context.GetChebyshevNodes();
+    const vector<R>& chebyshevNodes = context.GetChebyshevNodes();
 
-    std::vector<R> realTempWeights0( q_to_d );
-    std::vector<R> imagTempWeights0( q_to_d );
-    std::vector<R> realTempWeights1( q_to_d );
-    std::vector<R> imagTempWeights1( q_to_d );
-    std::vector<R> postscalingArguments( q );
-    std::vector<R> realPostscalings( q );
-    std::vector<R> imagPostscalings( q );
-    for( std::size_t cLocal=0; 
+    vector<R> realTempWeights0( q_to_d ), imagTempWeights0( q_to_d ),
+              realTempWeights1( q_to_d ), imagTempWeights1( q_to_d );
+    vector<R> postscalingArguments( q );
+    vector<R> realPostscalings( q ), imagPostscalings( q );
+    for( size_t cLocal=0; 
          cLocal<(1u<<(2-log2NumMergingProcesses));
          ++cLocal )
     {
-        const std::size_t interactionIndex = parentInteractionOffset + cLocal;
-        const std::size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
+        const size_t interactionIndex = parentInteractionOffset + cLocal;
+        const size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
         const WeightGrid<R,d,q>& oldWeightGrid = 
             oldWeightGridList[interactionIndex];
 
         // Find the center of child c
-        Array<R,d> p0Bc;
-        for( std::size_t j=0; j<d; ++j )
+        array<R,d> p0Bc;
+        for( size_t j=0; j<d; ++j )
             p0Bc[j] = p0B[j] + ( (c>>j)&1 ? wB[j]/4 : -wB[j]/4 );
 
         //--------------------------------------------------------------------//
@@ -209,9 +209,9 @@ FormCheckPotentials
             const R* imagReadBuffer = oldWeightGrid.ImagBuffer();
             const R* realScalingBuffer = &realPrescalings[0][0];
             const R* imagScalingBuffer = &imagPrescalings[0][0];
-            for( std::size_t t=0; t<q; ++t )
+            for( size_t t=0; t<q; ++t )
             {
-                for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                for( size_t tPrime=0; tPrime<q; ++tPrime )
                 {
                     const R realWeight = realReadBuffer[t*q+tPrime];
                     const R imagWeight = imagReadBuffer[t*q+tPrime];
@@ -226,9 +226,9 @@ FormCheckPotentials
         }
         // Apply forward map
         {
-            const std::vector<R>& realForwardMap = 
+            const vector<R>& realForwardMap = 
                 context.GetRealForwardMap( 0 );
-            const std::vector<R>& imagForwardMap = 
+            const vector<R>& imagForwardMap = 
                 context.GetImagForwardMap( 0 );
             // Form the real part
             Gemm
@@ -254,7 +254,7 @@ FormCheckPotentials
               (R)1, &imagTempWeights1[0], q );
         }
         // Postscale
-        for( std::size_t t=0; t<q; ++t )
+        for( size_t t=0; t<q; ++t )
             postscalingArguments[t] = 
                 SignedTwoPi*(x0A[0]+chebyshevNodes[t]*wA[0])*p0Bc[0];
         SinCosBatch( postscalingArguments, imagPostscalings, realPostscalings );
@@ -263,9 +263,9 @@ FormCheckPotentials
             R* imagBuffer = &imagTempWeights1[0];
             const R* realScalingBuffer = &realPostscalings[0];
             const R* imagScalingBuffer = &imagPostscalings[0];
-            for( std::size_t t=0; t<q; ++t )
+            for( size_t t=0; t<q; ++t )
             {
-                for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                for( size_t tPrime=0; tPrime<q; ++tPrime )
                 {
                     const R realWeight = realBuffer[t*q+tPrime];
                     const R imagWeight = imagBuffer[t*q+tPrime];
@@ -288,9 +288,9 @@ FormCheckPotentials
             R* imagBuffer = &imagTempWeights1[0];
             const R* realScalingBuffer = &realPrescalings[1][0];
             const R* imagScalingBuffer = &imagPrescalings[1][0];
-            for( std::size_t w=0; w<q; ++w )
+            for( size_t w=0; w<q; ++w )
             {
-                for( std::size_t t=0; t<q; ++t )
+                for( size_t t=0; t<q; ++t )
                 {
                     const R realWeight = realBuffer[w+t*q];
                     const R imagWeight = imagBuffer[w+t*q];
@@ -305,9 +305,9 @@ FormCheckPotentials
         }
         // Apply forward map
         {
-            const std::vector<R>& realForwardMap = 
+            const vector<R>& realForwardMap = 
                 context.GetRealForwardMap( 1 );
-            const std::vector<R>& imagForwardMap = 
+            const vector<R>& imagForwardMap = 
                 context.GetImagForwardMap( 1 );
             // Form the real part
             Gemm
@@ -333,7 +333,7 @@ FormCheckPotentials
               (R)1, &imagTempWeights0[0], q );
         }
         // Postscale
-        for( std::size_t t=0; t<q; ++t )
+        for( size_t t=0; t<q; ++t )
             postscalingArguments[t] = 
                 SignedTwoPi*(x0A[1]+chebyshevNodes[t]*wA[1])*p0Bc[1];
         SinCosBatch( postscalingArguments, imagPostscalings, realPostscalings );
@@ -344,9 +344,9 @@ FormCheckPotentials
             const R* imagReadBuffer = &imagTempWeights0[0];
             const R* realScalingBuffer = &realPostscalings[0];
             const R* imagScalingBuffer = &imagPostscalings[0];
-            for( std::size_t w=0; w<q; ++w )
+            for( size_t w=0; w<q; ++w )
             {
-                for( std::size_t t=0; t<q; ++t )
+                for( size_t t=0; t<q; ++t )
                 {
                     const R realWeight = realReadBuffer[w+t*q];
                     const R imagWeight = imagReadBuffer[w+t*q];
@@ -363,51 +363,48 @@ FormCheckPotentials
 }
 
 // Fallback for 3d and above
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 void
 FormCheckPotentials
 ( const interpolative_nuft::Context<R,d,q>& context,
   const Plan<d>& plan,
-  const std::size_t level,
-  const Array<std::vector<R>,d>& realPrescalings,
-  const Array<std::vector<R>,d>& imagPrescalings,
-  const Array<R,d>& x0A,
-  const Array<R,d>& p0B,
-  const Array<R,d>& wA,
-  const Array<R,d>& wB,
-  const std::size_t parentInteractionOffset,
+  const size_t level,
+  const array<vector<R>,d>& realPrescalings,
+  const array<vector<R>,d>& imagPrescalings,
+  const array<R,d>& x0A,
+  const array<R,d>& p0B,
+  const array<R,d>& wA,
+  const array<R,d>& wB,
+  const size_t parentInteractionOffset,
   const WeightGridList<R,d,q>& oldWeightGridList,
         WeightGrid<R,d,q>& weightGrid )
 {
-    const std::size_t q_to_d = Pow<q,d>::val;
-    std::memset( weightGrid.Buffer(), 0, 2*q_to_d*sizeof(R) );
+    const size_t q_to_d = Pow<q,d>::val;
+    memset( weightGrid.Buffer(), 0, 2*q_to_d*sizeof(R) );
 
     const Direction direction = context.GetDirection();
     const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
 
-    const std::size_t log2NumMergingProcesses = 
+    const size_t log2NumMergingProcesses = 
         plan.GetLog2NumMergingProcesses( level );
-    const std::vector<R>& chebyshevNodes = context.GetChebyshevNodes();
+    const vector<R>& chebyshevNodes = context.GetChebyshevNodes();
 
-    std::vector<R> realTempWeights0( q_to_d );
-    std::vector<R> imagTempWeights0( q_to_d );
-    std::vector<R> realTempWeights1( q_to_d );
-    std::vector<R> imagTempWeights1( q_to_d );
-    std::vector<R> postscalingArguments( q );
-    std::vector<R> realPostscalings( q );
-    std::vector<R> imagPostscalings( q );
-    for( std::size_t cLocal=0;
+    vector<R> realTempWeights0( q_to_d ), imagTempWeights0( q_to_d ),
+              realTempWeights1( q_to_d ), imagTempWeights1( q_to_d );
+    vector<R> postscalingArguments( q );
+    vector<R> realPostscalings( q ), imagPostscalings( q );
+    for( size_t cLocal=0;
          cLocal<(1u<<(d-log2NumMergingProcesses));
          ++cLocal )
     {
-        const std::size_t interactionIndex = parentInteractionOffset + cLocal;
-        const std::size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
+        const size_t interactionIndex = parentInteractionOffset + cLocal;
+        const size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
         const WeightGrid<R,d,q>& oldWeightGrid = 
             oldWeightGridList[interactionIndex];
 
         // Find the center of child c
-        Array<R,d> p0Bc;
-        for( std::size_t j=0; j<d; ++j )
+        array<R,d> p0Bc;
+        for( size_t j=0; j<d; ++j )
             p0Bc[j] = p0B[j] + ( (c>>j)&1 ? wB[j]/4 : -wB[j]/4 );
 
         //--------------------------------------------------------------------//
@@ -421,9 +418,9 @@ FormCheckPotentials
             const R* imagReadBuffer = oldWeightGrid.ImagBuffer();
             const R* realScalingBuffer = &realPrescalings[0][0];
             const R* imagScalingBuffer = &imagPrescalings[0][0];
-            for( std::size_t t=0; t<Pow<q,d-1>::val; ++t )
+            for( size_t t=0; t<Pow<q,d-1>::val; ++t )
             {
-                for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                for( size_t tPrime=0; tPrime<q; ++tPrime )
                 {
                     const R realWeight = realReadBuffer[t*q+tPrime];
                     const R imagWeight = imagReadBuffer[t*q+tPrime];
@@ -438,9 +435,9 @@ FormCheckPotentials
         }
         // Apply forward map
         {
-            const std::vector<R>& realForwardMap = 
+            const vector<R>& realForwardMap = 
                 context.GetRealForwardMap( 0 );
-            const std::vector<R>& imagForwardMap = 
+            const vector<R>& imagForwardMap = 
                 context.GetImagForwardMap( 0 );
             // Form the real part
             Gemm
@@ -466,7 +463,7 @@ FormCheckPotentials
               (R)1, &imagTempWeights1[0], q );
         }
         // Postscale
-        for( std::size_t t=0; t<q; ++t )
+        for( size_t t=0; t<q; ++t )
             postscalingArguments[t] = 
                 SignedTwoPi*(x0A[0]+chebyshevNodes[t]*wA[0])*p0Bc[0];
         SinCosBatch( postscalingArguments, imagPostscalings, realPostscalings );
@@ -475,9 +472,9 @@ FormCheckPotentials
             R* imagBuffer = &imagTempWeights1[0];
             const R* realScalingBuffer = &realPostscalings[0];
             const R* imagScalingBuffer = &imagPostscalings[0];
-            for( std::size_t t=0; t<Pow<q,d-1>::val; ++t )
+            for( size_t t=0; t<Pow<q,d-1>::val; ++t )
             {
-                for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                for( size_t tPrime=0; tPrime<q; ++tPrime )
                 {
                     const R realWeight = realBuffer[t*q+tPrime];
                     const R imagWeight = imagBuffer[t*q+tPrime];
@@ -495,16 +492,16 @@ FormCheckPotentials
         // Transform the second dimension                                     //
         //--------------------------------------------------------------------//
         // Prescale
-        for( std::size_t p=0; p<Pow<q,d-2>::val; ++p )
+        for( size_t p=0; p<Pow<q,d-2>::val; ++p )
         {
-            const std::size_t offset = p*q*q; 
+            const size_t offset = p*q*q; 
             R* offsetRealBuffer = &realTempWeights1[offset];
             R* offsetImagBuffer = &imagTempWeights1[offset];
             const R* realScalingBuffer = &realPrescalings[1][0];
             const R* imagScalingBuffer = &imagPrescalings[1][0];
-            for( std::size_t w=0; w<q; ++w )
+            for( size_t w=0; w<q; ++w )
             {
-                for( std::size_t t=0; t<q; ++t )
+                for( size_t t=0; t<q; ++t )
                 {
                     const R realWeight = offsetRealBuffer[w+t*q];
                     const R imagWeight = offsetImagBuffer[w+t*q];
@@ -519,11 +516,11 @@ FormCheckPotentials
         }
         // Apply forward map
         {
-            const std::vector<R>& realForwardMap = 
+            const vector<R>& realForwardMap = 
                 context.GetRealForwardMap( 1 );
-            const std::vector<R>& imagForwardMap = 
+            const vector<R>& imagForwardMap = 
                 context.GetImagForwardMap( 1 );
-            for( std::size_t w=0; w<Pow<q,d-2>::val; ++w )
+            for( size_t w=0; w<Pow<q,d-2>::val; ++w )
             {
                 // Form the real part
                 Gemm
@@ -550,20 +547,20 @@ FormCheckPotentials
             }
         }
         // Postscale
-        for( std::size_t t=0; t<q; ++t )
+        for( size_t t=0; t<q; ++t )
             postscalingArguments[t] =
                 SignedTwoPi*(x0A[1]+chebyshevNodes[t]*wA[1])*p0Bc[1];
         SinCosBatch( postscalingArguments, imagPostscalings, realPostscalings );
-        for( std::size_t p=0; p<Pow<q,d-2>::val; ++p )
+        for( size_t p=0; p<Pow<q,d-2>::val; ++p )
         {
-            const std::size_t offset = p*q*q;
+            const size_t offset = p*q*q;
             R* offsetRealBuffer = &realTempWeights0[offset];
             R* offsetImagBuffer = &imagTempWeights0[offset];
             const R* realScalingBuffer = &realPostscalings[0];
             const R* imagScalingBuffer = &imagPostscalings[0];
-            for( std::size_t w=0; w<q; ++w )
+            for( size_t w=0; w<q; ++w )
             {
-                for( std::size_t t=0; t<q; ++t )
+                for( size_t t=0; t<q; ++t )
                 {
                     const R realWeight = offsetRealBuffer[w+t*q];
                     const R imagWeight = offsetImagBuffer[w+t*q];
@@ -580,10 +577,10 @@ FormCheckPotentials
         //--------------------------------------------------------------------//
         // Transform the remaining dimension                                  //
         //--------------------------------------------------------------------//
-        std::size_t q_to_j = q*q;
-        for( std::size_t j=2; j<d; ++j )
+        size_t q_to_j = q*q;
+        for( size_t j=2; j<d; ++j )
         {
-            const std::size_t stride = q_to_j;
+            const size_t stride = q_to_j;
 
             R* realWriteBuffer = 
                 ( j==d-1 ? weightGrid.RealBuffer()
@@ -598,30 +595,29 @@ FormCheckPotentials
             R* imagReadBuffer = 
                 ( j&1 ? &imagTempWeights1[0] : &imagTempWeights0[0] );
 
-            const std::vector<R>& realForwardMap = 
+            const vector<R>& realForwardMap = 
                 context.GetRealForwardMap( j );
-            const std::vector<R>& imagForwardMap = 
+            const vector<R>& imagForwardMap = 
                 context.GetImagForwardMap( j );
             const R* realForwardBuffer = &realForwardMap[0];
             const R* imagForwardBuffer = &imagForwardMap[0];
 
             if( j != d-1 )
             {
-                std::memset( realWriteBuffer, 0, q_to_d*sizeof(R) );
-                std::memset( imagWriteBuffer, 0, q_to_d*sizeof(R) );
+                memset( realWriteBuffer, 0, q_to_d*sizeof(R) );
+                memset( imagWriteBuffer, 0, q_to_d*sizeof(R) );
             }
 
             // Prescale, apply the forward map, and then postscale
-            std::vector<R> realTempWeightStrip( q );
-            std::vector<R> imagTempWeightStrip( q );
-            for( std::size_t t=0; t<q; ++t )
+            vector<R> realTempWeightStrip( q ), imagTempWeightStrip( q );
+            for( size_t t=0; t<q; ++t )
                 postscalingArguments[t] = 
                     SignedTwoPi*(x0A[j]+chebyshevNodes[t]*wA[j])*p0Bc[j];
             SinCosBatch
             ( postscalingArguments, imagPostscalings, realPostscalings );
-            for( std::size_t p=0; p<q_to_d/(q_to_j*q); ++p )        
+            for( size_t p=0; p<q_to_d/(q_to_j*q); ++p )        
             {
-                const std::size_t offset = p*(q_to_j*q);
+                const size_t offset = p*(q_to_j*q);
                 R* offsetRealReadBuffer = &realReadBuffer[offset];
                 R* offsetImagReadBuffer = &imagReadBuffer[offset];
                 R* offsetRealWriteBuffer = &realWriteBuffer[offset];
@@ -630,10 +626,10 @@ FormCheckPotentials
                 const R* imagPrescalingBuffer = &imagPrescalings[j][0];
                 const R* realPostscalingBuffer = &realPostscalings[0];
                 const R* imagPostscalingBuffer = &imagPostscalings[0];
-                for( std::size_t w=0; w<q_to_j; ++w )
+                for( size_t w=0; w<q_to_j; ++w )
                 {
                     // Prescale
-                    for( std::size_t t=0; t<q; ++t )
+                    for( size_t t=0; t<q; ++t )
                     {
                         const R realWeight = offsetRealReadBuffer[w+t*stride];
                         const R imagWeight = offsetImagReadBuffer[w+t*stride];
@@ -645,11 +641,11 @@ FormCheckPotentials
                             imagWeight*realScaling + realWeight*imagScaling;
                     }
                     // Transform
-                    for( std::size_t t=0; t<q; ++t )
+                    for( size_t t=0; t<q; ++t )
                     {
                         offsetRealReadBuffer[w+t*stride] = 0;
                         offsetImagReadBuffer[w+t*stride] = 0;
-                        for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                        for( size_t tPrime=0; tPrime<q; ++tPrime )
                         {
                             offsetRealReadBuffer[w+t*stride] +=
                                 realForwardBuffer[t+tPrime*q] * 
@@ -667,7 +663,7 @@ FormCheckPotentials
                         }
                     }
                     // Postscale
-                    for( std::size_t t=0; t<q; ++t )
+                    for( size_t t=0; t<q; ++t )
                     {
                         const R realWeight = 
                             offsetRealReadBuffer[w+t*stride];

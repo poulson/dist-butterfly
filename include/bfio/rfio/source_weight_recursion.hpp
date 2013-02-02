@@ -9,13 +9,13 @@
 #ifndef BFIO_RFIO_SOURCE_WEIGHT_RECURSION_HPP
 #define BFIO_RFIO_SOURCE_WEIGHT_RECURSION_HPP
 
+#include <array>
 #include <cstddef>
 #include <cstring>
 #include <vector>
 
 #include "bfio/constants.hpp"
 
-#include "bfio/structures/array.hpp"
 #include "bfio/structures/weight_grid.hpp"
 #include "bfio/structures/weight_grid_list.hpp"
 
@@ -26,52 +26,54 @@
 #include "bfio/rfio/context.hpp"
 
 namespace bfio {
+
+using std::array;
+using std::memset;
+using std::size_t;
+using std::vector;
+
 namespace rfio {
 
 // 1d specialization
-template<typename R,std::size_t q>
+template<typename R,size_t q>
 void
 SourceWeightRecursion
 ( const rfio::Context<R,1,q>& context,
   const Plan<1>& plan,
   const Phase<R,1>& phase,
-  const std::size_t level,
-  const Array<R,1>& x0A,
-  const Array<R,1>& p0B,
-  const Array<R,1>& wB,
-  const std::size_t parentInteractionOffset,
+  const size_t level,
+  const array<R,1>& x0A,
+  const array<R,1>& p0B,
+  const array<R,1>& wB,
+  const size_t parentInteractionOffset,
   const WeightGridList<R,1,q>& oldWeightGridList,
         WeightGrid<R,1,q>& weightGrid )
 {
-    std::memset( weightGrid.Buffer(), 0, 2*q*sizeof(R) );
+    memset( weightGrid.Buffer(), 0, 2*q*sizeof(R) );
 
-    const std::size_t log2NumMergingProcesses = 
+    const size_t log2NumMergingProcesses = 
         plan.GetLog2NumMergingProcesses( level );
-    const std::vector<R>& leftMap = context.GetLeftChebyshevMap();
-    const std::vector<R>& rightMap = context.GetRightChebyshevMap();
+    const vector<R>& leftMap = context.GetLeftChebyshevMap();
+    const vector<R>& rightMap = context.GetRightChebyshevMap();
 
-    std::vector<R> phiResults;
-    std::vector<R> sinResults;
-    std::vector<R> cosResults;
-    std::vector< Array<R,1> > xPoint( 1, x0A );
-    std::vector< Array<R,1> > pPoints( q );
-    const std::vector< Array<R,1> >& sourceChildGrids = 
-        context.GetSourceChildGrids();
-    for( std::size_t cLocal=0;
+    vector<R> phiResults, sinResults, cosResults;
+    vector<array<R,1>> xPoint( 1, x0A ), pPoints( q );
+    const vector<array<R,1>>& sourceChildGrids = context.GetSourceChildGrids();
+    for( size_t cLocal=0;
          cLocal<(1u<<(1-log2NumMergingProcesses));
          ++cLocal )
     {
         //--------------------------------------------------------------------//
         // Step 1                                                             //
         //--------------------------------------------------------------------//
-        const std::size_t interactionIndex = parentInteractionOffset + cLocal;
-        const std::size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
+        const size_t interactionIndex = parentInteractionOffset + cLocal;
+        const size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
 
         // Form the set of p points to evaluate
         {
             R* RESTRICT pPointsBuffer = &pPoints[0][0];
             const R* RESTRICT sourceChildBuffer = &sourceChildGrids[c*q][0];
-            for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+            for( size_t tPrime=0; tPrime<q; ++tPrime )
                 pPointsBuffer[tPrime] = 
                     p0B[0] + wB[0]*sourceChildBuffer[tPrime];
         }
@@ -90,7 +92,7 @@ SourceWeightRecursion
                 oldWeightGridList[interactionIndex].RealBuffer();
             const R* RESTRICT oldImagBuffer = 
                 oldWeightGridList[interactionIndex].ImagBuffer();
-            for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+            for( size_t tPrime=0; tPrime<q; ++tPrime )
             {
                 const R realWeight = oldRealBuffer[tPrime];
                 const R imagWeight = oldImagBuffer[tPrime];
@@ -121,11 +123,11 @@ SourceWeightRecursion
     //------------------------------------------------------------------------//
     // Step 3                                                                 //
     //------------------------------------------------------------------------//
-    const std::vector< Array<R,1> >& chebyshevGrid = context.GetChebyshevGrid();
+    const vector<array<R,1>>& chebyshevGrid = context.GetChebyshevGrid();
     {
         R* RESTRICT pPointsBuffer = &pPoints[0][0];
         const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
-        for( std::size_t t=0; t<q; ++t )
+        for( size_t t=0; t<q; ++t )
             pPointsBuffer[t] = p0B[0] + wB[0]*chebyshevBuffer[t];
     }
     phase.BatchEvaluate( xPoint, pPoints, phiResults );
@@ -135,7 +137,7 @@ SourceWeightRecursion
         R* RESTRICT imagBuffer = weightGrid.ImagBuffer();
         const R* RESTRICT cosBuffer = &cosResults[0];
         const R* RESTRICT sinBuffer = &sinResults[0];
-        for( std::size_t t=0; t<q; ++t )
+        for( size_t t=0; t<q; ++t )
         {
             const R realPhase = cosBuffer[t];
             const R imagPhase = -sinBuffer[t];
@@ -148,43 +150,37 @@ SourceWeightRecursion
 }
 
 // 2d specialization
-template<typename R,std::size_t q>
+template<typename R,size_t q>
 void
 SourceWeightRecursion
 ( const rfio::Context<R,2,q>& context,
   const Plan<2>& plan,
   const Phase<R,2>& phase,
-  const std::size_t level,
-  const Array<R,2>& x0A,
-  const Array<R,2>& p0B,
-  const Array<R,2>& wB,
-  const std::size_t parentInteractionOffset,
+  const size_t level,
+  const array<R,2>& x0A,
+  const array<R,2>& p0B,
+  const array<R,2>& wB,
+  const size_t parentInteractionOffset,
   const WeightGridList<R,2,q>& oldWeightGridList,
         WeightGrid<R,2,q>& weightGrid )
 {
-    std::memset( weightGrid.Buffer(), 0, 2*q*q*sizeof(R) );
+    memset( weightGrid.Buffer(), 0, 2*q*q*sizeof(R) );
 
-    const std::size_t log2NumMergingProcesses = 
+    const size_t log2NumMergingProcesses = 
         plan.GetLog2NumMergingProcesses( level );
-    const std::vector<R>& leftMap = context.GetLeftChebyshevMap();
-    const std::vector<R>& rightMap = context.GetRightChebyshevMap();
+    const vector<R>& leftMap = context.GetLeftChebyshevMap();
+    const vector<R>& rightMap = context.GetRightChebyshevMap();
 
-    std::vector<R> phiResults;
-    std::vector<R> sinResults;
-    std::vector<R> cosResults;
-    std::vector< Array<R,2> > xPoint( 1, x0A );
-    std::vector< Array<R,2> > pPoints( q*q );
-    const std::vector< Array<R,2> >& sourceChildGrids = 
-        context.GetSourceChildGrids();
-    for( std::size_t cLocal=0; 
-         cLocal<(1u<<(2-log2NumMergingProcesses));
-         ++cLocal )
+    vector<R> phiResults, sinResults, cosResults;
+    vector<array<R,2>> xPoint( 1, x0A ), pPoints( q*q );
+    const vector<array<R,2>>& sourceChildGrids = context.GetSourceChildGrids();
+    for( size_t cLocal=0; cLocal<(1u<<(2-log2NumMergingProcesses)); ++cLocal )
     {
         //--------------------------------------------------------------------//
         // Step 1                                                             //
         //--------------------------------------------------------------------//
-        const std::size_t interactionIndex = parentInteractionOffset + cLocal;
-        const std::size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
+        const size_t interactionIndex = parentInteractionOffset + cLocal;
+        const size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
 
         // Form the set of p points to evaluate
         {
@@ -192,8 +188,8 @@ SourceWeightRecursion
             const R* RESTRICT wBBuffer = &wB[0];
             const R* RESTRICT p0Buffer = &p0B[0];
             const R* RESTRICT sourceChildBuffer = &sourceChildGrids[c*q*q][0];
-            for( std::size_t tPrime=0; tPrime<q*q; ++tPrime )
-                for( std::size_t j=0; j<2; ++j )
+            for( size_t tPrime=0; tPrime<q*q; ++tPrime )
+                for( size_t j=0; j<2; ++j )
                     pPointsBuffer[tPrime*2+j] = 
                         p0Buffer[j] + 
                         wBBuffer[j]*sourceChildBuffer[tPrime*2+j];
@@ -213,7 +209,7 @@ SourceWeightRecursion
                 oldWeightGridList[interactionIndex].RealBuffer();
             const R* RESTRICT oldImagBuffer =
                 oldWeightGridList[interactionIndex].ImagBuffer();
-            for( std::size_t tPrime=0; tPrime<q*q; ++tPrime )
+            for( size_t tPrime=0; tPrime<q*q; ++tPrime )
             {
                 const R realWeight = oldRealBuffer[tPrime];
                 const R imagWeight = oldImagBuffer[tPrime];
@@ -261,14 +257,14 @@ SourceWeightRecursion
     //------------------------------------------------------------------------//
     // Step 3                                                                 //
     //------------------------------------------------------------------------//
-    const std::vector< Array<R,2> >& chebyshevGrid = context.GetChebyshevGrid();
+    const vector<array<R,2>>& chebyshevGrid = context.GetChebyshevGrid();
     {
         R* RESTRICT pPointsBuffer = &pPoints[0][0];
         const R* RESTRICT wBBuffer = &wB[0];
         const R* RESTRICT p0Buffer = &p0B[0];
         const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
-        for( std::size_t t=0; t<q*q; ++t )
-            for( std::size_t j=0; j<2; ++j )
+        for( size_t t=0; t<q*q; ++t )
+            for( size_t j=0; j<2; ++j )
                 pPointsBuffer[t*2+j] = 
                     p0Buffer[j] + wBBuffer[j]*chebyshevBuffer[t*2+j];
     }
@@ -279,7 +275,7 @@ SourceWeightRecursion
         R* RESTRICT imagBuffer = weightGrid.ImagBuffer();
         const R* RESTRICT cosBuffer = &cosResults[0];
         const R* RESTRICT sinBuffer = &sinResults[0];
-        for( std::size_t t=0; t<q*q; ++t )
+        for( size_t t=0; t<q*q; ++t )
         {
             const R realPhase = cosBuffer[t];
             const R imagPhase = -sinBuffer[t];
@@ -292,45 +288,39 @@ SourceWeightRecursion
 }
 
 // Fallback for 3d and above
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 void
 SourceWeightRecursion
 ( const rfio::Context<R,d,q>& context,
   const Plan<d>& plan,
   const Phase<R,d>& phase,
-  const std::size_t level,
-  const Array<R,d>& x0A,
-  const Array<R,d>& p0B,
-  const Array<R,d>& wB,
-  const std::size_t parentInteractionOffset,
+  const size_t level,
+  const array<R,d>& x0A,
+  const array<R,d>& p0B,
+  const array<R,d>& wB,
+  const size_t parentInteractionOffset,
   const WeightGridList<R,d,q>& oldWeightGridList,
         WeightGrid<R,d,q>& weightGrid )
 {
-    const std::size_t q_to_d = Pow<q,d>::val;
-    std::memset( weightGrid.Buffer(), 0, 2*q_to_d*sizeof(R) );
+    const size_t q_to_d = Pow<q,d>::val;
+    memset( weightGrid.Buffer(), 0, 2*q_to_d*sizeof(R) );
 
-    const std::size_t log2NumMergingProcesses = 
+    const size_t log2NumMergingProcesses = 
         plan.GetLog2NumMergingProcesses( level );
-    const std::vector<R>& leftMap = context.GetLeftChebyshevMap();
-    const std::vector<R>& rightMap = context.GetRightChebyshevMap();
+    const vector<R>& leftMap = context.GetLeftChebyshevMap();
+    const vector<R>& rightMap = context.GetRightChebyshevMap();
 
-    std::vector<R> phiResults;
-    std::vector<R> sinResults;
-    std::vector<R> cosResults;
-    std::vector< Array<R,d> > xPoint( 1, x0A );
-    std::vector< Array<R,d> > pPoints( q_to_d );
-    const std::vector< Array<R,d> >& sourceChildGrids = 
-        context.GetSourceChildGrids();
+    vector<R> phiResults, sinResults, cosResults;
+    vector<array<R,d>> xPoint( 1, x0A ), pPoints( q_to_d );
+    const vector<array<R,d>>& sourceChildGrids = context.GetSourceChildGrids();
     WeightGrid<R,d,q> scaledWeightGrid;
-    for( std::size_t cLocal=0;
-         cLocal<(1u<<(d-log2NumMergingProcesses));
-         ++cLocal )
+    for( size_t cLocal=0; cLocal<(1u<<(d-log2NumMergingProcesses)); ++cLocal )
     {
         //--------------------------------------------------------------------//
         // Step 1                                                             //
         //--------------------------------------------------------------------//
-        const std::size_t interactionIndex = parentInteractionOffset + cLocal;
-        const std::size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
+        const size_t interactionIndex = parentInteractionOffset + cLocal;
+        const size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
 
         // Form the set of p points to evaluate
         {
@@ -339,8 +329,8 @@ SourceWeightRecursion
             const R* RESTRICT p0BBuffer = &p0B[0];
             const R* RESTRICT sourceChildBuffer = 
                 &sourceChildGrids[c*q_to_d][0];
-            for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
-                for( std::size_t j=0; j<d; ++j )
+            for( size_t tPrime=0; tPrime<q_to_d; ++tPrime )
+                for( size_t j=0; j<d; ++j )
                     pPointsBuffer[tPrime*d+j] = 
                         p0BBuffer[j] + 
                         wBBuffer[j]*sourceChildBuffer[tPrime*d+j];
@@ -359,7 +349,7 @@ SourceWeightRecursion
                 oldWeightGridList[interactionIndex].RealBuffer();
             const R* RESTRICT oldImagBuffer = 
                 oldWeightGridList[interactionIndex].ImagBuffer();
-            for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
+            for( size_t tPrime=0; tPrime<q_to_d; ++tPrime )
             {
                 const R realWeight = oldRealBuffer[tPrime];
                 const R imagWeight = oldImagBuffer[tPrime];
@@ -401,7 +391,7 @@ SourceWeightRecursion
             const R* realReadBuffer = tempWeightGrid.RealBuffer();
             const R* imagReadBuffer = tempWeightGrid.ImagBuffer();
             const R* mapBuffer = ( (c>>1)&1 ? &rightMap[0] : &leftMap[0] );
-            for( std::size_t w=0; w<Pow<q,d-2>::val; ++w )
+            for( size_t w=0; w<Pow<q,d-2>::val; ++w )
             {
                 Gemm
                 ( 'N', 'T', q, q, q,
@@ -409,7 +399,7 @@ SourceWeightRecursion
                         mapBuffer,               q,
                   (R)0, &realWriteBuffer[w*q*q], q );
             }
-            for( std::size_t w=0; w<Pow<q,d-2>::val; ++w )
+            for( size_t w=0; w<Pow<q,d-2>::val; ++w )
             {
                 Gemm
                 ( 'N', 'T', q, q, q,
@@ -427,10 +417,10 @@ SourceWeightRecursion
         //
         // TODO: Check if loading discontinuous chunks is faster than repeatedly
         //       striding over them.
-        std::size_t q_to_j = q*q;
-        for( std::size_t j=2; j<d; ++j )
+        size_t q_to_j = q*q;
+        for( size_t j=2; j<d; ++j )
         {
-            const std::size_t stride = q_to_j;
+            const size_t stride = q_to_j;
 
             R* realWriteBuffer = 
                 ( j==d-1 ? weightGrid.RealBuffer()
@@ -451,30 +441,30 @@ SourceWeightRecursion
 
             if( j != d-1 )
             {
-                std::memset( realWriteBuffer, 0, q_to_d*sizeof(R) );
-                std::memset( imagWriteBuffer, 0, q_to_d*sizeof(R) );
+                memset( realWriteBuffer, 0, q_to_d*sizeof(R) );
+                memset( imagWriteBuffer, 0, q_to_d*sizeof(R) );
             }
-            for( std::size_t p=0; p<q_to_d/(q_to_j*q); ++p )
+            for( size_t p=0; p<q_to_d/(q_to_j*q); ++p )
             {
-                const std::size_t offset = p*(q_to_j*q);
+                const size_t offset = p*(q_to_j*q);
                 R* RESTRICT offsetRealWriteBuffer = &realWriteBuffer[offset];
                 R* RESTRICT offsetImagWriteBuffer = &imagWriteBuffer[offset];
                 const R* RESTRICT offsetRealReadBuffer = &realReadBuffer[offset];
                 const R* RESTRICT offsetImagReadBuffer = &imagReadBuffer[offset];
-                for( std::size_t w=0; w<q_to_j; ++w )
+                for( size_t w=0; w<q_to_j; ++w )
                 {
-                    for( std::size_t t=0; t<q; ++t )
+                    for( size_t t=0; t<q; ++t )
                     {
-                        for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                        for( size_t tPrime=0; tPrime<q; ++tPrime )
                         {
                             offsetRealWriteBuffer[w+t*stride] +=
                                 mapBuffer[t+tPrime*q] * 
                                 offsetRealReadBuffer[w+tPrime*stride];
                         }
                     }
-                    for( std::size_t t=0; t<q; ++t )
+                    for( size_t t=0; t<q; ++t )
                     {
-                        for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                        for( size_t tPrime=0; tPrime<q; ++tPrime )
                         {
                             offsetImagWriteBuffer[w+t*stride] +=
                                 mapBuffer[t+tPrime*q] *
@@ -490,14 +480,14 @@ SourceWeightRecursion
     //------------------------------------------------------------------------//
     // Step 3                                                                 //
     //------------------------------------------------------------------------//
-    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
+    const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
     {
         R* RESTRICT pPointsBuffer = &pPoints[0][0];
         const R* RESTRICT wBBuffer = &wB[0];
         const R* RESTRICT p0BBuffer = &p0B[0];
         const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
-        for( std::size_t t=0; t<q_to_d; ++t )
-            for( std::size_t j=0; j<d; ++j )
+        for( size_t t=0; t<q_to_d; ++t )
+            for( size_t j=0; j<d; ++j )
                 pPointsBuffer[t*d+j] =  
                     p0BBuffer[j] + wBBuffer[j]*chebyshevBuffer[t*d+j];
     }
@@ -508,7 +498,7 @@ SourceWeightRecursion
         R* RESTRICT imagBuffer = weightGrid.ImagBuffer();
         const R* RESTRICT cosBuffer = &cosResults[0];
         const R* RESTRICT sinBuffer = &sinResults[0];
-        for( std::size_t t=0; t<q_to_d; ++t )
+        for( size_t t=0; t<q_to_d; ++t )
         {
             const R realPhase = cosBuffer[t];
             const R imagPhase = -sinBuffer[t];

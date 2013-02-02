@@ -34,14 +34,13 @@ class GenRadon : public bfio::Phase<R,d>
 public:
     virtual GenRadon<R>* Clone() const;
 
-    virtual R operator()
-    ( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const;
+    virtual R operator()( const array<R,d>& x, const array<R,d>& p ) const;
 
     // We can optionally override the batched application for better efficiency.
     virtual void BatchEvaluate
-    ( const vector< bfio::Array<R,d> >& xPoints,
-      const vector< bfio::Array<R,d> >& pPoints,
-            vector< R                >& results ) const;
+    ( const vector<array<R,d>>& xPoints,
+      const vector<array<R,d>>& pPoints,
+            vector<R         >& results ) const;
 };
 
 template<typename R>
@@ -51,7 +50,7 @@ GenRadon<R>::Clone() const
 
 template<typename R>
 inline R GenRadon<R>::operator()
-( const bfio::Array<R,d>& x, const bfio::Array<R,d>& p ) const
+( const array<R,d>& x, const array<R,d>& p ) const
 {
     R a = p[0]*(2+sin(bfio::TwoPi*x[0])*sin(bfio::TwoPi*x[1]))/3;
     R b = p[1]*(2+cos(bfio::TwoPi*x[0])*cos(bfio::TwoPi*x[1]))/3;
@@ -60,9 +59,9 @@ inline R GenRadon<R>::operator()
 
 template<typename R>
 void GenRadon<R>::BatchEvaluate
-( const vector< bfio::Array<R,d> >& xPoints,
-  const vector< bfio::Array<R,d> >& pPoints,
-        vector< R                >& results ) const
+( const vector<array<R,d>>& xPoints,
+  const vector<array<R,d>>& pPoints,
+        vector<R         >& results ) const
 {
     const size_t xSize = xPoints.size();
     const size_t pSize = pPoints.size();
@@ -202,8 +201,8 @@ main
 
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
-        vector< bfio::Source<double,d> > mySources;
-        vector< bfio::Source<double,d> > globalSources;
+        vector<bfio::Source<double,d>> mySources;
+        vector<bfio::Source<double,d>> globalSources;
         if( testAccuracy || store )
         {
             globalSources.resize( M );
@@ -263,12 +262,11 @@ main
             cout << "done." << endl;
 
         // Run the algorithm to generate the potential field
-        auto_ptr< const bfio::rfio::PotentialField<double,d,q> > u;
         if( rank == 0 )
             cout << "Launching transform..." << endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        u = bfio::ReducedFIO
+        auto u = bfio::ReducedFIO
         ( context, plan, genRadon, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
@@ -307,4 +305,3 @@ main
     MPI_Finalize();
     return 0;
 }
-

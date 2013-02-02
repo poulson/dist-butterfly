@@ -9,16 +9,16 @@
 #ifndef BFIO_STRUCTURES_BOX_HPP
 #define BFIO_STRUCTURES_BOX_HPP
 
+#include <array>
 #include <cstddef>
-#include "bfio/structures/array.hpp"
 
 namespace bfio {
 
 template<typename R,std::size_t d>
 struct Box
 {
-    Array<R,d> widths;
-    Array<R,d> offsets;
+    std::array<R,d> widths;
+    std::array<R,d> offsets;
 };
 
 } // bfio

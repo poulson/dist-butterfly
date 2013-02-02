@@ -9,7 +9,8 @@
 #ifndef BFIO_STRUCTURES_LOW_RANK_POTENTIAL_HPP
 #define BFIO_STRUCTURES_LOW_RANK_POTENTIAL_HPP
 
-#include "bfio/structures/array.hpp"
+#include <array>
+
 #include "bfio/structures/weight_grid.hpp"
 
 namespace bfio {
@@ -17,7 +18,7 @@ namespace bfio {
 template<typename R,std::size_t d,std::size_t q>
 struct LRP
 {
-    Array<R,d> x0;
+    std::array<R,d> x0;
     WeightGrid<R,d,q> weightGrid;
 };
 

@@ -13,6 +13,7 @@
 # include <iostream>
 #endif
 
+#include <array>
 #include <bitset>
 #include <stdexcept>
 #include <vector>
@@ -26,55 +27,55 @@
 
 namespace bfio {
 
-template<std::size_t d>
+using std::size_t;
+using std::vector;
+
+template<size_t d>
 class PlanBase
 {
 protected:
     MPI_Comm _comm;
     const Direction _direction;
-    const std::size_t _N;
+    const size_t _N;
 
     // Does not depend on the problem size
     int _rank;
     int _numProcesses;
-    std::size_t _log2NumProcesses;
-    std::size_t _log2N;
-    Array<std::size_t,d> _myInitialSourceBoxCoords;
-    Array<std::size_t,d> _myFinalTargetBoxCoords;
-    Array<std::size_t,d> _log2InitialSourceBoxesPerDim;
-    Array<std::size_t,d> _log2FinalTargetBoxesPerDim;
+    size_t _log2NumProcesses;
+    size_t _log2N;
+    array<size_t,d> _myInitialSourceBoxCoords;
+    array<size_t,d> _myFinalTargetBoxCoords;
+    array<size_t,d> _log2InitialSourceBoxesPerDim;
+    array<size_t,d> _log2FinalTargetBoxesPerDim;
 
     // Depends on the problem size
-    const std::size_t _bootstrapSkip;
+    const size_t _bootstrapSkip;
     MPI_Comm _bootstrapClusterComm;
-    std::vector<std::size_t> _bootstrapSourceDimsToMerge;
-    std::vector<std::size_t> _bootstrapTargetDimsToCut;
-    std::vector<bool       > _bootstrapRightSideOfCut;
-    std::vector< MPI_Comm                 > _clusterComms;
-    std::vector< std::size_t              > _log2SubclusterSizes;
-    std::vector< std::vector<std::size_t> > _sourceDimsToMerge;
-    std::vector< std::vector<std::size_t> > _targetDimsToCut;
-    std::vector< std::vector<bool       > > _rightSideOfCut;
+    vector<size_t> _bootstrapSourceDimsToMerge;
+    vector<size_t> _bootstrapTargetDimsToCut;
+    vector<bool> _bootstrapRightSideOfCut;
+    vector<MPI_Comm> _clusterComms;
+    vector<size_t> _log2SubclusterSizes;
+    vector<vector<size_t>> _sourceDimsToMerge;
+    vector<vector<size_t>> _targetDimsToCut;
+    vector<vector<bool>> _rightSideOfCut;
 
     PlanBase
-    ( MPI_Comm comm, Direction direction, std::size_t N, 
-      std::size_t bootstrapSkip );
+    ( MPI_Comm comm, Direction direction, size_t N, size_t bootstrapSkip );
 
 public:        
     virtual ~PlanBase();
 
-    virtual std::size_t 
-    LocalToClusterSourceIndex
-    ( std::size_t level, std::size_t cLocal ) const = 0;
+    virtual size_t 
+    LocalToClusterSourceIndex( size_t level, size_t cLocal ) const = 0;
 
-    virtual std::size_t
-    LocalToBootstrapClusterSourceIndex
-    ( std::size_t cLocal ) const = 0;
+    virtual size_t
+    LocalToBootstrapClusterSourceIndex( size_t cLocal ) const = 0;
 
     MPI_Comm GetComm() const;
     Direction GetDirection() const;
-    std::size_t GetN() const;
-    std::size_t GetBootstrapSkip() const;
+    size_t GetN() const;
+    size_t GetBootstrapSkip() const;
 
     template<typename R>
     Box<R,d> GetMyInitialSourceBox( const Box<R,d>& sourceBox ) const;
@@ -82,88 +83,69 @@ public:
     template<typename R>
     Box<R,d> GetMyFinalTargetBox( const Box<R,d>& targetBox ) const;
 
-    const Array<std::size_t,d>& GetMyInitialSourceBoxCoords() const;
-    const Array<std::size_t,d>& GetMyFinalTargetBoxCoords() const;
-    const Array<std::size_t,d>& GetLog2InitialSourceBoxesPerDim() const;
-    const Array<std::size_t,d>& GetLog2FinalTargetBoxesPerDim() const;
+    const array<size_t,d>& GetMyInitialSourceBoxCoords() const;
+    const array<size_t,d>& GetMyFinalTargetBoxCoords() const;
+    const array<size_t,d>& GetLog2InitialSourceBoxesPerDim() const;
+    const array<size_t,d>& GetLog2FinalTargetBoxesPerDim() const;
 
     MPI_Comm GetBootstrapClusterComm() const;
-    MPI_Comm GetClusterComm( std::size_t level ) const;
-    std::size_t GetLog2SubclusterSize( std::size_t level ) const;
-    std::size_t GetLog2NumMergingProcesses( std::size_t level ) const;
+    MPI_Comm GetClusterComm( size_t level ) const;
+    size_t GetLog2SubclusterSize( size_t level ) const;
+    size_t GetLog2NumMergingProcesses( size_t level ) const;
 
-    const std::vector<std::size_t>&
-    GetBootstrapSourceDimsToMerge() const;
-
-    const std::vector<std::size_t>&
-    GetBootstrapTargetDimsToCut() const;
-
-    const std::vector<bool>&
-    GetBootstrapRightSideOfCut() const;
-
-    const std::vector<std::size_t>& 
-    GetSourceDimsToMerge( std::size_t level ) const;
-
-    const std::vector<std::size_t>& 
-    GetTargetDimsToCut( std::size_t level ) const;
-
-    const std::vector<bool>& 
-    GetRightSideOfCut( std::size_t level ) const;
+    const vector<size_t>& GetBootstrapSourceDimsToMerge() const;
+    const vector<size_t>& GetBootstrapTargetDimsToCut() const;
+    const vector<bool>&   GetBootstrapRightSideOfCut() const;
+    const vector<size_t>& GetSourceDimsToMerge( size_t level ) const;
+    const vector<size_t>& GetTargetDimsToCut( size_t level ) const;
+    const vector<bool>&   GetRightSideOfCut( size_t level ) const;
 };
 
-template<std::size_t d>
+template<size_t d>
 class Plan : public PlanBase<d>
 {
     //---------------------------------//
     // For forward plans               //
     //---------------------------------//
-    std::size_t _myBootstrapClusterRank;
-    std::vector<std::size_t> _myClusterRanks;
+    size_t _myBootstrapClusterRank;
+    vector<size_t> _myClusterRanks;
     void GenerateForwardPlan();
 
-    std::size_t
-    ForwardLocalToBootstrapClusterSourceIndex
-    ( std::size_t cLocal ) const;
+    size_t
+    ForwardLocalToBootstrapClusterSourceIndex( size_t cLocal ) const;
 
-    std::size_t 
-    ForwardLocalToClusterSourceIndex
-    ( std::size_t level, std::size_t cLocal ) const;
+    size_t 
+    ForwardLocalToClusterSourceIndex( size_t level, size_t cLocal ) const;
 
     //---------------------------------//
     // For adjoint plans               //
     //---------------------------------//
-    std::size_t _myBootstrapMappedRank;
-    std::vector<std::size_t> _myMappedRanks;
+    size_t _myBootstrapMappedRank;
+    vector<size_t> _myMappedRanks;
     void GenerateAdjointPlan();
 
-    std::size_t
-    AdjointLocalToBootstrapClusterSourceIndex
-    ( std::size_t cLocal ) const;
+    size_t
+    AdjointLocalToBootstrapClusterSourceIndex( size_t cLocal ) const;
 
-    std::size_t 
-    AdjointLocalToClusterSourceIndex
-    ( std::size_t level, std::size_t cLocal ) const;
+    size_t 
+    AdjointLocalToClusterSourceIndex( size_t level, size_t cLocal ) const;
 
 public:
     Plan
-    ( MPI_Comm comm, Direction direction, std::size_t N, 
-      std::size_t bootstrapSkip=0 );
+    ( MPI_Comm comm, Direction direction, size_t N, size_t bootstrapSkip=0 );
 
-    virtual std::size_t
-    LocalToBootstrapClusterSourceIndex
-    ( std::size_t cLocal ) const;
+    virtual size_t
+    LocalToBootstrapClusterSourceIndex( size_t cLocal ) const;
 
-    virtual std::size_t 
-    LocalToClusterSourceIndex
-    ( std::size_t level, std::size_t cLocal ) const;
+    virtual size_t 
+    LocalToClusterSourceIndex( size_t level, size_t cLocal ) const;
 };
 
 // Implementations
     
-template<std::size_t d>
+template<size_t d>
 PlanBase<d>::PlanBase
-( MPI_Comm comm, Direction direction, std::size_t N,
-  std::size_t bootstrapSkip ) 
+( MPI_Comm comm, Direction direction, size_t N, size_t bootstrapSkip ) 
 : _comm(comm), _direction(direction), _N(N), _bootstrapSkip(bootstrapSkip)
 { 
     MPI_Comm_rank( comm, &_rank );
@@ -187,39 +169,40 @@ PlanBase<d>::PlanBase
     _rightSideOfCut.resize( _log2N );
 }
 
-template<std::size_t d>
+template<size_t d>
 PlanBase<d>::~PlanBase()
 {
     MPI_Comm_free( &_bootstrapClusterComm );
-    for( std::size_t level=1; level<=_log2N; ++level )
+    for( size_t level=1; level<=_log2N; ++level )
         MPI_Comm_free( &_clusterComms[level-1] );
 }
 
-template<std::size_t d>
+template<size_t d>
 inline MPI_Comm PlanBase<d>::GetComm() const 
 { return _comm; }
 
-template<std::size_t d>
+template<size_t d>
 inline Direction
 PlanBase<d>::GetDirection() const
 { return _direction; }
 
-template<std::size_t d>
-inline std::size_t 
+template<size_t d>
+inline size_t 
 PlanBase<d>::GetN() const 
 { return _N; }
 
-template<std::size_t d>
-inline std::size_t
+template<size_t d>
+inline size_t
 PlanBase<d>::GetBootstrapSkip() const
 { return _bootstrapSkip; }
 
-template<std::size_t d> template<typename R>
+template<size_t d> 
+template<typename R>
 Box<R,d> 
 PlanBase<d>::GetMyInitialSourceBox( const Box<R,d>& sourceBox ) const
 {
     Box<R,d> myInitialSourceBox;
-    for( std::size_t j=0; j<d; ++j )
+    for( size_t j=0; j<d; ++j )
     {
         myInitialSourceBox.widths[j] = 
             sourceBox.widths[j] / (1u<<_log2InitialSourceBoxesPerDim[j]);
@@ -230,12 +213,13 @@ PlanBase<d>::GetMyInitialSourceBox( const Box<R,d>& sourceBox ) const
     return myInitialSourceBox;
 }
 
-template<std::size_t d> template<typename R>
+template<size_t d> 
+template<typename R>
 Box<R,d> 
 PlanBase<d>::GetMyFinalTargetBox( const Box<R,d>& targetBox ) const
 {
     Box<R,d> myFinalTargetBox;
-    for( std::size_t j=0; j<d; ++j )
+    for( size_t j=0; j<d; ++j )
     {
         myFinalTargetBox.widths[j] = 
             targetBox.widths[j] / (1u<<_log2FinalTargetBoxesPerDim[j]);
@@ -246,79 +230,79 @@ PlanBase<d>::GetMyFinalTargetBox( const Box<R,d>& targetBox ) const
     return myFinalTargetBox;
 }
 
-template<std::size_t d>
-inline const Array<std::size_t,d>& 
+template<size_t d>
+inline const array<size_t,d>& 
 PlanBase<d>::GetMyInitialSourceBoxCoords() const
 { return _myInitialSourceBoxCoords; }
 
-template<std::size_t d>
-inline const Array<std::size_t,d>& 
+template<size_t d>
+inline const array<size_t,d>& 
 PlanBase<d>::GetMyFinalTargetBoxCoords() const
 { return _myFinalTargetBoxCoords; }
 
-template<std::size_t d>
-inline const Array<std::size_t,d>& 
+template<size_t d>
+inline const array<size_t,d>& 
 PlanBase<d>::GetLog2InitialSourceBoxesPerDim() const
 { return _log2InitialSourceBoxesPerDim; }
 
-template<std::size_t d>
-inline const Array<std::size_t,d>& 
+template<size_t d>
+inline const array<size_t,d>& 
 PlanBase<d>::GetLog2FinalTargetBoxesPerDim() const
 { return _log2FinalTargetBoxesPerDim; }
 
-template<std::size_t d>
+template<size_t d>
 inline MPI_Comm 
-PlanBase<d>::GetClusterComm( std::size_t level ) const
+PlanBase<d>::GetClusterComm( size_t level ) const
 { return _clusterComms[level-1]; }
 
-template<std::size_t d>
+template<size_t d>
 inline MPI_Comm
 PlanBase<d>::GetBootstrapClusterComm() const
 { return _bootstrapClusterComm; }
 
-template<std::size_t d>
-inline const std::vector<std::size_t>&
+template<size_t d>
+inline const vector<size_t>&
 PlanBase<d>::GetBootstrapSourceDimsToMerge() const
 { return _bootstrapSourceDimsToMerge; }
 
-template<std::size_t d>
-inline const std::vector<std::size_t>&
+template<size_t d>
+inline const vector<size_t>&
 PlanBase<d>::GetBootstrapTargetDimsToCut() const
 { return _bootstrapTargetDimsToCut; }
 
-template<std::size_t d>
-inline const std::vector<bool>& 
+template<size_t d>
+inline const vector<bool>& 
 PlanBase<d>::GetBootstrapRightSideOfCut() const
 { return _bootstrapRightSideOfCut; }
 
-template<std::size_t d>
-inline std::size_t 
-PlanBase<d>::GetLog2SubclusterSize( std::size_t level ) const
+template<size_t d>
+inline size_t 
+PlanBase<d>::GetLog2SubclusterSize( size_t level ) const
 { return _log2SubclusterSizes[level-1]; }
 
-template<std::size_t d>
-inline std::size_t
-PlanBase<d>::GetLog2NumMergingProcesses( std::size_t level ) const
+template<size_t d>
+inline size_t
+PlanBase<d>::GetLog2NumMergingProcesses( size_t level ) const
 { return _sourceDimsToMerge[level-1].size(); }
 
-template<std::size_t d>
-inline const std::vector<std::size_t>&
-PlanBase<d>::GetSourceDimsToMerge( std::size_t level ) const
+template<size_t d>
+inline const vector<size_t>&
+PlanBase<d>::GetSourceDimsToMerge( size_t level ) const
 { return _sourceDimsToMerge[level-1]; }
 
-template<std::size_t d>
-inline const std::vector<std::size_t>& 
-PlanBase<d>::GetTargetDimsToCut( std::size_t level ) const
+template<size_t d>
+inline const vector<size_t>& 
+PlanBase<d>::GetTargetDimsToCut( size_t level ) const
 { return _targetDimsToCut[level-1]; }
 
-template<std::size_t d>
-inline const std::vector<bool>& 
-PlanBase<d>::GetRightSideOfCut( std::size_t level ) const
+template<size_t d>
+inline const vector<bool>& 
+PlanBase<d>::GetRightSideOfCut( size_t level ) const
 { return _rightSideOfCut[level-1]; }
 
-template<std::size_t d>
+template<size_t d>
 Plan<d>::Plan
-( MPI_Comm comm, Direction direction, std::size_t N, std::size_t bootstrapSkip )
+( MPI_Comm comm, Direction direction, size_t N, size_t bootstrapSkip )
 : PlanBase<d>( comm, direction, N, bootstrapSkip )
 { 
 
@@ -328,25 +312,23 @@ Plan<d>::Plan
         GenerateAdjointPlan();
 }
 
-template<std::size_t d>
-inline std::size_t
-Plan<d>::ForwardLocalToBootstrapClusterSourceIndex
-( std::size_t cLocal ) const
+template<size_t d>
+inline size_t
+Plan<d>::ForwardLocalToBootstrapClusterSourceIndex( size_t cLocal ) const
 {
     return (cLocal<<this->_bootstrapSourceDimsToMerge.size()) +
            this->_myBootstrapClusterRank;
 }
 
-template<std::size_t d>
-inline std::size_t
-Plan<d>::ForwardLocalToClusterSourceIndex
-( std::size_t level, std::size_t cLocal ) const
+template<size_t d>
+inline size_t
+Plan<d>::ForwardLocalToClusterSourceIndex( size_t level, size_t cLocal ) const
 {
     return (cLocal<<this->_sourceDimsToMerge[level-1].size()) +     
            this->_myClusterRanks[level-1];
 }
 
-template<std::size_t d>
+template<size_t d>
 void
 Plan<d>::GenerateForwardPlan()
 {
@@ -355,14 +337,14 @@ Plan<d>::GenerateForwardPlan()
     _myClusterRanks.resize( this->_log2N );
 
     // Compute the number of source boxes per dimension and our coordinates
-    std::size_t nextSourceDimToCut = 0;
-    std::size_t lastSourceDimCut = 0; // initialize to avoid compiler warnings
-    for( std::size_t j=0; j<d; ++j )
+    size_t nextSourceDimToCut = 0;
+    size_t lastSourceDimCut = 0; // initialize to avoid compiler warnings
+    for( size_t j=0; j<d; ++j )
     {
         this->_myInitialSourceBoxCoords[j] = 0;
         this->_log2InitialSourceBoxesPerDim[j] = 0;
     }
-    for( std::size_t m=this->_log2NumProcesses; m>0; --m )
+    for( size_t m=this->_log2NumProcesses; m>0; --m )
     {
 #ifndef RELEASE
         if( this->_rank == 0 )
@@ -384,7 +366,7 @@ Plan<d>::GenerateForwardPlan()
         if( this->_rank == p )
         {
             std::cout << "Rank " << p << "'s initial source box coords: ";
-            for( std::size_t j=0; j<d; ++j )
+            for( size_t j=0; j<d; ++j )
                 std::cout << this->_myInitialSourceBoxCoords[j] << " ";
             std::cout << std::endl;
         }
@@ -394,11 +376,11 @@ Plan<d>::GenerateForwardPlan()
 #endif
 
     // Generate subcommunicator vector by walking through the forward process
-    std::size_t numTargetCuts = 0;
-    std::size_t nextTargetDimToCut = d-1;
-    std::size_t nextSourceDimToMerge = lastSourceDimCut;
-    std::size_t log2LocalSourceBoxes = 0;
-    for( std::size_t j=0; j<d; ++j )
+    size_t numTargetCuts = 0;
+    size_t nextTargetDimToCut = d-1;
+    size_t nextSourceDimToMerge = lastSourceDimCut;
+    size_t log2LocalSourceBoxes = 0;
+    for( size_t j=0; j<d; ++j )
     {
         log2LocalSourceBoxes += 
             this->_log2N-this->_log2InitialSourceBoxesPerDim[j];
@@ -420,9 +402,9 @@ Plan<d>::GenerateForwardPlan()
     }
     else
     {
-        const std::size_t log2NumMergingProcesses = 
+        const size_t log2NumMergingProcesses = 
             this->_bootstrapSkip*d - log2LocalSourceBoxes;
-        const std::size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
+        const size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
 
 #ifndef RELEASE
         if( this->_rank == 0 )
@@ -436,13 +418,13 @@ Plan<d>::GenerateForwardPlan()
 
         // Construct the communicator for the bootstrap cluster
         const int startRank = this->_rank & ~(numMergingProcesses-1);
-        std::vector<int> ranks( numMergingProcesses );
-        for( std::size_t j=0; j<numMergingProcesses; ++j )
+        vector<int> ranks( numMergingProcesses );
+        for( size_t j=0; j<numMergingProcesses; ++j )
         {
             // We need to reverse the order of the last log2NumMergingProcesses
             // bits of j and add the result onto the startRank
-            std::size_t jReversed = 0;
-            for( std::size_t k=0; k<log2NumMergingProcesses; ++k )
+            size_t jReversed = 0;
+            for( size_t k=0; k<log2NumMergingProcesses; ++k )
                 jReversed |= ((j>>k)&1)<<(log2NumMergingProcesses-1-k);
             ranks[j] = startRank + jReversed;
             if( this->_rank == ranks[j] )
@@ -456,7 +438,7 @@ Plan<d>::GenerateForwardPlan()
             {
                 std::cout << "  process " << p 
                           << "'s bootstrap cluster ranks: ";
-                for( std::size_t j=0; j<numMergingProcesses; ++j )
+                for( size_t j=0; j<numMergingProcesses; ++j )
                     std::cout << ranks[j] << " ";
                 std::cout << std::endl;
             }
@@ -472,9 +454,9 @@ Plan<d>::GenerateForwardPlan()
         this->_bootstrapSourceDimsToMerge.resize( log2NumMergingProcesses );
         this->_bootstrapTargetDimsToCut.resize( log2NumMergingProcesses );
         this->_bootstrapRightSideOfCut.resize( log2NumMergingProcesses );
-        std::size_t nextBootstrapSourceDimToMerge = nextSourceDimToMerge;
-        std::size_t nextBootstrapTargetDimToCut = nextTargetDimToCut;
-        for( std::size_t j=0; j<log2NumMergingProcesses; ++j )
+        size_t nextBootstrapSourceDimToMerge = nextSourceDimToMerge;
+        size_t nextBootstrapTargetDimToCut = nextTargetDimToCut;
+        for( size_t j=0; j<log2NumMergingProcesses; ++j )
         {
             this->_bootstrapSourceDimsToMerge[j] = 
                 nextBootstrapSourceDimToMerge;
@@ -495,9 +477,9 @@ Plan<d>::GenerateForwardPlan()
                           << this->_myBootstrapClusterRank << std::endl;
                 std::cout << "  process " << p 
                           << "'s bootstrap cluster children: ";
-                const std::size_t numLocalChildren =
+                const size_t numLocalChildren =
                     (1u<<(this->_bootstrapSkip*d-log2NumMergingProcesses));
-                for( std::size_t i=0; i<numLocalChildren; ++i )
+                for( size_t i=0; i<numLocalChildren; ++i )
                     std::cout << this->LocalToBootstrapClusterSourceIndex( i )
                               << " ";
                 std::cout << std::endl;
@@ -508,7 +490,7 @@ Plan<d>::GenerateForwardPlan()
 #endif
     }
     // Generate the single-level communicators
-    for( std::size_t level=1; level<=this->_log2N; ++level )
+    for( size_t level=1; level<=this->_log2N; ++level )
     {
         if( log2LocalSourceBoxes >= d )
         {
@@ -531,8 +513,8 @@ Plan<d>::GenerateForwardPlan()
         }
         else
         {
-            const std::size_t log2NumMergingProcesses = d-log2LocalSourceBoxes;
-            const std::size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
+            const size_t log2NumMergingProcesses = d-log2LocalSourceBoxes;
+            const size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
             log2LocalSourceBoxes = 0;
 
 #ifndef RELEASE
@@ -546,17 +528,17 @@ Plan<d>::GenerateForwardPlan()
 #endif
 
             // Construct the communicator for our current cluster
-            const std::size_t log2Stride = numTargetCuts;
+            const size_t log2Stride = numTargetCuts;
             const int startRank = 
                 this->_rank & ~((numMergingProcesses-1)<<log2Stride);
-            std::vector<int> ranks( numMergingProcesses );
-            for( std::size_t j=0; j<numMergingProcesses; ++j )
+            vector<int> ranks( numMergingProcesses );
+            for( size_t j=0; j<numMergingProcesses; ++j )
             {
                 // We need to reverse the order of the last
                 // log2NumMergingProcesses bits of j and add the result
                 // multiplied by the stride onto the startRank
-                std::size_t jReversed = 0;
-                for( std::size_t k=0; k<log2NumMergingProcesses; ++k )
+                size_t jReversed = 0;
+                for( size_t k=0; k<log2NumMergingProcesses; ++k )
                     jReversed |= ((j>>k)&1)<<(log2NumMergingProcesses-1-k);
                 ranks[j] = startRank+(jReversed<<log2Stride);
                 if( this->_rank == ranks[j] )
@@ -568,7 +550,7 @@ Plan<d>::GenerateForwardPlan()
                 if( this->_rank == p )
                 {
                     std::cout << "  process " << p << "'s cluster ranks: ";
-                    for( std::size_t j=0; j<numMergingProcesses; ++j )
+                    for( size_t j=0; j<numMergingProcesses; ++j )
                         std::cout << ranks[j] << " ";
                     std::cout << std::endl;
                 }
@@ -595,9 +577,9 @@ Plan<d>::GenerateForwardPlan()
             this->_sourceDimsToMerge[level-1].resize( log2NumMergingProcesses );
             this->_targetDimsToCut[level-1].resize( log2NumMergingProcesses );
             this->_rightSideOfCut[level-1].resize( log2NumMergingProcesses );
-            for( std::size_t j=0; j<log2NumMergingProcesses; ++j )
+            for( size_t j=0; j<log2NumMergingProcesses; ++j )
             {
-                const std::size_t thisBit = numTargetCuts;
+                const size_t thisBit = numTargetCuts;
 
                 this->_sourceDimsToMerge[level-1][j] = nextSourceDimToMerge;
                 this->_targetDimsToCut[level-1][j] = nextTargetDimToCut;
@@ -620,9 +602,9 @@ Plan<d>::GenerateForwardPlan()
                     std::cout << "  process " << p << "'s cluster rank: "
                               << this->_myClusterRanks[level-1] << std::endl;
                     std::cout << "  process " << p << "'s cluster children: ";
-                    const std::size_t numLocalChildren =
+                    const size_t numLocalChildren =
                         (1u<<(d-log2NumMergingProcesses));
-                    for( std::size_t i=0; i<numLocalChildren; ++i )
+                    for( size_t i=0; i<numLocalChildren; ++i )
                         std::cout << this->LocalToClusterSourceIndex( level, i )
                                   << " ";
                     std::cout << std::endl;
@@ -635,26 +617,24 @@ Plan<d>::GenerateForwardPlan()
     }
 }
 
-template<std::size_t d>
-inline std::size_t
-Plan<d>::AdjointLocalToBootstrapClusterSourceIndex
-( std::size_t cLocal ) const
+template<size_t d>
+inline size_t
+Plan<d>::AdjointLocalToBootstrapClusterSourceIndex( size_t cLocal ) const
 {
     return (this->_myBootstrapMappedRank<<
             (this->_bootstrapSkip*d-this->_bootstrapSourceDimsToMerge.size()))
            + cLocal;
 }
 
-template<std::size_t d>
-inline std::size_t
-Plan<d>::AdjointLocalToClusterSourceIndex
-( std::size_t level, std::size_t cLocal ) const
+template<size_t d>
+inline size_t
+Plan<d>::AdjointLocalToClusterSourceIndex( size_t level, size_t cLocal ) const
 {
     return (this->_myMappedRanks[level-1]<<
             (d-this->_sourceDimsToMerge[level-1].size())) + cLocal;
 }
 
-template<std::size_t d>
+template<size_t d>
 void
 Plan<d>::GenerateAdjointPlan()
 {
@@ -662,14 +642,14 @@ Plan<d>::GenerateAdjointPlan()
     _myMappedRanks.resize( this->_log2N );
 
     // Compute the number of source boxes per dimension and our coordinates
-    std::size_t nextSourceDimToCut = d-1;
-    std::size_t lastSourceDimCut = 0; // initialize to avoid compiler warnings
-    for( std::size_t j=0; j<d; ++j )
+    size_t nextSourceDimToCut = d-1;
+    size_t lastSourceDimCut = 0; // initialize to avoid compiler warnings
+    for( size_t j=0; j<d; ++j )
     {
         this->_myInitialSourceBoxCoords[j] = 0;
         this->_log2InitialSourceBoxesPerDim[j] = 0;
     }
-    for( std::size_t m=0; m<this->_log2NumProcesses; ++m )
+    for( size_t m=0; m<this->_log2NumProcesses; ++m )
     {
 #ifndef RELEASE
         if( this->_rank == 0 )
@@ -691,7 +671,7 @@ Plan<d>::GenerateAdjointPlan()
         if( this->_rank == p )
         {
             std::cout << "Rank " << p << "'s initial source box coords: ";
-            for( std::size_t j=0; j<d; ++j )
+            for( size_t j=0; j<d; ++j )
                 std::cout << this->_myInitialSourceBoxCoords[j] << " ";
             std::cout << std::endl;
         }
@@ -704,11 +684,11 @@ Plan<d>::GenerateAdjointPlan()
     //
     // The following choice ensures that the first communication partitions 
     // dimensions of the form 0 -> c, and the rest are of the form 0 -> d-1.
-    std::size_t numTargetCuts = 0;
-    std::size_t nextTargetDimToCut = 0;
-    std::size_t nextSourceDimToMerge = lastSourceDimCut;
-    std::size_t log2LocalSourceBoxes = 0;
-    for( std::size_t j=0; j<d; ++j )
+    size_t numTargetCuts = 0;
+    size_t nextTargetDimToCut = 0;
+    size_t nextSourceDimToMerge = lastSourceDimCut;
+    size_t log2LocalSourceBoxes = 0;
+    for( size_t j=0; j<d; ++j )
     {
         log2LocalSourceBoxes +=
             this->_log2N-this->_log2InitialSourceBoxesPerDim[j];
@@ -730,9 +710,9 @@ Plan<d>::GenerateAdjointPlan()
     }
     else
     {
-        const std::size_t log2NumMergingProcesses =
+        const size_t log2NumMergingProcesses =
             this->_bootstrapSkip*d - log2LocalSourceBoxes;
-        const std::size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
+        const size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
 
 #ifndef RELEASE
         if( this->_rank == 0 )
@@ -745,18 +725,18 @@ Plan<d>::GenerateAdjointPlan()
 #endif
 
         // Construct the communicator for the bootstrap cluster
-        const std::size_t log2Stride = 
+        const size_t log2Stride = 
             this->_log2NumProcesses-log2NumMergingProcesses;
         const int startRank = 
             this->_rank & ~((numMergingProcesses-1)<<log2Stride);
-        std::vector<int> ranks( numMergingProcesses );
-        for( std::size_t j=0; j<numMergingProcesses; ++j )
+        vector<int> ranks( numMergingProcesses );
+        for( size_t j=0; j<numMergingProcesses; ++j )
         {
             // We need to reverse the order of the last log2NumMergingProcesses
             // bits of j and add the result multiplied by the stride onto the 
             // startRank
-            std::size_t jReversed = 0;
-            for( std::size_t k=0; k<log2NumMergingProcesses; ++k )
+            size_t jReversed = 0;
+            for( size_t k=0; k<log2NumMergingProcesses; ++k )
                 jReversed |= ((j>>k)&1)<<(log2NumMergingProcesses-1-k);
             ranks[j] = startRank + (jReversed<<log2Stride);
             if( this->_rank == ranks[j] )
@@ -770,7 +750,7 @@ Plan<d>::GenerateAdjointPlan()
             {
                 std::cout << "  process " << p
                           << "'s bootstrap cluster ranks: ";
-                for( std::size_t j=0; j<numMergingProcesses; ++j )
+                for( size_t j=0; j<numMergingProcesses; ++j )
                     std::cout << ranks[j] << " ";
                 std::cout << std::endl;
             }
@@ -786,11 +766,11 @@ Plan<d>::GenerateAdjointPlan()
         this->_bootstrapSourceDimsToMerge.resize( log2NumMergingProcesses );
         this->_bootstrapTargetDimsToCut.resize( log2NumMergingProcesses );
         this->_bootstrapRightSideOfCut.resize( log2NumMergingProcesses );
-        std::size_t nextBootstrapSourceDimToMerge = nextSourceDimToMerge;
-        std::size_t nextBootstrapTargetDimToCut = nextTargetDimToCut;
-        for( std::size_t j=0; j<log2NumMergingProcesses; ++j )
+        size_t nextBootstrapSourceDimToMerge = nextSourceDimToMerge;
+        size_t nextBootstrapTargetDimToCut = nextTargetDimToCut;
+        for( size_t j=0; j<log2NumMergingProcesses; ++j )
         {
-            const std::size_t thisBit = (this->_log2NumProcesses-1)-j;
+            const size_t thisBit = (this->_log2NumProcesses-1)-j;
 
             this->_bootstrapSourceDimsToMerge[j] =
                 nextBootstrapSourceDimToMerge;
@@ -811,9 +791,9 @@ Plan<d>::GenerateAdjointPlan()
                           << this->_myBootstrapClusterRank << std::endl;
                 std::cout << "  process " << p
                           << "'s bootstrap cluster children: ";
-                const std::size_t numLocalChildren =
+                const size_t numLocalChildren =
                     (1u<<(this->_bootstrapSkip*d-log2NumMergingProcesses));
-                for( std::size_t i=0; i<numLocalChildren; ++i )
+                for( size_t i=0; i<numLocalChildren; ++i )
                     std::cout << this->LocalToBootstrapClusterSourceIndex( i )
                               << " ";
                 std::cout << std::endl;
@@ -824,7 +804,7 @@ Plan<d>::GenerateAdjointPlan()
 #endif
     }
     // Generate the single-level communicators
-    for( std::size_t level=1; level<=this->_log2N; ++level )
+    for( size_t level=1; level<=this->_log2N; ++level )
     {
         if( log2LocalSourceBoxes >= d )
         {
@@ -849,8 +829,8 @@ Plan<d>::GenerateAdjointPlan()
         }
         else
         {
-            const std::size_t log2NumMergingProcesses = d-log2LocalSourceBoxes;
-            const std::size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
+            const size_t log2NumMergingProcesses = d-log2LocalSourceBoxes;
+            const size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
             log2LocalSourceBoxes = 0;
 
 #ifndef RELEASE
@@ -864,29 +844,29 @@ Plan<d>::GenerateAdjointPlan()
 #endif
 
             // Construct the communicator for our current cluster
-            const std::size_t log2Stride = 
+            const size_t log2Stride = 
                 this->_log2NumProcesses-numTargetCuts-log2NumMergingProcesses;
             const int startRank = 
                 this->_rank & ~((numMergingProcesses-1)<<log2Stride);
-            std::vector<int> ranks( numMergingProcesses ); 
+            vector<int> ranks( numMergingProcesses ); 
             {
                 // The bits of j must be shuffled according to the ordering 
                 // on the partition dimensions:
                 //  - The last d-nextTargetDimToCut bits are reversed and last
                 //  - The remaining bits are reversed but occur first
-                const std::size_t lastBitsetSize = 
+                const size_t lastBitsetSize = 
                     std::min(d-nextTargetDimToCut,log2NumMergingProcesses);
-                const std::size_t firstBitsetSize = 
+                const size_t firstBitsetSize = 
                     log2NumMergingProcesses-lastBitsetSize;
-                for( std::size_t j=0; j<numMergingProcesses; ++j )
+                for( size_t j=0; j<numMergingProcesses; ++j )
                 {
-                    std::size_t jWrapped = 0;
-                    for( std::size_t k=0; k<firstBitsetSize; ++k )
+                    size_t jWrapped = 0;
+                    for( size_t k=0; k<firstBitsetSize; ++k )
                     {
                         jWrapped |= 
                             ((j>>k)&1)<<(firstBitsetSize-1-k);
                     }
-                    for( std::size_t k=0; k<lastBitsetSize; ++k )
+                    for( size_t k=0; k<lastBitsetSize; ++k )
                     {
                         jWrapped |=
                             ((j>>(k+firstBitsetSize))&1)<<
@@ -901,7 +881,7 @@ Plan<d>::GenerateAdjointPlan()
                 if( this->_rank == p )
                 {
                     std::cout << "  process " << p << "'s cluster ranks: ";
-                    for( std::size_t j=0; j<numMergingProcesses; ++j )
+                    for( size_t j=0; j<numMergingProcesses; ++j )
                         std::cout << ranks[j] << " ";
                     std::cout << std::endl;
                 }
@@ -911,20 +891,20 @@ Plan<d>::GenerateAdjointPlan()
 #endif
 
             {
-                const std::size_t lastBitsetSize = 
+                const size_t lastBitsetSize = 
                     std::min(d-nextSourceDimToMerge,log2NumMergingProcesses);
-                const std::size_t firstBitsetSize = 
+                const size_t firstBitsetSize = 
                     log2NumMergingProcesses-lastBitsetSize;
                 // Apply the same transformation to our shifted rank
-                const std::size_t shiftedRank = this->_rank-startRank;
-                const std::size_t scaledRank = shiftedRank >> log2Stride;
-                std::size_t wrappedRank = 0;
-                for( std::size_t k=0; k<firstBitsetSize; ++k )
+                const size_t shiftedRank = this->_rank-startRank;
+                const size_t scaledRank = shiftedRank >> log2Stride;
+                size_t wrappedRank = 0;
+                for( size_t k=0; k<firstBitsetSize; ++k )
                 {
                     wrappedRank |=
                         ((scaledRank>>k)&1)<<(firstBitsetSize-1-k);
                 }
-                for( std::size_t k=0; k<lastBitsetSize; ++k )
+                for( size_t k=0; k<lastBitsetSize; ++k )
                 {
                     wrappedRank |=
                         ((scaledRank>>(k+firstBitsetSize))&1)<<
@@ -952,9 +932,9 @@ Plan<d>::GenerateAdjointPlan()
             this->_sourceDimsToMerge[level-1].resize( log2NumMergingProcesses );
             this->_targetDimsToCut[level-1].resize( log2NumMergingProcesses );
             this->_rightSideOfCut[level-1].resize( log2NumMergingProcesses );
-            for( std::size_t j=0; j<log2NumMergingProcesses; ++j )
+            for( size_t j=0; j<log2NumMergingProcesses; ++j )
             {
-                const std::size_t thisBit = 
+                const size_t thisBit = 
                     (this->_log2NumProcesses-1) - numTargetCuts;
 
                 this->_sourceDimsToMerge[level-1][j] =  nextSourceDimToMerge;
@@ -979,9 +959,9 @@ Plan<d>::GenerateAdjointPlan()
                     std::cout << "  process " << p << "'s mapped rank: "
                               << this->_myMappedRanks[level-1] << std::endl;
                     std::cout << "  process " << p << "'s cluster children: ";
-                    const std::size_t numLocalChildren = 
+                    const size_t numLocalChildren = 
                         (1u<<(d-log2NumMergingProcesses));
-                    for( std::size_t i=0; i<numLocalChildren; ++i ) 
+                    for( size_t i=0; i<numLocalChildren; ++i ) 
                         std::cout << this->LocalToClusterSourceIndex( level, i )
                                   << " ";
                     std::cout << std::endl;
@@ -994,10 +974,9 @@ Plan<d>::GenerateAdjointPlan()
     }
 }
 
-template<std::size_t d>
-inline std::size_t 
-Plan<d>::LocalToClusterSourceIndex
-( std::size_t level, std::size_t cLocal ) const
+template<size_t d>
+inline size_t 
+Plan<d>::LocalToClusterSourceIndex( size_t level, size_t cLocal ) const
 {
     if( this->_direction == FORWARD )
         return this->ForwardLocalToClusterSourceIndex( level, cLocal );
@@ -1005,10 +984,9 @@ Plan<d>::LocalToClusterSourceIndex
         return this->AdjointLocalToClusterSourceIndex( level, cLocal );
 }
 
-template<std::size_t d>
-inline std::size_t
-Plan<d>::LocalToBootstrapClusterSourceIndex
-( std::size_t cLocal ) const
+template<size_t d>
+inline size_t
+Plan<d>::LocalToBootstrapClusterSourceIndex( size_t cLocal ) const
 {
     if( this->_direction == FORWARD )
         return this->ForwardLocalToBootstrapClusterSourceIndex( cLocal );

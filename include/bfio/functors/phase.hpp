@@ -9,15 +9,18 @@
 #ifndef BFIO_FUNCTORS_PHASE_HPP
 #define BFIO_FUNCTORS_PHASE_HPP
 
+#include <array>
 #include <cstddef>
 #include <vector>
 
-#include "bfio/structures/array.hpp"
-
 namespace bfio {
 
+using std::array;
+using std::size_t;
+using std::vector;
+
 // You will need to derive from this class and override the operator()
-template<typename R,std::size_t d>
+template<typename R,size_t d>
 class Phase
 {
 public:
@@ -27,34 +30,34 @@ public:
 
     // Point-wise evaluation of the phase function
     virtual R operator() 
-    ( const Array<R,d>& x, const Array<R,d>& p ) const = 0;
+    ( const array<R,d>& x, const array<R,d>& p ) const = 0;
 
     // ButterflyFIO calls BatchEvaluate whenever possible so that, if the user
     // supplies a class that overrides this method with an efficient vectorized
     // implementation, then performance should significantly increase.
     virtual void BatchEvaluate
-    ( const std::vector< Array<R,d> >& x,
-      const std::vector< Array<R,d> >& p,
-            std::vector< R          >& results ) const;
+    ( const vector<array<R,d>>& x,
+      const vector<array<R,d>>& p,
+            vector<R         >& results ) const;
 };
 
 // Implementations
 
-template<typename R,std::size_t d>
+template<typename R,size_t d>
 inline
 Phase<R,d>::~Phase() 
 { }
 
-template<typename R,std::size_t d>
+template<typename R,size_t d>
 void 
 Phase<R,d>::BatchEvaluate
-( const std::vector< Array<R,d> >& x,
-  const std::vector< Array<R,d> >& p,
-        std::vector< R          >& results ) const
+( const vector<array<R,d>>& x,
+  const vector<array<R,d>>& p,
+        vector<R         >& results ) const
 {
     results.resize( x.size()*p.size() );
-    for( std::size_t i=0; i<x.size(); ++i )
-        for( std::size_t j=0; j<p.size(); ++j )
+    for( size_t i=0; i<x.size(); ++i )
+        for( size_t j=0; j<p.size(); ++j )
             results[i*p.size()+j] = (*this)(x[i],p[j]);
 }
 

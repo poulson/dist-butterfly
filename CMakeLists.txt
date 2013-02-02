@@ -17,18 +17,35 @@ option(BUILD_TESTS "Build the test drivers" ON)
 option(AVOID_COMPLEX_MPI "Avoid complex MPI routines for robustness" ON)
 mark_as_advanced(AVOID_COMPLEX_MPI)
 
-if(APPLE)
-  set(CXX_FLAGS "-fast" CACHE STRING "CXX flags")
-else()
-  set(CXX_FLAGS "-O3" CACHE STRING "CXX flags")
-endif()
-set(CMAKE_CXX_FLAGS "${CXX_FLAGS} ${MPI_CXX_COMPILE_FLAGS}")
-
 find_package(MPI)
 if(NOT MPI_CXX_FOUND)
     message(FATAL_ERROR "A C++ MPI compiler is required but not found")
 endif()
 include_directories(${MPI_CXX_INCLUDE_PATH})
+
+# Initialize CXXFLAGS.
+# NOTE: Adapted from Matthias Vallentin's StackExchange post
+if(APPLE)
+  set(CMAKE_CXX_FLAGS "-Wall -std=c++11 ${MPI_CXX_COMPILE_FLAGS} -fast")
+else()
+  set(CMAKE_CXX_FLAGS "-Wall -std=c++11 ${MPI_CXX_COMPILE_FLAGS}")
+endif()
+set(CMAKE_CXX_FLAGS_DEBUG          "-O0 -g")
+set(CMAKE_CXX_FLAGS_MINSIZEREL     "-Os -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE        "-O4 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
+# Compiler-specific C++11 activation.
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  execute_process(
+    COMMAND ${CMAKE_CXX_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+  if(NOT (GCC_VERSION VERSION_GREATER 4.7 OR GCC_VERSION VERSION_EQUAL 4.7))
+    message(FATAL_ERROR "${PROJECT_NAME} requires g++ 4.7 or greater.")
+  endif()
+elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+else()
+  message(FATAL_ERROR "Your C++ compiler does not support C++11.")
+endif()
 
 if(MATH_LIBS)
   set(NEED_MATH FALSE)

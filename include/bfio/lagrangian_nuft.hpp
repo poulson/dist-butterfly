@@ -9,15 +9,23 @@
 #ifndef BFIO_LAGRANGIAN_NUFT_HPP
 #define BFIO_LAGRANGIAN_NUFT_HPP
 
+#include <array>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
+#include <vector>
 
 #include "bfio/structures.hpp"
 #include "bfio/tools.hpp"
 
 #ifdef TIMING
 namespace bfio {
+
+using std::array;
+using std::memcpy;
+using std::size_t;
+using std::vector;
+
 namespace lagrangian_nuft {
 
 static bool alreadyTimed = false;
@@ -78,21 +86,21 @@ PrintTimings()
 
 namespace bfio {
 
-template<typename R,std::size_t d,std::size_t q>
-std::auto_ptr< const lagrangian_nuft::PotentialField<R,d,q> >
+template<typename R,size_t d,size_t q>
+std::unique_ptr<const lagrangian_nuft::PotentialField<R,d,q>>
 LagrangianNUFT
 ( const lagrangian_nuft::Context<R,d,q>& nuftContext,
   const Plan<d>& plan,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
-  const std::vector< Source<R,d> >& mySources )
+  const vector<Source<R,d>>& mySources )
 {
 #ifdef TIMING
     lagrangian_nuft::ResetTimers();
     lagrangian_nuft::timer.Start();
 #endif
-    typedef std::complex<R> C;
-    const std::size_t q_to_d = Pow<q,d>::val;
+    typedef complex<R> C;
+    const size_t q_to_d = Pow<q,d>::val;
     const rfio::Context<R,d,q>& rfioContext = 
         nuftContext.GetReducedFIOContext();
 
@@ -114,16 +122,16 @@ LagrangianNUFT
     MPI_Comm_size( comm, &numProcesses ); 
 
     // Get the problem-specific parameters
-    const std::size_t N = plan.GetN();
-    const std::size_t log2N = Log2( N );
-    const Array<std::size_t,d>& myInitialSourceBoxCoords = 
+    const size_t N = plan.GetN();
+    const size_t log2N = Log2( N );
+    const array<size_t,d>& myInitialSourceBoxCoords = 
         plan.GetMyInitialSourceBoxCoords();
-    const Array<std::size_t,d>& log2InitialSourceBoxesPerDim = 
+    const array<size_t,d>& log2InitialSourceBoxesPerDim = 
         plan.GetLog2InitialSourceBoxesPerDim();
-    Array<std::size_t,d> mySourceBoxCoords = myInitialSourceBoxCoords;
-    Array<std::size_t,d> log2SourceBoxesPerDim = log2InitialSourceBoxesPerDim;
+    array<size_t,d> mySourceBoxCoords = myInitialSourceBoxCoords;
+    array<size_t,d> log2SourceBoxesPerDim = log2InitialSourceBoxesPerDim;
     Box<R,d> mySourceBox;
-    for( std::size_t j=0; j<d; ++j )
+    for( size_t j=0; j<d; ++j )
     {
         mySourceBox.widths[j] = 
             sourceBox.widths[j] / (1u<<log2SourceBoxesPerDim[j]);
@@ -131,18 +139,20 @@ LagrangianNUFT
             sourceBox.offsets[j] + mySourceBox.widths[j]*mySourceBoxCoords[j];
     }
 
-    Array<std::size_t,d> myTargetBoxCoords(0);
-    Array<std::size_t,d> log2TargetBoxesPerDim(0);
+    array<size_t,d> myTargetBoxCoords, log2TargetBoxesPerDim;
+    myTargetBoxCoords.fill(0);
+    log2TargetBoxesPerDim.fill(0);
     Box<R,d> myTargetBox;
     myTargetBox = targetBox;
 
     // Compute the number of leaf-level boxes in the source domain that 
     // our process is responsible for initializing the weights in. 
-    std::size_t log2LocalSourceBoxes = 0;
-    std::size_t log2LocalTargetBoxes = 0;
-    Array<std::size_t,d> log2LocalSourceBoxesPerDim;
-    Array<std::size_t,d> log2LocalTargetBoxesPerDim(0);
-    for( std::size_t j=0; j<d; ++j )
+    size_t log2LocalSourceBoxes=0,
+           log2LocalTargetBoxes=0;
+    array<size_t,d> log2LocalSourceBoxesPerDim,
+                    log2LocalTargetBoxesPerDim;
+    log2LocalTargetBoxesPerDim.fill(0);
+    for( size_t j=0; j<d; ++j )
     {
         log2LocalSourceBoxesPerDim[j] = log2N-log2SourceBoxesPerDim[j];
         log2LocalSourceBoxes += log2LocalSourceBoxesPerDim[j];
@@ -177,12 +187,11 @@ LagrangianNUFT
 	lagrangian_nuft::switchToTargetInterpTimer.Stop();
 #endif
     }
-    for( std::size_t level=1; level<=log2N; ++level )
+    for( size_t level=1; level<=log2N; ++level )
     {
         // Compute the width of the nodes at this level
-        Array<R,d> wA;
-        Array<R,d> wB;
-        for( std::size_t j=0; j<d; ++j )
+        array<R,d> wA, wB;
+        for( size_t j=0; j<d; ++j )
         {
             wA[j] = targetBox.widths[j] / (1<<level);
             wB[j] = sourceBox.widths[j] / (1<<(log2N-level));
@@ -191,7 +200,7 @@ LagrangianNUFT
         if( log2LocalSourceBoxes >= d )
         {
             // Refine target domain and coursen the source domain
-            for( std::size_t j=0; j<d; ++j )
+            for( size_t j=0; j<d; ++j )
             {
                 --log2LocalSourceBoxesPerDim[j];
                 ++log2LocalTargetBoxesPerDim[j];
@@ -202,37 +211,37 @@ LagrangianNUFT
             // Loop over boxes in target domain. 
             ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
             WeightGridList<R,d,q> oldWeightGridList( weightGridList );
-            for( std::size_t targetIndex=0; 
+            for( size_t targetIndex=0; 
                  targetIndex<(1u<<log2LocalTargetBoxes); 
                  ++targetIndex, AWalker.Walk() )
             {
-                const Array<std::size_t,d> A = AWalker.State();
+                const array<size_t,d> A = AWalker.State();
 
                 // Compute coordinates and center of this target box
-                Array<R,d> x0A;
-                for( std::size_t j=0; j<d; ++j )
+                array<R,d> x0A;
+                for( size_t j=0; j<d; ++j )
                     x0A[j] = myTargetBox.offsets[j] + (A[j]+0.5)*wA[j];
 
                 // Loop over the B boxes in source domain
                 ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
-                for( std::size_t sourceIndex=0; 
+                for( size_t sourceIndex=0; 
                      sourceIndex<(1u<<log2LocalSourceBoxes); 
                      ++sourceIndex, BWalker.Walk() )
                 {
-                    const Array<std::size_t,d> B = BWalker.State();
+                    const array<size_t,d> B = BWalker.State();
 
                     // Compute coordinates and center of this source box
-                    Array<R,d> p0B;
-                    for( std::size_t j=0; j<d; ++j )
+                    array<R,d> p0B;
+                    for( size_t j=0; j<d; ++j )
                         p0B[j] = mySourceBox.offsets[j] + (B[j]+0.5)*wB[j];
 
                     // We are storing the interaction pairs source-major
-                    const std::size_t interactionIndex = 
+                    const size_t interactionIndex = 
                         sourceIndex + (targetIndex<<log2LocalSourceBoxes);
 
                     // Grab the interaction offset for the parent of target box 
                     // i interacting with the children of source box k
-                    const std::size_t parentInteractionOffset = 
+                    const size_t parentInteractionOffset = 
                         ((targetIndex>>d)<<(log2LocalSourceBoxes+d)) + 
                         (sourceIndex<<d);
 
@@ -251,10 +260,10 @@ LagrangianNUFT
                     }
                     else
                     {
-                        Array<R,d> x0Ap;
-                        Array<std::size_t,d> globalA;
-                        std::size_t ARelativeToAp = 0;
-                        for( std::size_t j=0; j<d; ++j )
+                        array<R,d> x0Ap;
+                        array<size_t,d> globalA;
+                        size_t ARelativeToAp = 0;
+                        for( size_t j=0; j<d; ++j )
                         {
                             globalA[j] = 
                                 (myTargetBoxCoords[j]<<
@@ -280,34 +289,34 @@ LagrangianNUFT
         }
         else 
         {
-            const std::size_t log2NumMergingProcesses = d-log2LocalSourceBoxes;
-            const std::size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
+            const size_t log2NumMergingProcesses = d-log2LocalSourceBoxes;
+            const size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
 
             log2LocalSourceBoxes = 0; 
-            for( std::size_t j=0; j<d; ++j )
+            for( size_t j=0; j<d; ++j )
                 log2LocalSourceBoxesPerDim[j] = 0;
 
             // Fully refine target domain and coarsen source domain.
             // We partition the target domain after the SumScatter.
-            const std::vector<std::size_t>& sourceDimsToMerge = 
+            const vector<size_t>& sourceDimsToMerge = 
                 plan.GetSourceDimsToMerge( level );
-            for( std::size_t i=0; i<log2NumMergingProcesses; ++i )
+            for( size_t i=0; i<log2NumMergingProcesses; ++i )
             {
-                const std::size_t j = sourceDimsToMerge[i];
+                const size_t j = sourceDimsToMerge[i];
                 if( mySourceBoxCoords[j] & 1 )
                     mySourceBox.offsets[j] -= mySourceBox.widths[j];
                 mySourceBoxCoords[j] >>= 1;
                 mySourceBox.widths[j] *= 2;
             }
-            for( std::size_t j=0; j<d; ++j )
+            for( size_t j=0; j<d; ++j )
             {
                 ++log2LocalTargetBoxesPerDim[j];
                 ++log2LocalTargetBoxes;
             }
 
             // Compute the coordinates and center of this source box
-            Array<R,d> p0B;
-            for( std::size_t j=0; j<d; ++j )
+            array<R,d> p0B;
+            for( size_t j=0; j<d; ++j )
                 p0B[j] = mySourceBox.offsets[j] + 0.5*wB[j];
 
             // Form the partial weights by looping over the boxes in the  
@@ -315,20 +324,20 @@ LagrangianNUFT
             ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
             WeightGridList<R,d,q> partialWeightGridList
             ( 1<<log2LocalTargetBoxes );
-            for( std::size_t targetIndex=0; 
+            for( size_t targetIndex=0; 
                  targetIndex<(1u<<log2LocalTargetBoxes); 
                  ++targetIndex, AWalker.Walk() )
             {
-                const Array<std::size_t,d> A = AWalker.State();
+                const array<size_t,d> A = AWalker.State();
 
                 // Compute coordinates and center of this target box
-                Array<R,d> x0A;
-                for( std::size_t j=0; j<d; ++j )
+                array<R,d> x0A;
+                for( size_t j=0; j<d; ++j )
                     x0A[j] = myTargetBox.offsets[j] + (A[j]+0.5)*wA[j];
 
                 // Compute the interaction offset of A's parent interacting 
                 // with the remaining local source boxes
-                const std::size_t parentInteractionOffset = 
+                const size_t parentInteractionOffset = 
                     ((targetIndex>>d)<<(d-log2NumMergingProcesses));
                 if( level <= log2N/2 )
                 {
@@ -345,10 +354,10 @@ LagrangianNUFT
                 }
                 else
                 {
-                    Array<R,d> x0Ap;
-                    Array<std::size_t,d> globalA;
-                    std::size_t ARelativeToAp = 0;
-                    for( std::size_t j=0; j<d; ++j )
+                    array<R,d> x0Ap;
+                    array<size_t,d> globalA;
+                    size_t ARelativeToAp = 0;
+                    for( size_t j=0; j<d; ++j )
                     {
                         globalA[j] = 
                             (myTargetBoxCoords[j]<<
@@ -374,8 +383,8 @@ LagrangianNUFT
 #ifdef TIMING
             lagrangian_nuft::sumScatterTimer.Start();
 #endif
-            std::vector<int> recvCounts( numMergingProcesses );
-            for( std::size_t j=0; j<numMergingProcesses; ++j )
+            vector<int> recvCounts( numMergingProcesses );
+            for( size_t j=0; j<numMergingProcesses; ++j )
                 recvCounts[j] = 2*weightGridList.Length()*q_to_d;
             // Currently two types of planned communication are supported, as 
             // they are the only required types for transforming and inverting 
@@ -384,7 +393,7 @@ LagrangianNUFT
             //  2) partitions of dimensions c -> d-1
             // Both 1 and 2 include partitioning 0 -> d-1, but, in general, 
             // the second category never requires packing.
-            const std::size_t log2SubclusterSize = 
+            const size_t log2SubclusterSize = 
                 plan.GetLog2SubclusterSize( level );
             if( log2SubclusterSize == 0 )
             {
@@ -395,29 +404,29 @@ LagrangianNUFT
             }
             else
             {
-                const std::size_t log2NumSubclusters = 
+                const size_t log2NumSubclusters = 
                     log2NumMergingProcesses-log2SubclusterSize;
-                const std::size_t numSubclusters = 1u<<log2NumSubclusters;
-                const std::size_t subclusterSize = 1u<<log2SubclusterSize;
+                const size_t numSubclusters = 1u<<log2NumSubclusters;
+                const size_t subclusterSize = 1u<<log2SubclusterSize;
 
-                const std::size_t recvSize = recvCounts[0];
-                const std::size_t sendSize = recvSize*numMergingProcesses;
-                const std::size_t numChunksPerProcess = subclusterSize;
-                const std::size_t chunkSize = recvSize / numChunksPerProcess;
+                const size_t recvSize = recvCounts[0];
+                const size_t sendSize = recvSize*numMergingProcesses;
+                const size_t numChunksPerProcess = subclusterSize;
+                const size_t chunkSize = recvSize / numChunksPerProcess;
                 const R* partialBuffer = partialWeightGridList.Buffer();
-                std::vector<R> sendBuffer( sendSize );
-                for( std::size_t sc=0; sc<numSubclusters; ++sc )
+                vector<R> sendBuffer( sendSize );
+                for( size_t sc=0; sc<numSubclusters; ++sc )
                 {
                     R* subclusterSendBuffer = 
                         &sendBuffer[sc*subclusterSize*recvSize];
                     const R* subclusterPartialBuffer = 
                         &partialBuffer[sc*subclusterSize*recvSize];
-                    for( std::size_t p=0; p<subclusterSize; ++p )
+                    for( size_t p=0; p<subclusterSize; ++p )
                     {
                         R* processSend = &subclusterSendBuffer[p*recvSize];
-                        for( std::size_t c=0; c<numChunksPerProcess; ++c )
+                        for( size_t c=0; c<numChunksPerProcess; ++c )
                         {
-                            std::memcpy 
+                            memcpy 
                             ( &processSend[c*chunkSize],
                               &subclusterPartialBuffer
                               [(p+c*subclusterSize)*chunkSize],
@@ -434,13 +443,13 @@ LagrangianNUFT
             lagrangian_nuft::sumScatterTimer.Stop();
 #endif
 
-            const std::vector<std::size_t>& targetDimsToCut = 
+            const vector<size_t>& targetDimsToCut = 
                 plan.GetTargetDimsToCut( level );
-            const std::vector<bool>& rightSideOfCut = 
+            const vector<bool>& rightSideOfCut = 
                 plan.GetRightSideOfCut( level );
-            for( std::size_t i=0; i<log2NumMergingProcesses; ++i )
+            for( size_t i=0; i<log2NumMergingProcesses; ++i )
             {
-                const std::size_t j = targetDimsToCut[i];
+                const size_t j = targetDimsToCut[i];
                 myTargetBox.widths[j] *= 0.5;
                 myTargetBoxCoords[j] *= 2;
                 if( rightSideOfCut[i] )
@@ -469,7 +478,7 @@ LagrangianNUFT
     }
 
     // Construct the PotentialField
-    std::auto_ptr< const lagrangian_nuft::PotentialField<R,d,q> > 
+    std::unique_ptr< const lagrangian_nuft::PotentialField<R,d,q> > 
     potentialField( 
         new lagrangian_nuft::PotentialField<R,d,q>
             ( nuftContext, sourceBox, myTargetBox, myTargetBoxCoords,

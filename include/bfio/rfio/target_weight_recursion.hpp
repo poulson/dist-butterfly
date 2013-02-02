@@ -9,11 +9,11 @@
 #ifndef BFIO_RFIO_TARGET_WEIGHT_RECURSION_HPP
 #define BFIO_RFIO_TARGET_WEIGHT_RECURSION_HPP
 
+#include <array>
 #include <cstddef>
 #include <cstring>
 #include <vector>
 
-#include "bfio/structures/array.hpp"
 #include "bfio/structures/plan.hpp"
 #include "bfio/structures/weight_grid.hpp"
 #include "bfio/structures/weight_grid_list.hpp"
@@ -26,48 +26,51 @@
 #include "bfio/rfio/context.hpp"
 
 namespace bfio {
+
+using std::array;
+using std::memset;
+using std::size_t;
+using std::vector;
+
 namespace rfio {
 
 // 1d specialization
-template<typename R,std::size_t q>
+template<typename R,size_t q>
 void
 TargetWeightRecursion
 ( const rfio::Context<R,1,q>& context,
   const Plan<1>& plan,
   const Phase<R,1>& phase,
-  const std::size_t level,
-  const std::size_t ARelativeToAp,
-  const Array<R,1>& x0A,
-  const Array<R,1>& x0Ap,
-  const Array<R,1>& p0B,
-  const Array<R,1>& wA,
-  const Array<R,1>& wB,
-  const std::size_t parentInteractionOffset,
+  const size_t level,
+  const size_t ARelativeToAp,
+  const array<R,1>& x0A,
+  const array<R,1>& x0Ap,
+  const array<R,1>& p0B,
+  const array<R,1>& wA,
+  const array<R,1>& wB,
+  const size_t parentInteractionOffset,
   const WeightGridList<R,1,q>& oldWeightGridList,
         WeightGrid<R,1,q>& weightGrid )
 {
-    std::memset( weightGrid.Buffer(), 0, 2*q*sizeof(R) );
+    memset( weightGrid.Buffer(), 0, 2*q*sizeof(R) );
 
-    const std::size_t log2NumMergingProcesses = 
+    const size_t log2NumMergingProcesses = 
         plan.GetLog2NumMergingProcesses( level );
-    const std::vector<R>& leftMap = context.GetLeftChebyshevMap();
-    const std::vector<R>& rightMap = context.GetRightChebyshevMap();
+    const vector<R>& leftMap = context.GetLeftChebyshevMap();
+    const vector<R>& rightMap = context.GetRightChebyshevMap();
 
-    std::vector<R> phiResults;
-    std::vector<R> sinResults;
-    std::vector<R> cosResults;
-    std::vector< Array<R,1> > pPoint( 1 );
-    std::vector< Array<R,1> > xPoints( q );
-    const std::vector< Array<R,1> >& chebyshevGrid = context.GetChebyshevGrid();
-    for( std::size_t cLocal=0; 
+    vector<R> phiResults, sinResults, cosResults;
+    vector<array<R,1>> pPoint( 1 ), xPoints( q );
+    const vector<array<R,1>>& chebyshevGrid = context.GetChebyshevGrid();
+    for( size_t cLocal=0; 
          cLocal<(1u<<(1-log2NumMergingProcesses)); 
          ++cLocal )
     {
         //--------------------------------------------------------------------//
         // Step 1                                                             //
         //--------------------------------------------------------------------//
-        const std::size_t interactionIndex = parentInteractionOffset + cLocal;
-        const std::size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
+        const size_t interactionIndex = parentInteractionOffset + cLocal;
+        const size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
 
         pPoint[0][0] = p0B[0] + ( c&1 ? wB[0]/4 : -wB[0]/4 );
         {
@@ -75,7 +78,7 @@ TargetWeightRecursion
             const R* RESTRICT wABuffer = &wA[0];
             const R* RESTRICT x0ApBuffer = &x0Ap[0];
             const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
-            for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+            for( size_t tPrime=0; tPrime<q; ++tPrime )
                 xPointsBuffer[tPrime] = 
                     x0ApBuffer[0] + 2*wABuffer[0]*chebyshevBuffer[tPrime];
         }
@@ -92,7 +95,7 @@ TargetWeightRecursion
                 oldWeightGridList[interactionIndex].RealBuffer();
             const R* RESTRICT oldImagBuffer = 
                 oldWeightGridList[interactionIndex].ImagBuffer();
-            for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+            for( size_t tPrime=0; tPrime<q; ++tPrime )
             {
                 const R realPhase = cosBuffer[tPrime];
                 const R imagPhase = -sinBuffer[tPrime];
@@ -129,7 +132,7 @@ TargetWeightRecursion
             const R* RESTRICT wABuffer = &wA[0];
             const R* RESTRICT x0ABuffer = &x0A[0];
             const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
-            for( std::size_t t=0; t<q; ++t )
+            for( size_t t=0; t<q; ++t )
                 xPointsBuffer[t] = 
                     x0ABuffer[0] + wABuffer[0]*chebyshevBuffer[t];
         }
@@ -144,7 +147,7 @@ TargetWeightRecursion
                 expandedWeightGrid.RealBuffer();
             const R* RESTRICT expandedImagBuffer = 
                 expandedWeightGrid.ImagBuffer();
-            for( std::size_t t=0; t<q; ++t )
+            for( size_t t=0; t<q; ++t )
             {
                 const R realPhase = cosBuffer[t];
                 const R imagPhase = sinBuffer[t];
@@ -158,55 +161,52 @@ TargetWeightRecursion
 }
 
 // 2d specialization
-template<typename R,std::size_t q>
+template<typename R,size_t q>
 void
 TargetWeightRecursion
 ( const rfio::Context<R,2,q>& context,
   const Plan<2>& plan,
   const Phase<R,2>& phase,
-  const std::size_t level,
-  const std::size_t ARelativeToAp,
-  const Array<R,2>& x0A,
-  const Array<R,2>& x0Ap,
-  const Array<R,2>& p0B,
-  const Array<R,2>& wA,
-  const Array<R,2>& wB,
-  const std::size_t parentInteractionOffset,
+  const size_t level,
+  const size_t ARelativeToAp,
+  const array<R,2>& x0A,
+  const array<R,2>& x0Ap,
+  const array<R,2>& p0B,
+  const array<R,2>& wA,
+  const array<R,2>& wB,
+  const size_t parentInteractionOffset,
   const WeightGridList<R,2,q>& oldWeightGridList,
         WeightGrid<R,2,q>& weightGrid )
 {
-    std::memset( weightGrid.Buffer(), 0, 2*q*q*sizeof(R) );
+    memset( weightGrid.Buffer(), 0, 2*q*q*sizeof(R) );
 
-    const std::size_t log2NumMergingProcesses = 
+    const size_t log2NumMergingProcesses = 
         plan.GetLog2NumMergingProcesses( level );
-    const std::vector<R>& leftMap = context.GetLeftChebyshevMap();
-    const std::vector<R>& rightMap = context.GetRightChebyshevMap();
+    const vector<R>& leftMap = context.GetLeftChebyshevMap();
+    const vector<R>& rightMap = context.GetRightChebyshevMap();
 
-    std::vector<R> phiResults;
-    std::vector<R> sinResults;
-    std::vector<R> cosResults;
-    std::vector< Array<R,2> > pPoint( 1 );
-    std::vector< Array<R,2> > xPoints( q*q );
-    const std::vector< Array<R,2> >& chebyshevGrid = context.GetChebyshevGrid();
-    for( std::size_t cLocal=0; 
+    vector<R> phiResults, sinResults, cosResults;
+    vector<array<R,2>> pPoint( 1 ), xPoints( q*q );
+    const vector<array<R,2>>& chebyshevGrid = context.GetChebyshevGrid();
+    for( size_t cLocal=0; 
          cLocal<(1u<<(2-log2NumMergingProcesses)); 
          ++cLocal )
     {
         //--------------------------------------------------------------------//
         // Step 1                                                             //
         //--------------------------------------------------------------------//
-        const std::size_t interactionIndex = parentInteractionOffset + cLocal;
-        const std::size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
+        const size_t interactionIndex = parentInteractionOffset + cLocal;
+        const size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
 
-        for( std::size_t j=0; j<2; ++j )
+        for( size_t j=0; j<2; ++j )
             pPoint[0][j] = p0B[j] + ( (c>>j)&1 ? wB[j]/4 : -wB[j]/4 );
         {
             R* RESTRICT xPointsBuffer = &xPoints[0][0];
             const R* RESTRICT wABuffer = &wA[0];
             const R* RESTRICT x0ApBuffer = &x0Ap[0];
             const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
-            for( std::size_t tPrime=0; tPrime<q*q; ++tPrime )
-                for( std::size_t j=0; j<2; ++j )
+            for( size_t tPrime=0; tPrime<q*q; ++tPrime )
+                for( size_t j=0; j<2; ++j )
                     xPointsBuffer[tPrime*2+j] = 
                         x0ApBuffer[j] + 
                         2*wABuffer[j]*chebyshevBuffer[tPrime*2+j];
@@ -224,7 +224,7 @@ TargetWeightRecursion
                 oldWeightGridList[interactionIndex].RealBuffer();
             const R* RESTRICT oldImagBuffer = 
                 oldWeightGridList[interactionIndex].ImagBuffer();
-            for( std::size_t tPrime=0; tPrime<q*q; ++tPrime )
+            for( size_t tPrime=0; tPrime<q*q; ++tPrime )
             {
                 const R realPhase = cosBuffer[tPrime];
                 const R imagPhase = -sinBuffer[tPrime];
@@ -279,8 +279,8 @@ TargetWeightRecursion
             const R* RESTRICT wABuffer = &wA[0];
             const R* RESTRICT x0ABuffer = &x0A[0];
             const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
-            for( std::size_t t=0; t<q*q; ++t )
-                for( std::size_t j=0; j<2; ++j )
+            for( size_t t=0; t<q*q; ++t )
+                for( size_t j=0; j<2; ++j )
                     xPointsBuffer[t*2+j] = 
                         x0ABuffer[j] + wABuffer[j]*chebyshevBuffer[t*2+j];
         }
@@ -295,7 +295,7 @@ TargetWeightRecursion
                 expandedWeightGrid.RealBuffer();
             const R* RESTRICT expandedImagBuffer = 
                 expandedWeightGrid.ImagBuffer();
-            for( std::size_t t=0; t<q*q; ++t )
+            for( size_t t=0; t<q*q; ++t )
             {
                 const R realPhase = cosBuffer[t];
                 const R imagPhase = sinBuffer[t];
@@ -309,56 +309,53 @@ TargetWeightRecursion
 }
 
 // Fallback for 3d and above
-template<typename R,std::size_t d,std::size_t q>
+template<typename R,size_t d,size_t q>
 void
 TargetWeightRecursion
 ( const rfio::Context<R,d,q>& context,
   const Plan<d>& plan,
   const Phase<R,d>& phase,
-  const std::size_t level,
-  const std::size_t ARelativeToAp,
-  const Array<R,d>& x0A,
-  const Array<R,d>& x0Ap,
-  const Array<R,d>& p0B,
-  const Array<R,d>& wA,
-  const Array<R,d>& wB,
-  const std::size_t parentInteractionOffset,
+  const size_t level,
+  const size_t ARelativeToAp,
+  const array<R,d>& x0A,
+  const array<R,d>& x0Ap,
+  const array<R,d>& p0B,
+  const array<R,d>& wA,
+  const array<R,d>& wB,
+  const size_t parentInteractionOffset,
   const WeightGridList<R,d,q>& oldWeightGridList,
         WeightGrid<R,d,q>& weightGrid )
 {
-    const std::size_t q_to_d = Pow<q,d>::val;
-    std::memset( weightGrid.Buffer(), 0, 2*q_to_d*sizeof(R) );
+    const size_t q_to_d = Pow<q,d>::val;
+    memset( weightGrid.Buffer(), 0, 2*q_to_d*sizeof(R) );
 
-    const std::size_t log2NumMergingProcesses = 
+    const size_t log2NumMergingProcesses = 
         plan.GetLog2NumMergingProcesses( level );
-    const std::vector<R>& leftMap = context.GetLeftChebyshevMap();
-    const std::vector<R>& rightMap = context.GetRightChebyshevMap();
+    const vector<R>& leftMap = context.GetLeftChebyshevMap();
+    const vector<R>& rightMap = context.GetRightChebyshevMap();
 
-    std::vector<R> phiResults;
-    std::vector<R> sinResults;
-    std::vector<R> cosResults;
-    std::vector< Array<R,d> > pPoint( 1 );
-    std::vector< Array<R,d> > xPoints( q_to_d );
-    const std::vector< Array<R,d> >& chebyshevGrid = context.GetChebyshevGrid();
-    for( std::size_t cLocal=0; 
+    vector<R> phiResults, sinResults, cosResults;
+    vector<array<R,d>> pPoint( 1 ), xPoints( q_to_d );
+    const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
+    for( size_t cLocal=0; 
          cLocal<(1u<<(d-log2NumMergingProcesses)); 
          ++cLocal )
     {
         //--------------------------------------------------------------------//
         // Step 1                                                             //
         //--------------------------------------------------------------------//
-        const std::size_t interactionIndex = parentInteractionOffset + cLocal;
-        const std::size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
+        const size_t interactionIndex = parentInteractionOffset + cLocal;
+        const size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
 
-        for( std::size_t j=0; j<d; ++j )
+        for( size_t j=0; j<d; ++j )
             pPoint[0][j] = p0B[j] + ( (c>>j)&1 ? wB[j]/4 : -wB[j]/4 );
         {
             R* RESTRICT xPointsBuffer = &xPoints[0][0];
             const R* RESTRICT wABuffer = &wA[0];
             const R* RESTRICT x0ApBuffer = &x0Ap[0];
             const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
-            for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
-                for( std::size_t j=0; j<d; ++j )
+            for( size_t tPrime=0; tPrime<q_to_d; ++tPrime )
+                for( size_t j=0; j<d; ++j )
                     xPointsBuffer[tPrime*d+j] = 
                         x0ApBuffer[j] + 
                         2*wABuffer[j]*chebyshevBuffer[tPrime*d+j];
@@ -376,7 +373,7 @@ TargetWeightRecursion
                 oldWeightGridList[interactionIndex].RealBuffer();
             const R* RESTRICT oldImagBuffer = 
                 oldWeightGridList[interactionIndex].ImagBuffer();
-            for( std::size_t tPrime=0; tPrime<q_to_d; ++tPrime )
+            for( size_t tPrime=0; tPrime<q_to_d; ++tPrime )
             {
                 const R realPhase = cosBuffer[tPrime];
                 const R imagPhase = -sinBuffer[tPrime];
@@ -416,7 +413,7 @@ TargetWeightRecursion
             const R* imagReadBuffer = tempWeightGrid.ImagBuffer();
             const R* mapBuffer = 
                 ( (ARelativeToAp>>1)&1 ? &rightMap[0] : &leftMap[0] );
-            for( std::size_t w=0; w<Pow<q,d-2>::val; ++w )
+            for( size_t w=0; w<Pow<q,d-2>::val; ++w )
             {
                 Gemm
                 ( 'N', 'N', q, q, q,
@@ -424,7 +421,7 @@ TargetWeightRecursion
                         mapBuffer,               q,
                   (R)0, &realWriteBuffer[w*q*q], q );
             }
-            for( std::size_t w=0; w<Pow<q,d-2>::val; ++w )
+            for( size_t w=0; w<Pow<q,d-2>::val; ++w )
             {
                 Gemm
                 ( 'N', 'N', q, q, q,
@@ -442,11 +439,11 @@ TargetWeightRecursion
         // 
         // TODO: Check if loading discontinuous chunks is faster than repeatedly
         //       striding over them.
-        std::size_t q_to_j = q*q;
+        size_t q_to_j = q*q;
         WeightGrid<R,d,q> expandedWeightGrid;
-        for( std::size_t j=2; j<d; ++j )
+        for( size_t j=2; j<d; ++j )
         {
-            const std::size_t stride = q_to_j;
+            const size_t stride = q_to_j;
 
             R* realWriteBuffer = 
                 ( j==d-1 ? expandedWeightGrid.RealBuffer()
@@ -465,29 +462,29 @@ TargetWeightRecursion
             const R* RESTRICT mapBuffer = 
                 ( (ARelativeToAp>>j)&1 ? &rightMap[0] : &leftMap[0] );
 
-            std::memset( realWriteBuffer, 0, q_to_d*sizeof(R) );
-            std::memset( imagWriteBuffer, 0, q_to_d*sizeof(R) );
-            for( std::size_t p=0; p<q_to_d/(q_to_j*q); ++p )
+            memset( realWriteBuffer, 0, q_to_d*sizeof(R) );
+            memset( imagWriteBuffer, 0, q_to_d*sizeof(R) );
+            for( size_t p=0; p<q_to_d/(q_to_j*q); ++p )
             {
-                const std::size_t offset = p*(q_to_j*q);
+                const size_t offset = p*(q_to_j*q);
                 R* RESTRICT offsetRealWriteBuffer = &realWriteBuffer[offset];
                 R* RESTRICT offsetImagWriteBuffer = &imagWriteBuffer[offset];
                 const R* RESTRICT offsetRealReadBuffer = &realReadBuffer[offset];
                 const R* RESTRICT offsetImagReadBuffer = &imagReadBuffer[offset];
-                for( std::size_t w=0; w<q_to_j; ++w )
+                for( size_t w=0; w<q_to_j; ++w )
                 {
-                    for( std::size_t t=0; t<q; ++t )
+                    for( size_t t=0; t<q; ++t )
                     {
-                        for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                        for( size_t tPrime=0; tPrime<q; ++tPrime )
                         {
                             offsetRealWriteBuffer[w+t*stride] +=
                                 mapBuffer[tPrime+t*q] *
                                 offsetRealReadBuffer[w+tPrime*stride];
                         }
                     }
-                    for( std::size_t t=0; t<q; ++t )
+                    for( size_t t=0; t<q; ++t )
                     {
-                        for( std::size_t tPrime=0; tPrime<q; ++tPrime )
+                        for( size_t tPrime=0; tPrime<q; ++tPrime )
                         {
                             offsetImagWriteBuffer[w+t*stride] +=
                                 mapBuffer[tPrime+t*q] *
@@ -507,8 +504,8 @@ TargetWeightRecursion
             const R* RESTRICT wABuffer = &wA[0];
             const R* RESTRICT x0ABuffer = &x0A[0];
             const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
-            for( std::size_t t=0; t<q_to_d; ++t )
-                for( std::size_t j=0; j<d; ++j )
+            for( size_t t=0; t<q_to_d; ++t )
+                for( size_t j=0; j<d; ++j )
                     xPointsBuffer[t*d+j] = 
                         x0ABuffer[j] + wABuffer[j]*chebyshevBuffer[t*d+j];
         }
@@ -523,7 +520,7 @@ TargetWeightRecursion
                 expandedWeightGrid.RealBuffer();
             const R* RESTRICT expandedImagBuffer = 
                 expandedWeightGrid.ImagBuffer();
-            for( std::size_t t=0; t<q_to_d; ++t )
+            for( size_t t=0; t<q_to_d; ++t )
             {
                 const R realPhase = cosBuffer[t];
                 const R imagPhase = sinBuffer[t];

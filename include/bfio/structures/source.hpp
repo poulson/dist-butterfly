@@ -9,16 +9,16 @@
 #ifndef BFIO_STRUCTURES_SOURCE_HPP
 #define BFIO_STRUCTURES_SOURCE_HPP
 
+#include <array>
 #include <cstddef>
 #include <complex>
-#include "bfio/structures/array.hpp"
 
 namespace bfio {
 
 template<typename R,std::size_t d>
 struct Source 
 { 
-    Array<R,d> p;
+    std::array<R,d> p;
     std::complex<R> magnitude;
 };
 
