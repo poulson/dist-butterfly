@@ -6,8 +6,8 @@
    <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_LAGRANGIAN_NUFT_CONTEXT_HPP
-#define BFIO_LAGRANGIAN_NUFT_CONTEXT_HPP
+#ifndef BFIO_LNUFT_CONTEXT_HPP
+#define BFIO_LNUFT_CONTEXT_HPP
 
 #include <array>
 #include <vector>
@@ -19,7 +19,7 @@ using std::array;
 using std::size_t;
 using std::vector;
 
-namespace lagrangian_nuft {
+namespace lnuft {
 
 template<typename R,size_t d,size_t q>
 class Context
@@ -48,13 +48,11 @@ public:
     const array<vector<R>,d>& GetImagOffsetEvaluations() const;
 };
 
-} // lagrangian_nuft
-
 // Implementations
 
 template<typename R,size_t d,size_t q>
 void
-lagrangian_nuft::Context<R,d,q>::GenerateOffsetEvaluations()
+Context<R,d,q>::GenerateOffsetEvaluations()
 {
     const size_t log2N = Log2( _N );
     const size_t middleLevel = log2N/2;
@@ -86,7 +84,7 @@ lagrangian_nuft::Context<R,d,q>::GenerateOffsetEvaluations()
 
 template<typename R,size_t d,size_t q>
 inline
-lagrangian_nuft::Context<R,d,q>::Context
+Context<R,d,q>::Context
 ( Direction direction, size_t N, 
   const Box<R,d>& sourceBox, const Box<R,d>& targetBox ) 
 : _rfioContext(), _direction(direction), _N(N), 
@@ -95,24 +93,25 @@ lagrangian_nuft::Context<R,d,q>::Context
 
 template<typename R,size_t d,size_t q>
 inline const rfio::Context<R,d,q>&
-lagrangian_nuft::Context<R,d,q>::GetReducedFIOContext() const
+Context<R,d,q>::GetReducedFIOContext() const
 { return _rfioContext; }
 
 template<typename R,size_t d,size_t q>
 inline Direction
-lagrangian_nuft::Context<R,d,q>::GetDirection() const
+Context<R,d,q>::GetDirection() const
 { return _direction; }
 
 template<typename R,size_t d,size_t q>
 inline const array<vector<R>,d>&
-lagrangian_nuft::Context<R,d,q>::GetRealOffsetEvaluations() const
+Context<R,d,q>::GetRealOffsetEvaluations() const
 { return _realOffsetEvaluations; }
 
 template<typename R,size_t d,size_t q>
 inline const array<vector<R>,d>&
-lagrangian_nuft::Context<R,d,q>::GetImagOffsetEvaluations() const
+Context<R,d,q>::GetImagOffsetEvaluations() const
 { return _imagOffsetEvaluations; }
 
+} // lnuft
 } // bfio
 
-#endif // ifndef BFIO_LAGRANGIAN_NUFT_CONTEXT_HPP
+#endif // ifndef BFIO_LNUFT_CONTEXT_HPP

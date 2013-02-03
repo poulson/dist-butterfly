@@ -6,8 +6,8 @@
    <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_LAGRANGIAN_NUFT_FT_PHASES_HPP
-#define BFIO_LAGRANGIAN_NUFT_FT_PHASES_HPP
+#ifndef BFIO_LNUFT_FT_PHASES_HPP
+#define BFIO_LNUFT_FT_PHASES_HPP
 
 #include <array>
 #include <vector>
@@ -21,10 +21,10 @@ using std::memset;
 using std::size_t;
 using std::vector;
 
-namespace lagrangian_nuft {
+namespace lnuft {
 
 // Perform a trivial extension of Phase so that we may explicitly write the 
-// lagrangian_nuft PotentialField in terms of Fourier phase functions
+// lnuft PotentialField in terms of Fourier phase functions
 template<typename R,size_t d>
 class FTPhase : public Phase<R,d>
 { };
@@ -69,31 +69,29 @@ public:
             vector<R         >& results ) const;
 };
 
-} // lagrangian_nuft
-
 // Implementations
 
 template<typename R,size_t d>
-lagrangian_nuft::ForwardFTPhase<R,d>::ForwardFTPhase()
+ForwardFTPhase<R,d>::ForwardFTPhase()
 { }
 
 template<typename R,size_t d>
-lagrangian_nuft::AdjointFTPhase<R,d>::AdjointFTPhase()
+AdjointFTPhase<R,d>::AdjointFTPhase()
 { }
 
 template<typename R,size_t d>
-inline lagrangian_nuft::ForwardFTPhase<R,d>*
-lagrangian_nuft::ForwardFTPhase<R,d>::Clone() const
-{ return new lagrangian_nuft::ForwardFTPhase<R,d>(*this); }
+inline ForwardFTPhase<R,d>*
+ForwardFTPhase<R,d>::Clone() const
+{ return new ForwardFTPhase<R,d>(*this); }
 
 template<typename R,size_t d>
-inline lagrangian_nuft::AdjointFTPhase<R,d>*
-lagrangian_nuft::AdjointFTPhase<R,d>::Clone() const
-{ return new lagrangian_nuft::AdjointFTPhase<R,d>(*this); }
+inline AdjointFTPhase<R,d>*
+AdjointFTPhase<R,d>::Clone() const
+{ return new AdjointFTPhase<R,d>(*this); }
 
 template<typename R,size_t d>
 inline R
-lagrangian_nuft::ForwardFTPhase<R,d>::operator()
+ForwardFTPhase<R,d>::operator()
 ( const array<R,d>& x, const array<R,d>& p ) const
 {
     R sum = 0;
@@ -106,7 +104,7 @@ lagrangian_nuft::ForwardFTPhase<R,d>::operator()
 
 template<typename R,size_t d>
 inline R
-lagrangian_nuft::AdjointFTPhase<R,d>::operator()
+AdjointFTPhase<R,d>::operator()
 ( const array<R,d>& x, const array<R,d>& p ) const
 {
     R sum = 0;
@@ -119,7 +117,7 @@ lagrangian_nuft::AdjointFTPhase<R,d>::operator()
 
 template<typename R,size_t d>
 void
-lagrangian_nuft::ForwardFTPhase<R,d>::BatchEvaluate
+ForwardFTPhase<R,d>::BatchEvaluate
 ( const vector<array<R,d>>& xPoints,
   const vector<array<R,d>>& pPoints,
         vector<R         >& results ) const
@@ -148,7 +146,7 @@ lagrangian_nuft::ForwardFTPhase<R,d>::BatchEvaluate
 
 template<typename R,size_t d>
 void
-lagrangian_nuft::AdjointFTPhase<R,d>::BatchEvaluate
+AdjointFTPhase<R,d>::BatchEvaluate
 ( const vector<array<R,d>>& xPoints,
   const vector<array<R,d>>& pPoints,
         vector<R         >& results ) const
@@ -175,6 +173,7 @@ lagrangian_nuft::AdjointFTPhase<R,d>::BatchEvaluate
     }
 }
 
+} // lnuft
 } // bfio
 
-#endif // ifndef BFIO_LAGRANGIAN_NUFT_FT_PHASES_HPP
+#endif // ifndef BFIO_LNUFT_FT_PHASES_HPP

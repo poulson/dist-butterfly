@@ -6,8 +6,8 @@
    <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_INTERPOLATIVE_NUFT_FORM_CHECK_POTENTIALS_HPP
-#define BFIO_INTERPOLATIVE_NUFT_FORM_CHECK_POTENTIALS_HPP
+#ifndef BFIO_INUFT_FORM_CHECK_POTENTIALS_HPP
+#define BFIO_INUFT_FORM_CHECK_POTENTIALS_HPP
 
 #include <array>
 #include <cstddef>
@@ -21,7 +21,7 @@
 
 #include "bfio/tools/special_functions.hpp"
 
-#include "bfio/interpolative_nuft/context.hpp"
+#include "bfio/inuft/context.hpp"
 
 namespace bfio {
 
@@ -30,13 +30,13 @@ using std::memset;
 using std::size_t;
 using std::vector;
 
-namespace interpolative_nuft {
+namespace inuft {
 
 // 1d specialization
 template<typename R,size_t q>
 void
 FormCheckPotentials
-( const interpolative_nuft::Context<R,1,q>& context,
+( const Context<R,1,q>& context,
   const Plan<1>& plan,
   const size_t level,
   const array<vector<R>,1>& realPrescalings,
@@ -156,7 +156,7 @@ FormCheckPotentials
 template<typename R,size_t q>
 void
 FormCheckPotentials
-( const interpolative_nuft::Context<R,2,q>& context,
+( const Context<R,2,q>& context,
   const Plan<2>& plan,
   const size_t level,
   const array<vector<R>,2>& realPrescalings,
@@ -366,7 +366,7 @@ FormCheckPotentials
 template<typename R,size_t d,size_t q>
 void
 FormCheckPotentials
-( const interpolative_nuft::Context<R,d,q>& context,
+( const Context<R,d,q>& context,
   const Plan<d>& plan,
   const size_t level,
   const array<vector<R>,d>& realPrescalings,
@@ -683,7 +683,7 @@ FormCheckPotentials
     }
 }
 
-} // interpolative_nuft
+} // inuft
 } // bfio
 
-#endif // ifndef BFIO_INTERPOLATIVE_NUFT_FORM_CHECK_POTENTIALS_HPP
+#endif // ifndef BFIO_INUFT_FORM_CHECK_POTENTIALS_HPP

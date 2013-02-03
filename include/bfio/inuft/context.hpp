@@ -6,8 +6,8 @@
    <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_INTERPOLATIVE_NUFT_CONTEXT_HPP
-#define BFIO_INTERPOLATIVE_NUFT_CONTEXT_HPP
+#ifndef BFIO_INUFT_CONTEXT_HPP
+#define BFIO_INUFT_CONTEXT_HPP
 
 #include <array>
 #include <complex>
@@ -24,7 +24,7 @@ using std::complex;
 using std::size_t;
 using std::vector;
 
-namespace interpolative_nuft {
+namespace inuft {
 template<typename R,size_t d,size_t q>
 class Context
 {
@@ -60,13 +60,12 @@ public:
     const vector<R>& GetRealForwardMap( const size_t j ) const;
     const vector<R>& GetImagForwardMap( const size_t j ) const;
 };
-} // interpolative_nuft
 
 // Implementations
 
 template<typename R,size_t d,size_t q>
 void 
-interpolative_nuft::Context<R,d,q>::GenerateChebyshevNodes()
+Context<R,d,q>::GenerateChebyshevNodes()
 {
     for( size_t t=0; t<q; ++t )
         _chebyshevNodes[t] = 0.5*cos(static_cast<R>(t*Pi/(q-1)));
@@ -74,7 +73,7 @@ interpolative_nuft::Context<R,d,q>::GenerateChebyshevNodes()
 
 template<typename R,size_t d,size_t q>
 void
-interpolative_nuft::Context<R,d,q>::GenerateChebyshevGrid()
+Context<R,d,q>::GenerateChebyshevGrid()
 {
     const size_t q_to_d = _chebyshevGrid.size();   
 
@@ -92,7 +91,7 @@ interpolative_nuft::Context<R,d,q>::GenerateChebyshevGrid()
 
 template<typename R,size_t d,size_t q>
 void
-interpolative_nuft::Context<R,d,q>::GenerateOffsetMaps()
+Context<R,d,q>::GenerateOffsetMaps()
 {
     for( size_t j=0; j<d; ++j )
     {
@@ -193,7 +192,7 @@ interpolative_nuft::Context<R,d,q>::GenerateOffsetMaps()
 }
 
 template<typename R,size_t d,size_t q>
-interpolative_nuft::Context<R,d,q>::Context
+Context<R,d,q>::Context
 ( const Direction direction,
   const size_t N,
   const Box<R,d>& sourceBox,
@@ -208,39 +207,40 @@ interpolative_nuft::Context<R,d,q>::Context
 
 template<typename R,size_t d,size_t q>
 inline Direction
-interpolative_nuft::Context<R,d,q>::GetDirection() const
+Context<R,d,q>::GetDirection() const
 { return _direction; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<R>&
-interpolative_nuft::Context<R,d,q>::GetChebyshevNodes() const
+Context<R,d,q>::GetChebyshevNodes() const
 { return _chebyshevNodes; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<array<R,d>>&
-interpolative_nuft::Context<R,d,q>::GetChebyshevGrid() const
+Context<R,d,q>::GetChebyshevGrid() const
 { return _chebyshevGrid; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<R>&
-interpolative_nuft::Context<R,d,q>::GetRealInverseMap( const size_t j ) const
+Context<R,d,q>::GetRealInverseMap( const size_t j ) const
 { return _realInverseMaps[j]; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<R>&
-interpolative_nuft::Context<R,d,q>::GetImagInverseMap( const size_t j ) const
+Context<R,d,q>::GetImagInverseMap( const size_t j ) const
 { return _imagInverseMaps[j]; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<R>&
-interpolative_nuft::Context<R,d,q>::GetRealForwardMap( const size_t j ) const
+Context<R,d,q>::GetRealForwardMap( const size_t j ) const
 { return _realForwardMaps[j]; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<R>&
-interpolative_nuft::Context<R,d,q>::GetImagForwardMap( const size_t j ) const
+Context<R,d,q>::GetImagForwardMap( const size_t j ) const
 { return _imagForwardMaps[j]; }
 
+} // inuft
 } // bfio
 
-#endif // ifndef BFIO_INTERPOLATIVE_NUFT_CONTEXT_HPP
+#endif // ifndef BFIO_INUFT_CONTEXT_HPP

@@ -6,8 +6,8 @@
    <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_LAGRANGIAN_NUFT_ADJOINT_SWITCH_TO_TARGET_INTERP_HPP
-#define BFIO_LAGRANGIAN_NUFT_ADJOINT_SWITCH_TO_TARGET_INTERP_HPP
+#ifndef BFIO_LNUFT_ADJOINT_SWITCH_TO_TARGET_INTERP_HPP
+#define BFIO_LNUFT_ADJOINT_SWITCH_TO_TARGET_INTERP_HPP
 
 #include <array>
 #include <cstddef>
@@ -20,7 +20,7 @@
 #include "bfio/structures/weight_grid.hpp"
 #include "bfio/structures/weight_grid_list.hpp"
 
-#include "bfio/lagrangian_nuft/context.hpp"
+#include "bfio/lnuft/context.hpp"
 
 namespace bfio {
 
@@ -29,13 +29,13 @@ using std::memcpy;
 using std::memset;
 using std::size_t;
 
-namespace lagrangian_nuft {
+namespace lnuft {
 
 // 1d specialization
 template<typename R,size_t q>
 void
 SwitchToTargetInterp
-( const lagrangian_nuft::Context<R,1,q>& nuftContext,
+( const Context<R,1,q>& nuftContext,
   const Plan<1>& plan,
   const Box<R,1>& sourceBox,
   const Box<R,1>& targetBox,
@@ -212,7 +212,7 @@ SwitchToTargetInterp
 template<typename R,size_t q>
 void
 SwitchToTargetInterp
-( const lagrangian_nuft::Context<R,2,q>& nuftContext,
+( const Context<R,2,q>& nuftContext,
   const Plan<2>& plan,
   const Box<R,2>& sourceBox,
   const Box<R,2>& targetBox,
@@ -469,7 +469,7 @@ SwitchToTargetInterp
 template<typename R,size_t d,size_t q>
 void
 SwitchToTargetInterp
-( const lagrangian_nuft::Context<R,d,q>& nuftContext,
+( const Context<R,d,q>& nuftContext,
   const Plan<d>& plan,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
@@ -800,7 +800,7 @@ SwitchToTargetInterp
     }
 }
 
-} // lagrangian_nuft
+} // lnuft
 } // bfio
 
-#endif // ifndef BFIO_LAGRANGIAN_NUFT_ADJOINT_SWITCH_TO_TARGET_INTERP_HPP
+#endif // ifndef BFIO_LNUFT_ADJOINT_SWITCH_TO_TARGET_INTERP_HPP

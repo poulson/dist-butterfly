@@ -6,8 +6,8 @@
    <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_LAGRANGIAN_NUFT_HPP
-#define BFIO_LAGRANGIAN_NUFT_HPP
+#ifndef BFIO_LNUFT_HPP
+#define BFIO_LNUFT_HPP
 
 #include <array>
 #include <iostream>
@@ -26,7 +26,7 @@ using std::memcpy;
 using std::size_t;
 using std::vector;
 
-namespace lagrangian_nuft {
+namespace lnuft {
 
 static bool alreadyTimed = false;
 
@@ -53,9 +53,9 @@ PrintTimings()
 {
 #ifndef RELEASE
     if( !alreadyTimed )
-	throw std::logic_error("You have not yet run LagrangianNUFT.");
+	throw std::logic_error("You have not yet run LNUFT.");
 #endif
-    std::cout << "LagrangianNUFT timings:\n"
+    std::cout << "LNUFT timings:\n"
               << "------------------------------------------\n" 
 	      << "InitializeWeights:     " 
 	      << initializeWeightsTimer.TotalTime() << " seconds.\n"
@@ -70,34 +70,34 @@ PrintTimings()
 	      << "Total: " << timer.TotalTime() << " seconds.\n" << std::endl;
 }
 
-} // lagrangian_nuft
+} // lnuft
 } // bfio
 #endif
 
-#include "bfio/lagrangian_nuft/context.hpp"
-#include "bfio/lagrangian_nuft/ft_phases.hpp"
-#include "bfio/lagrangian_nuft/potential_field.hpp"
+#include "bfio/lnuft/context.hpp"
+#include "bfio/lnuft/ft_phases.hpp"
+#include "bfio/lnuft/potential_field.hpp"
 
 #include "bfio/rfio/initialize_weights.hpp"
 #include "bfio/rfio/source_weight_recursion.hpp"
 #include "bfio/rfio/target_weight_recursion.hpp"
 
-#include "bfio/lagrangian_nuft/switch_to_target_interp.hpp"
+#include "bfio/lnuft/switch_to_target_interp.hpp"
 
 namespace bfio {
 
 template<typename R,size_t d,size_t q>
-std::unique_ptr<const lagrangian_nuft::PotentialField<R,d,q>>
-LagrangianNUFT
-( const lagrangian_nuft::Context<R,d,q>& nuftContext,
+std::unique_ptr<const lnuft::PotentialField<R,d,q>>
+LNUFT
+( const lnuft::Context<R,d,q>& nuftContext,
   const Plan<d>& plan,
   const Box<R,d>& sourceBox,
   const Box<R,d>& targetBox,
   const vector<Source<R,d>>& mySources )
 {
 #ifdef TIMING
-    lagrangian_nuft::ResetTimers();
-    lagrangian_nuft::timer.Start();
+    lnuft::ResetTimers();
+    lnuft::timer.Start();
 #endif
     typedef complex<R> C;
     const size_t q_to_d = Pow<q,d>::val;
@@ -108,12 +108,12 @@ LagrangianNUFT
     // We could potentially have the plan direction be different
     // (e.g., Forward direction with Adjoint FT phase function)
     const Direction direction = nuftContext.GetDirection();
-    const lagrangian_nuft::ForwardFTPhase<R,d> forwardPhase;
-    const lagrangian_nuft::AdjointFTPhase<R,d> adjointPhase;
-    const lagrangian_nuft::FTPhase<R,d>& phase = 
+    const lnuft::ForwardFTPhase<R,d> forwardPhase;
+    const lnuft::AdjointFTPhase<R,d> adjointPhase;
+    const lnuft::FTPhase<R,d>& phase = 
         ( direction==FORWARD ? 
-          (const lagrangian_nuft::FTPhase<R,d>&)forwardPhase :
-          (const lagrangian_nuft::FTPhase<R,d>&)adjointPhase );
+          (const lnuft::FTPhase<R,d>&)forwardPhase :
+          (const lnuft::FTPhase<R,d>&)adjointPhase );
 
     // Extract our communicator and its size
     MPI_Comm comm = plan.GetComm();
@@ -162,29 +162,29 @@ LagrangianNUFT
     // smooth component of the kernel.
     WeightGridList<R,d,q> weightGridList( 1<<log2LocalSourceBoxes );
 #ifdef TIMING
-    lagrangian_nuft::initializeWeightsTimer.Start();
+    lnuft::initializeWeightsTimer.Start();
 #endif
     rfio::InitializeWeights
     ( rfioContext, plan, phase, sourceBox, targetBox, mySourceBox, 
       log2LocalSourceBoxes, log2LocalSourceBoxesPerDim, mySources, 
       weightGridList );
 #ifdef TIMING
-    lagrangian_nuft::initializeWeightsTimer.Stop();
+    lnuft::initializeWeightsTimer.Stop();
 #endif
 
     // Start the main recursion loop
     if( log2N == 0 || log2N == 1 )
     {
 #ifdef TIMING
-	lagrangian_nuft::switchToTargetInterpTimer.Start();
+	lnuft::switchToTargetInterpTimer.Start();
 #endif
-        lagrangian_nuft::SwitchToTargetInterp
+        lnuft::SwitchToTargetInterp
         ( nuftContext, plan, sourceBox, targetBox, mySourceBox, 
           myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
           log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
           weightGridList );
 #ifdef TIMING
-	lagrangian_nuft::switchToTargetInterpTimer.Stop();
+	lnuft::switchToTargetInterpTimer.Stop();
 #endif
     }
     for( size_t level=1; level<=log2N; ++level )
@@ -248,14 +248,14 @@ LagrangianNUFT
                     if( level <= log2N/2 )
                     {
 #ifdef TIMING
-			lagrangian_nuft::sourceWeightRecursionTimer.Start();
+			lnuft::sourceWeightRecursionTimer.Start();
 #endif
                         rfio::SourceWeightRecursion
                         ( rfioContext, plan, phase, level, x0A, p0B, wB,
                           parentInteractionOffset, oldWeightGridList,
                           weightGridList[interactionIndex] );
 #ifdef TIMING
-			lagrangian_nuft::sourceWeightRecursionTimer.Stop();
+			lnuft::sourceWeightRecursionTimer.Stop();
 #endif
                     }
                     else
@@ -273,7 +273,7 @@ LagrangianNUFT
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
 #ifdef TIMING
-			lagrangian_nuft::targetWeightRecursionTimer.Start();
+			lnuft::targetWeightRecursionTimer.Start();
 #endif
                         rfio::TargetWeightRecursion
                         ( rfioContext, plan, phase, level,
@@ -281,7 +281,7 @@ LagrangianNUFT
                           parentInteractionOffset, oldWeightGridList, 
                           weightGridList[interactionIndex] );
 #ifdef TIMING
-			lagrangian_nuft::targetWeightRecursionTimer.Stop();
+			lnuft::targetWeightRecursionTimer.Stop();
 #endif
                     }
                 }
@@ -342,14 +342,14 @@ LagrangianNUFT
                 if( level <= log2N/2 )
                 {
 #ifdef TIMING
-		    lagrangian_nuft::sourceWeightRecursionTimer.Start();
+		    lnuft::sourceWeightRecursionTimer.Start();
 #endif
                     rfio::SourceWeightRecursion
                     ( rfioContext, plan, phase, level, x0A, p0B, wB,
                       parentInteractionOffset, weightGridList,
                       partialWeightGridList[targetIndex] );
 #ifdef TIMING
-		    lagrangian_nuft::sourceWeightRecursionTimer.Stop();
+		    lnuft::sourceWeightRecursionTimer.Stop();
 #endif
                 }
                 else
@@ -366,7 +366,7 @@ LagrangianNUFT
                         ARelativeToAp |= (globalA[j]&1)<<j;
                     }
 #ifdef TIMING
-		    lagrangian_nuft::targetWeightRecursionTimer.Start();
+		    lnuft::targetWeightRecursionTimer.Start();
 #endif
                     rfio::TargetWeightRecursion
                     ( rfioContext, plan, phase, level,
@@ -374,14 +374,14 @@ LagrangianNUFT
                       parentInteractionOffset, weightGridList, 
                       partialWeightGridList[targetIndex] );
 #ifdef TIMING
-		    lagrangian_nuft::targetWeightRecursionTimer.Stop();
+		    lnuft::targetWeightRecursionTimer.Stop();
 #endif
                 }
             }
 
             // Scatter the summation of the weights
 #ifdef TIMING
-            lagrangian_nuft::sumScatterTimer.Start();
+            lnuft::sumScatterTimer.Start();
 #endif
             vector<int> recvCounts( numMergingProcesses );
             for( size_t j=0; j<numMergingProcesses; ++j )
@@ -440,7 +440,7 @@ LagrangianNUFT
                   &recvCounts[0], clusterComm );
             }
 #ifdef TIMING
-            lagrangian_nuft::sumScatterTimer.Stop();
+            lnuft::sumScatterTimer.Stop();
 #endif
 
             const vector<size_t>& targetDimsToCut = 
@@ -464,34 +464,34 @@ LagrangianNUFT
         if( level==log2N/2 )
         {
 #ifdef TIMING
-	    lagrangian_nuft::switchToTargetInterpTimer.Start();
+	    lnuft::switchToTargetInterpTimer.Start();
 #endif
-            lagrangian_nuft::SwitchToTargetInterp
+            lnuft::SwitchToTargetInterp
             ( nuftContext, plan, sourceBox, targetBox, mySourceBox, 
               myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
               log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
               weightGridList );
 #ifdef TIMING
-	    lagrangian_nuft::switchToTargetInterpTimer.Stop();
+	    lnuft::switchToTargetInterpTimer.Stop();
 #endif
         }
     }
 
     // Construct the PotentialField
-    std::unique_ptr< const lagrangian_nuft::PotentialField<R,d,q> > 
+    std::unique_ptr<const lnuft::PotentialField<R,d,q>> 
     potentialField( 
-        new lagrangian_nuft::PotentialField<R,d,q>
+        new lnuft::PotentialField<R,d,q>
             ( nuftContext, sourceBox, myTargetBox, myTargetBoxCoords,
               log2LocalTargetBoxesPerDim, weightGridList )
     );
 
 #ifdef TIMING
-    lagrangian_nuft::timer.Stop();
-    lagrangian_nuft::alreadyTimed = true;
+    lnuft::timer.Stop();
+    lnuft::alreadyTimed = true;
 #endif
     return potentialField;
 }
 
 } // bfio
 
-#endif // ifndef BFIO_LAGRANGIAN_NUFT_HPP
+#endif // ifndef BFIO_LNUFT_HPP

@@ -193,31 +193,31 @@ main
         // Create a context for Interpolative NUFTs
         if( rank == 0 )
             cout << "Creating InterpolativeNUFT context..." << endl;
-        bfio::interpolative_nuft::Context<double,d,q> 
-            interpolativeNuftContext( bfio::FORWARD, N, sourceBox, targetBox );
+        bfio::inuft::Context<double,d,q> 
+            inuftContext( bfio::FORWARD, N, sourceBox, targetBox );
 
         // Run with the interpolative NUFT
         if( rank == 0 )
             cout << "Starting InterpolativeNUFT..." << endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        auto u = bfio::InterpolativeNUFT
-        ( interpolativeNuftContext, plan, sourceBox, targetBox, mySources );
+        auto u = bfio::INUFT
+        ( inuftContext, plan, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
         if( rank == 0 )
             cout << "Runtime: " << stopTime-startTime << " seconds.\n" << endl;
 #ifdef TIMING
 	if( rank == 0 )
-	    bfio::interpolative_nuft::PrintTimings();
+	    bfio::inuft::PrintTimings();
 #endif
         */
 
         // Create a context for NUFTs with Lagrangian interpolation
         if( rank == 0 )
             cout << "Creating LagrangianNUFT context..." << endl;
-        bfio::lagrangian_nuft::Context<double,d,q> 
-            lagrangianNuftContext( bfio::FORWARD, N, sourceBox, targetBox );
+        bfio::lnuft::Context<double,d,q> 
+            lnuftContext( bfio::FORWARD, N, sourceBox, targetBox );
 
         // Run with the Lagrangian NUFT
         if( rank == 0 )
@@ -225,8 +225,8 @@ main
         MPI_Barrier( comm );
         //startTime = MPI_Wtime();
         double startTime = MPI_Wtime();
-        auto v = bfio::LagrangianNUFT
-        ( lagrangianNuftContext, plan, sourceBox, targetBox, mySources );
+        auto v = bfio::LNUFT
+        ( lnuftContext, plan, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         //stopTime = MPI_Wtime();
         double stopTime = MPI_Wtime();
@@ -234,7 +234,7 @@ main
             cout << "Runtime: " << stopTime-startTime << " seconds.\n" << endl;
 #ifdef TIMING
 	if( rank == 0 )
-	    bfio::lagrangian_nuft::PrintTimings();
+	    bfio::lnuft::PrintTimings();
 #endif
 
         /*
@@ -265,20 +265,19 @@ main
 
         if( testAccuracy )
         {
-            bfio::lagrangian_nuft::PrintErrorEstimates
-            ( comm, *v, globalSources );
+            bfio::lnuft::PrintErrorEstimates( comm, *v, globalSources );
         }
         
         if( store )
         {
             if( testAccuracy )
             {
-                bfio::lagrangian_nuft::WriteVtkXmlPImageData
+                bfio::lnuft::WriteVtkXmlPImageData
                 ( comm, N, targetBox, *v, "nuft3d", globalSources );
             }
             else
             {
-                bfio::lagrangian_nuft::WriteVtkXmlPImageData
+                bfio::lnuft::WriteVtkXmlPImageData
                 ( comm, N, targetBox, *v, "nuft3d" );
             }
         }

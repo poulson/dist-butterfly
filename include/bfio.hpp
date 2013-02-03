@@ -20,7 +20,7 @@
 #include "bfio/functors.hpp"
 
 #include "bfio/rfio.hpp"
-#include "bfio/lagrangian_nuft.hpp"
-#include "bfio/interpolative_nuft.hpp"
+#include "bfio/lnuft.hpp"
+#include "bfio/inuft.hpp"
 
 #endif // ifndef BFIO_HPP 

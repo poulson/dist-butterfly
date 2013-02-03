@@ -6,8 +6,8 @@
    <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_INTERPOLATIVE_NUFT_FORM_EQUIVALENT_SOURCES_HPP
-#define BFIO_INTERPOLATIVE_NUFT_FORM_EQUIVALENT_SOURCES_HPP
+#ifndef BFIO_INUFT_FORM_EQUIVALENT_SOURCES_HPP
+#define BFIO_INUFT_FORM_EQUIVALENT_SOURCES_HPP
 
 #include <array>
 #include <cstddef>
@@ -24,7 +24,7 @@
 #include "bfio/tools/mpi.hpp"
 #include "bfio/tools/special_functions.hpp"
 
-#include "bfio/interpolative_nuft/context.hpp"
+#include "bfio/inuft/context.hpp"
 
 namespace bfio {
 
@@ -33,13 +33,13 @@ using std::memset;
 using std::size_t;
 using std::vector;
 
-namespace interpolative_nuft {
+namespace inuft {
 
 // 1d specialization
 template<typename R,size_t q>
 void
 FormEquivalentSources
-( const interpolative_nuft::Context<R,1,q>& context,
+( const Context<R,1,q>& context,
   const Plan<1>& plan,
   const Box<R,1>& mySourceBox,
   const Box<R,1>& myTargetBox,
@@ -185,7 +185,7 @@ FormEquivalentSources
 template<typename R,size_t q>
 void
 FormEquivalentSources
-( const interpolative_nuft::Context<R,2,q>& context,
+( const Context<R,2,q>& context,
   const Plan<2>& plan,
   const Box<R,2>& mySourceBox,
   const Box<R,2>& myTargetBox,
@@ -429,7 +429,7 @@ FormEquivalentSources
 template<typename R,size_t d,size_t q>
 void
 FormEquivalentSources
-( const interpolative_nuft::Context<R,d,q>& context,
+( const Context<R,d,q>& context,
   const Plan<d>& plan,
   const Box<R,d>& mySourceBox,
   const Box<R,d>& myTargetBox,
@@ -780,7 +780,7 @@ FormEquivalentSources
     }
 }
 
-} // interpolative_nuft
+} // inuft
 } // bfio
 
-#endif // ifndef BFIO_INTERPOLATIVE_NUFT_FORM_EQUIVALENT_SOURCES_HPP 
+#endif // ifndef BFIO_INUFT_FORM_EQUIVALENT_SOURCES_HPP 

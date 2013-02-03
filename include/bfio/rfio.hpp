@@ -507,7 +507,7 @@ transform
 } // rfio
 
 template<typename R,size_t d,size_t q>
-std::unique_ptr< const rfio::PotentialField<R,d,q> >
+std::unique_ptr<const rfio::PotentialField<R,d,q>>
 ReducedFIO
 ( const rfio::Context<R,d,q>& context,
   const Plan<d>& plan,
@@ -522,7 +522,7 @@ ReducedFIO
 }
 
 template<typename R,size_t d,size_t q>
-std::unique_ptr< const rfio::PotentialField<R,d,q> >
+std::unique_ptr<const rfio::PotentialField<R,d,q>>
 ReducedFIO
 ( const rfio::Context<R,d,q>& context,
   const Plan<d>& plan,

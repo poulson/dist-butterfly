@@ -6,8 +6,8 @@
    <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef BFIO_INTERPOLATIVE_NUFT_POTENTIAL_FIELD_HPP
-#define BFIO_INTERPOLATIVE_NUFT_POTENTIAL_FIELD_HPP
+#ifndef BFIO_INUFT_POTENTIAL_FIELD_HPP
+#define BFIO_INUFT_POTENTIAL_FIELD_HPP
 
 #include <array>
 #include <complex>
@@ -20,7 +20,7 @@
 #include "bfio/structures/weight_grid.hpp"
 #include "bfio/structures/weight_grid_list.hpp"
 
-#include "bfio/interpolative_nuft/context.hpp"
+#include "bfio/inuft/context.hpp"
 
 #include "bfio/tools/special_functions.hpp"
 
@@ -31,11 +31,11 @@ using std::complex;
 using std::size_t;
 using std::vector;
 
-namespace interpolative_nuft {
+namespace inuft {
 template<typename R,size_t d,size_t q>
 class PotentialField
 {
-    const interpolative_nuft::Context<R,d,q>& _context;
+    const Context<R,d,q>& _context;
     const Box<R,d> _sourceBox;
     const Box<R,d> _myTargetBox;
     const array<size_t,d> _log2TargetSubboxesPerDim;
@@ -47,7 +47,7 @@ class PotentialField
 
 public:
     PotentialField
-    ( const interpolative_nuft::Context<R,d,q>& context,
+    ( const Context<R,d,q>& context,
       const Box<R,d>& sourceBox,
       const Box<R,d>& myTargetBox,
       const array<size_t,d>& log2TargetSubboxesPerDim,
@@ -61,13 +61,12 @@ public:
     const array<size_t,d>& GetLog2SubboxesPerDim() const;
     const array<size_t,d>& GetLog2SubboxesUpToDim() const;
 };
-} // interpolative_nuft
 
 // Implementations
 
 /*
  * Remark: There is significant code duplication in 
- *         interpolative_nuft::PotentialField from
+ *         inuft::PotentialField from
  *         general_fio::PotentialField, but this was chosen as an alternative
  *         to coupling the two classes. Since LagrangianNUFT is a slight 
  *         specialization of the GeneralFIO approach, 
@@ -76,8 +75,8 @@ public:
  */
 
 template<typename R,size_t d,size_t q>
-interpolative_nuft::PotentialField<R,d,q>::PotentialField
-( const interpolative_nuft::Context<R,d,q>& context,
+PotentialField<R,d,q>::PotentialField
+( const Context<R,d,q>& context,
   const Box<R,d>& sourceBox,
   const Box<R,d>& myTargetBox,
   const array<size_t,d>& log2TargetSubboxesPerDim,
@@ -140,7 +139,7 @@ interpolative_nuft::PotentialField<R,d,q>::PotentialField
 
 template<typename R,size_t d,size_t q>
 complex<R>
-interpolative_nuft::PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
+PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
 {
     typedef complex<R> C;
 
@@ -186,29 +185,30 @@ interpolative_nuft::PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
 
 template<typename R,size_t d,size_t q>
 inline const Box<R,d>&
-interpolative_nuft::PotentialField<R,d,q>::GetMyTargetBox() const
+PotentialField<R,d,q>::GetMyTargetBox() const
 { return _myTargetBox; }
 
 template<typename R,size_t d,size_t q>
 inline size_t
-interpolative_nuft::PotentialField<R,d,q>::GetNumSubboxes() const
+PotentialField<R,d,q>::GetNumSubboxes() const
 { return _LRPs.size(); }
 
 template<typename R,size_t d,size_t q>
 inline const array<R,d>&
-interpolative_nuft::PotentialField<R,d,q>::GetSubboxWidths() const
+PotentialField<R,d,q>::GetSubboxWidths() const
 { return _wA; }
 
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
-interpolative_nuft::PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
+PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
 { return _log2TargetSubboxesPerDim; }
 
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
-interpolative_nuft::PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
+PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
 { return _log2TargetSubboxesUpToDim; }
 
+} // inuft
 } // bfio
 
-#endif // ifndef BFIO_INTERPOLATIVE_NUFT_POTENTIAL_FIELD_HPP
+#endif // ifndef BFIO_INUFT_POTENTIAL_FIELD_HPP
