@@ -49,8 +49,7 @@ SwitchToTargetInterp
 { 
     typedef complex<R> C;
     const size_t d = 1;
-    const rfio::Context<R,1,q>& rfioContext = 
-        nuftContext.GetReducedFIOContext();
+    const rfio::Context<R,1,q>& rfioContext = nuftContext.GetRFIOContext();
 
     const Direction direction = nuftContext.GetDirection();
     const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
@@ -72,12 +71,11 @@ SwitchToTargetInterp
     // Create space for holding the mixed offset evaluations, i.e., 
     // exp( +-TwoPi i (x0,dp) ) and exp( +-TwoPi i (dx,p0) )
     vector<R> phaseEvaluations( q );
-    vector<vector<R>> realFixedTargetEvals( d, vector<R>(q) );
-    vector<vector<R>> imagFixedTargetEvals( d, vector<R>(q) );
+    vector<vector<R>> realFixedTargetEvals( d, vector<R>(q) ),
+                      imagFixedTargetEvals( d, vector<R>(q) );
     vector<vector<vector<R>>>
         realFixedSourceEvals
-        ( 1<<log2LocalSourceBoxes, vector<vector<R>>( d, vector<R>(q) ) );
-    vector<vector<vector<R>>>
+        ( 1<<log2LocalSourceBoxes, vector<vector<R>>( d, vector<R>(q) ) ),
         imagFixedSourceEvals
         ( 1<<log2LocalSourceBoxes, vector<vector<R>>( d, vector<R>(q) ) );
 
@@ -227,8 +225,7 @@ SwitchToTargetInterp
     typedef complex<R> C;
     const size_t d = 2;
     const size_t q_to_d = Pow<q,d>::val;
-    const rfio::Context<R,2,q>& rfioContext = 
-        nuftContext.GetReducedFIOContext();
+    const rfio::Context<R,2,q>& rfioContext = nuftContext.GetRFIOContext();
 
     const Direction direction = nuftContext.GetDirection();
     const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
@@ -253,12 +250,11 @@ SwitchToTargetInterp
     // Create space for holding the mixed offset evaluations, i.e., 
     // exp( +-TwoPi i (x0,dp) ) and exp( +-TwoPi i (dx,p0) )
     vector<R> phaseEvaluations( q );
-    vector<vector<R>> realFixedTargetEvals( d, vector<R>(q) );
-    vector<vector<R>> imagFixedTargetEvals( d, vector<R>(q) );
+    vector<vector<R>> realFixedTargetEvals( d, vector<R>(q) ),
+                      imagFixedTargetEvals( d, vector<R>(q) );
     vector<vector<vector<R>>>
         realFixedSourceEvals
-        ( 1<<log2LocalSourceBoxes, vector<vector<R>>( d, vector<R>(q) ) );
-    vector<vector<vector<R>>>
+        ( 1<<log2LocalSourceBoxes, vector<vector<R>>( d, vector<R>(q) ) ),
         imagFixedSourceEvals
         ( 1<<log2LocalSourceBoxes, vector<vector<R>>( d, vector<R>(q) ) );
 
@@ -483,8 +479,7 @@ SwitchToTargetInterp
 {
     typedef complex<R> C;
     const size_t q_to_d = Pow<q,d>::val;
-    const rfio::Context<R,d,q>& rfioContext = 
-        nuftContext.GetReducedFIOContext();
+    const rfio::Context<R,d,q>& rfioContext = nuftContext.GetRFIOContext();
 
     const Direction direction = nuftContext.GetDirection();
     const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
@@ -509,12 +504,11 @@ SwitchToTargetInterp
     // Create space for holding the mixed offset evaluations, i.e., 
     // exp( +-TwoPi i (x0,dp) ) and exp( +-TwoPi i (dx,p0) )
     vector<R> phaseEvaluations( q );
-    vector<vector<R>> realFixedTargetEvals( d, vector<R>(q) );
-    vector<vector<R>> imagFixedTargetEvals( d, vector<R>(q) );
+    vector<vector<R>> realFixedTargetEvals( d, vector<R>(q) ),
+                      imagFixedTargetEvals( d, vector<R>(q) );
     vector<vector<vector<R>>>
         realFixedSourceEvals
-        ( 1<<log2LocalSourceBoxes, vector<vector<R>>( d, vector<R>(q) ) );
-    vector<vector<vector<R>>>
+        ( 1<<log2LocalSourceBoxes, vector<vector<R>>( d, vector<R>(q) ) ),
         imagFixedSourceEvals
         ( 1<<log2LocalSourceBoxes, vector<vector<R>>( d, vector<R>(q) ) );
 

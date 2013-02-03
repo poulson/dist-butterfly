@@ -54,9 +54,9 @@ PrintTimings()
 {
 #ifndef RELEASE
     if( !alreadyTimed )
-	throw std::logic_error("You have not yet run ReducedFIO.");
+	throw std::logic_error("You have not yet run RFIO.");
 #endif
-    std::cout << "ReducedFIO timings:\n"
+    std::cout << "RFIO timings:\n"
 	      << "--------------------------------------------\n"
               << "InitializeWeights:     "
               << initializeWeightsTimer.TotalTime() << " seconds.\n"
@@ -508,7 +508,7 @@ transform
 
 template<typename R,size_t d,size_t q>
 std::unique_ptr<const rfio::PotentialField<R,d,q>>
-ReducedFIO
+RFIO
 ( const rfio::Context<R,d,q>& context,
   const Plan<d>& plan,
   const Amplitude<R,d>& amplitude,
@@ -523,7 +523,7 @@ ReducedFIO
 
 template<typename R,size_t d,size_t q>
 std::unique_ptr<const rfio::PotentialField<R,d,q>>
-ReducedFIO
+RFIO
 ( const rfio::Context<R,d,q>& context,
   const Plan<d>& plan,
   const Phase<R,d>& phase,

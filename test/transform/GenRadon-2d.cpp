@@ -10,6 +10,7 @@
 #include <memory>
 #include "bfio.hpp"
 using namespace std;
+using namespace bfio;
 
 void 
 Usage()
@@ -29,19 +30,19 @@ static const size_t d = 2;
 static const size_t q = 8;
 
 template<typename R>    
-class GenRadon : public bfio::Phase<R,d>
+class GenRadon : public Phase<R,d>
 {
 public:
-    virtual GenRadon<R>* Clone() const;
+    virtual GenRadon<R>* Clone() const override;
 
     virtual R operator()
-    ( const array<R,d>& x, const array<R,d>& p ) const;
+    ( const array<R,d>& x, const array<R,d>& p ) const override;
 
     // We can optionally override the batched application for better efficiency.
     virtual void BatchEvaluate
     ( const vector<array<R,d>>& xPoints,
       const vector<array<R,d>>& pPoints,
-            vector<R         >& results ) const;
+            vector<R         >& results ) const override;
 };
 
 template<typename R>
@@ -53,9 +54,9 @@ template<typename R>
 inline R GenRadon<R>::operator()
 ( const array<R,d>& x, const array<R,d>& p ) const
 {
-    R a = p[0]*(2+sin(bfio::TwoPi*x[0])*sin(bfio::TwoPi*x[1]))/3.;
-    R b = p[1]*(2+cos(bfio::TwoPi*x[0])*cos(bfio::TwoPi*x[1]))/3.;
-    return bfio::TwoPi*(x[0]*p[0]+x[1]*p[1] + sqrt(a*a+b*b));
+    R a = p[0]*(2+sin(TwoPi*x[0])*sin(TwoPi*x[1]))/3.;
+    R b = p[1]*(2+cos(TwoPi*x[0])*cos(TwoPi*x[1]))/3.;
+    return TwoPi*(x[0]*p[0]+x[1]*p[1] + sqrt(a*a+b*b));
 }
 
 template<typename R>
@@ -74,15 +75,13 @@ void GenRadon<R>::BatchEvaluate
         const R* RESTRICT xPointsBuffer = 
             static_cast<const R*>(&(xPoints[0][0]));
         for( size_t i=0; i<d*xSize; ++i )
-            sinCosArgBuffer[i] = bfio::TwoPi*xPointsBuffer[i];
+            sinCosArgBuffer[i] = TwoPi*xPointsBuffer[i];
     }
-    vector<R> sinResults;
-    vector<R> cosResults;
-    bfio::SinCosBatch( sinCosArguments, sinResults, cosResults );
+    vector<R> sinResults, cosResults;
+    SinCosBatch( sinCosArguments, sinResults, cosResults );
 
     // Compute the the c1(x) and c2(x) results for every x vector
-    vector<R> c1( xSize );
-    vector<R> c2( xSize );
+    vector<R> c1( xSize ), c2( xSize );
     {
         R* RESTRICT c1Buffer = &c1[0];
         const R* RESTRICT sinBuffer = &sinResults[0];
@@ -116,7 +115,7 @@ void GenRadon<R>::BatchEvaluate
 
     // Perform the batched square roots
     vector<R> sqrtResults;
-    bfio::SqrtBatch( sqrtArguments, sqrtResults );
+    SqrtBatch( sqrtArguments, sqrtResults );
 
     // Form the answer
     results.resize( xSize*pSize );
@@ -133,15 +132,14 @@ void GenRadon<R>::BatchEvaluate
                     xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
                     xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] + 
                     sqrtBuffer[i*pSize+j];
-                resultsBuffer[i*pSize+j] *= bfio::TwoPi;
+                resultsBuffer[i*pSize+j] *= TwoPi;
             }
         }
     }
 }
 
 int
-main
-( int argc, char* argv[] )
+main( int argc, char* argv[] )
 {
     MPI_Init( &argc, &argv );
 
@@ -168,7 +166,7 @@ main
     try 
     {
         // Set our source and target boxes
-        bfio::Box<float,d> sourceBox, targetBox;
+        Box<float,d> sourceBox, targetBox;
         for( size_t j=0; j<d; ++j )
         {
             sourceBox.offsets[j] = -0.5*(N/F);
@@ -178,9 +176,8 @@ main
         }
 
         // Set up the general strategy for the forward transform
-        bfio::Plan<d> plan( comm, bfio::FORWARD, N, bootstrapSkip );
-        bfio::Box<float,d> mySourceBox = 
-            plan.GetMyInitialSourceBox( sourceBox );;
+        Plan<d> plan( comm, FORWARD, N, bootstrapSkip );
+        Box<float,d> mySourceBox = plan.GetMyInitialSourceBox( sourceBox );;
 
         if( rank == 0 )
         {
@@ -201,8 +198,7 @@ main
 
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
-        vector<bfio::Source<float,d>> mySources;
-        vector<bfio::Source<float,d>> globalSources;
+        vector<Source<float,d>> mySources, globalSources;
         if( testAccuracy || store )
         {
             globalSources.resize( M );
@@ -211,9 +207,9 @@ main
                 for( size_t j=0; j<d; ++j )
                 {
                     globalSources[i].p[j] = sourceBox.offsets[j] + 
-                        sourceBox.widths[j]*bfio::Uniform<float>(); 
+                        sourceBox.widths[j]*Uniform<float>(); 
                 }
-                globalSources[i].magnitude = 1.*(2*bfio::Uniform<float>()-1); 
+                globalSources[i].magnitude = 1.*(2*Uniform<float>()-1); 
 
                 // Check if we should push this source onto our local list
                 bool isMine = true;
@@ -242,22 +238,21 @@ main
                 {
                     mySources[i].p[j] = 
                         mySourceBox.offsets[j] + 
-                        bfio::Uniform<float>()*mySourceBox.widths[j];
+                        Uniform<float>()*mySourceBox.widths[j];
                 }
-                mySources[i].magnitude = 1.*(2*bfio::Uniform<float>()-1);
+                mySources[i].magnitude = 1.*(2*Uniform<float>()-1);
             }
         }
 
-        // Create our phase functor
-        GenRadon<float> genRadon;
-
-        // Create the context that takes care of all of the precomputation
+        // Create the phase functor and the context that takes care of all of 
+        // the precomputation
         if( rank == 0 )
         {
             cout << "Creating context...";
             cout.flush();
         }
-        bfio::rfio::Context<float,d,q> context;
+        GenRadon<float> genRadon;
+        rfio::Context<float,d,q> context;
         if( rank == 0 )
             cout << "done." << endl;
 
@@ -266,7 +261,7 @@ main
             cout << "Launching transform..." << endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        auto u = bfio::ReducedFIO
+        auto u = RFIO
         ( context, plan, genRadon, sourceBox, targetBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
@@ -274,24 +269,19 @@ main
             cout << "Runtime: " << stopTime-startTime << " seconds.\n" << endl;
 #ifdef TIMING
         if( rank == 0 )
-            bfio::rfio::PrintTimings();
+            rfio::PrintTimings();
 #endif
 
         if( testAccuracy )
-            bfio::rfio::PrintErrorEstimates( comm, *u, globalSources );
+            rfio::PrintErrorEstimates( comm, *u, globalSources );
         
         if( store )
         {
             if( testAccuracy )
-            {
-                bfio::rfio::WriteVtkXmlPImageData
+                rfio::WriteImage
                 ( comm, N, targetBox, *u, "genRadon2d", globalSources );
-            }
             else
-            {
-                bfio::rfio::WriteVtkXmlPImageData
-                ( comm, N, targetBox, *u, "genRadon2d" );
-            }
+                rfio::WriteImage( comm, N, targetBox, *u, "genRadon2d" );
         }
     }
     catch( const exception& e )

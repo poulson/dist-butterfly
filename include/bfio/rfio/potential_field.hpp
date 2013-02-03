@@ -86,7 +86,7 @@ void PrintErrorEstimates
   const vector<Source<R,d>>& globalSources );
 
 template<typename R,size_t d,size_t q>
-void WriteVtkXmlPImageData
+void WriteImage
 ( MPI_Comm comm, 
   const size_t N,
   const Box<R,d>& targetBox,
@@ -94,7 +94,7 @@ void WriteVtkXmlPImageData
   const string& basename );
 
 template<typename R,size_t d,size_t q>
-void WriteVtkXmlPImageData
+void WriteImage
 ( MPI_Comm comm, 
   const size_t N,
   const Box<R,d>& targetBox,
@@ -358,7 +358,7 @@ void rfio::PrintErrorEstimates
 // Just write out the real and imag components of the approximation
 template<typename R,size_t d,size_t q>
 inline void
-rfio::WriteVtkXmlPImageData
+rfio::WriteImage
 ( MPI_Comm comm,
   const size_t N,
   const Box<R,d>& targetBox,
@@ -560,7 +560,7 @@ rfio::WriteVtkXmlPImageData
 // and the error.
 template<typename R,size_t d,size_t q>
 inline void
-rfio::WriteVtkXmlPImageData
+rfio::WriteImage
 ( MPI_Comm comm,
   const size_t N,
   const Box<R,d>& targetBox,

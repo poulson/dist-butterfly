@@ -53,7 +53,7 @@ public:
     const array<size_t,d>& GetMyTargetBoxCoords() const;
     const array<size_t,d>& GetLog2SubboxesPerDim() const;
     const array<size_t,d>& GetLog2SubboxesUpToDim() const;
-    const rfio::PotentialField<R,d,q>& GetReducedFIOPotentialField() const;
+    const rfio::PotentialField<R,d,q>& GetRFIOPotentialField() const;
 };
 
 template<typename R,size_t d,size_t q>
@@ -63,7 +63,7 @@ void PrintErrorEstimates
   const vector<Source<R,d>>& globalSources );
 
 template<typename R,size_t d,size_t q>
-void WriteVtkXmlPImageData
+void WriteImage
 ( MPI_Comm comm, 
   const size_t N,
   const Box<R,d>& targetBox,
@@ -71,7 +71,7 @@ void WriteVtkXmlPImageData
   const string& basename );
 
 template<typename R,size_t d,size_t q>
-void WriteVtkXmlPImageData
+void WriteImage
 ( MPI_Comm comm, 
   const size_t N,
   const Box<R,d>& targetBox,
@@ -91,7 +91,7 @@ PotentialField<R,d,q>::PotentialField
   const WeightGridList<R,d,q>& weightGridList )
 : _nuftContext(nuftContext), 
   _rfioPotential
-  ( nuftContext.GetReducedFIOContext(),
+  ( nuftContext.GetRFIOContext(),
     UnitAmplitude<R,d>(),
     ( nuftContext.GetDirection()==FORWARD ? 
       (const FTPhase<R,d>&)ForwardFTPhase<R,d>() : 
@@ -150,7 +150,7 @@ PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
 
 template<typename R,size_t d,size_t q>
 const rfio::PotentialField<R,d,q>& 
-PotentialField<R,d,q>::GetReducedFIOPotentialField() const
+PotentialField<R,d,q>::GetRFIOPotentialField() const
 { return _rfioPotential; }
 
 template<typename R,size_t d,size_t q>
@@ -161,25 +161,25 @@ PrintErrorEstimates
   const vector<Source<R,d>>& globalSources )
 {
     rfio::PrintErrorEstimates    
-    ( comm, u.GetReducedFIOPotentialField(), globalSources );
+    ( comm, u.GetRFIOPotentialField(), globalSources );
 }
 
 template<typename R,size_t d,size_t q>
 inline void 
-WriteVtkXmlPImageData
+WriteImage
 ( MPI_Comm comm, 
   const size_t N,
   const Box<R,d>& targetBox,
   const PotentialField<R,d,q>& u,
   const string& basename )
 {
-    rfio::WriteVtkXmlPImageData
-    ( comm, N, targetBox, u.GetReducedFIOPotentialField(), basename );
+    rfio::WriteImage
+    ( comm, N, targetBox, u.GetRFIOPotentialField(), basename );
 }
 
 template<typename R,size_t d,size_t q>
 inline void 
-WriteVtkXmlPImageData
+WriteImage
 ( MPI_Comm comm, 
   const size_t N,
   const Box<R,d>& targetBox,
@@ -187,9 +187,8 @@ WriteVtkXmlPImageData
   const string& basename,
   const vector<Source<R,d>>& globalSources )
 {
-    rfio::WriteVtkXmlPImageData
-    ( comm, N, targetBox, u.GetReducedFIOPotentialField(), basename, 
-      globalSources );
+    rfio::WriteImage
+    ( comm, N, targetBox, u.GetRFIOPotentialField(), basename, globalSources );
 }
 
 } // lnuft

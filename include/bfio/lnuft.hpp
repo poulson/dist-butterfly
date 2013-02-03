@@ -101,8 +101,7 @@ LNUFT
 #endif
     typedef complex<R> C;
     const size_t q_to_d = Pow<q,d>::val;
-    const rfio::Context<R,d,q>& rfioContext = 
-        nuftContext.GetReducedFIOContext();
+    const rfio::Context<R,d,q>& rfioContext = nuftContext.GetRFIOContext();
 
     // We will choose the phase function based on the context's direction.
     // We could potentially have the plan direction be different

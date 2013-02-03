@@ -42,7 +42,7 @@ public:
       const Box<R,d>& sourceBox,
       const Box<R,d>& targetBox );
 
-    const rfio::Context<R,d,q>& GetReducedFIOContext() const;
+    const rfio::Context<R,d,q>& GetRFIOContext() const;
     Direction GetDirection() const;
     const array<vector<R>,d>& GetRealOffsetEvaluations() const;
     const array<vector<R>,d>& GetImagOffsetEvaluations() const;
@@ -93,7 +93,7 @@ Context<R,d,q>::Context
 
 template<typename R,size_t d,size_t q>
 inline const rfio::Context<R,d,q>&
-Context<R,d,q>::GetReducedFIOContext() const
+Context<R,d,q>::GetRFIOContext() const
 { return _rfioContext; }
 
 template<typename R,size_t d,size_t q>

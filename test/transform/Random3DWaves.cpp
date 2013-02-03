@@ -9,6 +9,7 @@
 #include <memory>
 #include "bfio.hpp"
 using namespace std;
+using namespace bfio;
 
 void 
 Usage()
@@ -27,49 +28,49 @@ static const size_t d = 3;
 static const size_t q = 5;
 
 template<typename R>
-class UpWave : public bfio::Phase<R,d>
+class UpWave : public Phase<R,d>
 {
     R _t;
 public:
     UpWave();
 
-    virtual UpWave<R>* Clone() const;
-
-    void SetTime( const R t );
-    R GetTime() const;
+    virtual UpWave<R>* Clone() const override;
 
     virtual R
-    operator()( const array<R,d>& x, const array<R,d>& p ) const;
+    operator()( const array<R,d>& x, const array<R,d>& p ) const override;
 
     // We can optionally override the batched application for better efficiency
     virtual void
     BatchEvaluate
     ( const vector<array<R,d>>& xPoints,
       const vector<array<R,d>>& pPoints,
-            vector<R         >& results ) const;
+            vector<R         >& results ) const override;
+
+    void SetTime( const R t );
+    R GetTime() const;
 };
 
 template<typename R>
-class DownWave : public bfio::Phase<R,d>
+class DownWave : public Phase<R,d>
 {
     R _t;
 public:
     DownWave();
 
-    virtual DownWave<R>* Clone() const;
-
-    void SetTime( const R t );
-    R GetTime() const;
+    virtual DownWave<R>* Clone() const override;
 
     virtual R
-    operator()( const array<R,d>& x, const array<R,d>& p ) const;
+    operator()( const array<R,d>& x, const array<R,d>& p ) const override;
     
     // We can optionally override the batched application for better efficiency
     virtual void
     BatchEvaluate
     ( const vector<array<R,d>>& xPoints,
       const vector<array<R,d>>& pPoints,
-            vector<R         >& results ) const;
+            vector<R         >& results ) const override;
+
+    void SetTime( const R t );
+    R GetTime() const;
 };
 
 template<typename R>
@@ -118,7 +119,7 @@ template<typename R>
 inline R
 UpWave<R>::operator()( const array<R,d>& x, const array<R,d>& p ) const
 { 
-    return bfio::TwoPi*( 
+    return TwoPi*( 
              x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
              _t * sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2])
            );
@@ -128,7 +129,7 @@ template<typename R>
 inline R
 DownWave<R>::operator()( const array<R,d>& x, const array<R,d>& p ) const
 { 
-    return bfio::TwoPi*(
+    return TwoPi*(
              x[0]*p[0]+x[1]*p[1]+x[2]*p[2] -
              _t * sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2])
            );
@@ -157,7 +158,7 @@ UpWave<R>::BatchEvaluate
 
     // Perform the batched square roots
     vector<R> sqrtResults;
-    bfio::SqrtBatch( sqrtArguments, sqrtResults );
+    SqrtBatch( sqrtArguments, sqrtResults );
 
     // Scale the square roots by _t
     {
@@ -182,7 +183,7 @@ UpWave<R>::BatchEvaluate
                     xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] +
                     xPointsBuffer[i*d+2]*pPointsBuffer[j*d+2] +
                     sqrtBuffer[j];
-                resultsBuffer[i*pSize+j] *= bfio::TwoPi;
+                resultsBuffer[i*pSize+j] *= TwoPi;
             }
         }
     }
@@ -211,7 +212,7 @@ DownWave<R>::BatchEvaluate
 
     // Perform the batched square roots
     vector<R> sqrtResults;
-    bfio::SqrtBatch( sqrtArguments, sqrtResults );
+    SqrtBatch( sqrtArguments, sqrtResults );
 
     // Scale the square roots by _t
     {
@@ -236,15 +237,14 @@ DownWave<R>::BatchEvaluate
                     xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] +
                     xPointsBuffer[i*d+2]*pPointsBuffer[j*d+2] -
                     sqrtBuffer[j];
-                resultsBuffer[i*pSize+j] *= bfio::TwoPi;
+                resultsBuffer[i*pSize+j] *= TwoPi;
             }
         }
     }
 }
 
 int
-main
-( int argc, char* argv[] )
+main( int argc, char* argv[] )
 {
     MPI_Init( &argc, &argv );
 
@@ -269,7 +269,7 @@ main
     try 
     {
         // Define the source and target boxes
-        bfio::Box<double,d> sourceBox, targetBox; 
+        Box<double,d> sourceBox, targetBox; 
         for( size_t j=0; j<d; ++j )
         {
             sourceBox.offsets[j] = -0.5*N;
@@ -279,9 +279,8 @@ main
         }
 
         // Set up the general strategy for the forward transform
-        bfio::Plan<d> plan( comm, bfio::FORWARD, N, bootstrapSkip );
-        bfio::Box<double,d> mySourceBox = 
-            plan.GetMyInitialSourceBox( sourceBox );
+        Plan<d> plan( comm, FORWARD, N, bootstrapSkip );
+        Box<double,d> mySourceBox = plan.GetMyInitialSourceBox( sourceBox );
 
         if( rank == 0 )
         {
@@ -306,16 +305,16 @@ main
         size_t numLocalSources = 
             ( rank<(int)(M%numProcesses) 
               ? M/numProcesses+1 : M/numProcesses );
-        vector<bfio::Source<double,d>> mySources( numLocalSources );
+        vector<Source<double,d>> mySources( numLocalSources );
         for( size_t i=0; i<numLocalSources; ++i )
         {
             for( size_t j=0; j<d; ++j )
             {
                 mySources[i].p[j] = 
                     mySourceBox.offsets[j] +
-                    bfio::Uniform<double>()*mySourceBox.widths[j];
+                    Uniform<double>()*mySourceBox.widths[j];
             }
-            mySources[i].magnitude = 200*bfio::Uniform<double>()-100;
+            mySources[i].magnitude = 200*Uniform<double>()-100;
         }
 
         // Set up our phase functors
@@ -325,7 +324,7 @@ main
         // Create the context 
         if( rank == 0 )
             cout << "Creating context..." << endl;
-        bfio::rfio::Context<double,d,q> context;
+        rfio::Context<double,d,q> context;
 
         // Loop over each timestep, computing in parallel, gathering the 
         // results, and then dumping to file
@@ -342,13 +341,13 @@ main
                           << "  Starting upWave transform...";
                 cout.flush();
             }
-            auto u = bfio::ReducedFIO
+            auto u = RFIO
             ( context, plan, upWave, sourceBox, targetBox, mySources );
             if( rank == 0 )
                 cout << "done" << endl;
 #ifdef TIMING
             if( rank == 0 )
-                bfio::rfio::PrintTimings();
+                rfio::PrintTimings();
 #endif
 
             if( rank == 0 )
@@ -356,20 +355,19 @@ main
                 cout << "  Starting downWave transform...";
                 cout.flush();
             }
-            auto v = bfio::ReducedFIO
+            auto v = RFIO
             ( context, plan, downWave, sourceBox, targetBox, mySources );
             if( rank == 0 )
                 cout << "done" << endl;
 #ifdef TIMING
             if( rank == 0 )
-                bfio::rfio::PrintTimings();
+                rfio::PrintTimings();
 #endif
 
             // Store this timeslice
             ostringstream fileStream;
             fileStream << "randomWaves-" << i;
-            bfio::rfio::WriteVtkXmlPImageData
-            ( comm, N, targetBox, *u, fileStream.str() );
+            rfio::WriteImage( comm, N, targetBox, *u, fileStream.str() );
         }
     }
     catch( const exception& e )
