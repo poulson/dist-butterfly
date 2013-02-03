@@ -30,8 +30,7 @@ class Context
 {
     const Direction _direction;
     const size_t _N;
-    const Box<R,d> _sourceBox;
-    const Box<R,d> _targetBox;
+    const Box<R,d> _sBox, _tBox;
 
     vector<R> _chebyshevNodes;
     vector<array<R,d>> _chebyshevGrid;
@@ -46,8 +45,8 @@ public:
     Context
     ( const Direction direction,
       const size_t N,
-      const Box<R,d>& sourceBox,
-      const Box<R,d>& targetBox );
+      const Box<R,d>& sBox,
+      const Box<R,d>& tBox );
 
     Direction
     GetDirection() const;
@@ -103,7 +102,7 @@ Context<R,d,q>::GenerateOffsetMaps()
 
     array<R,d> productWidths;
     for( size_t j=0; j<d; ++j )
-        productWidths[j] = _sourceBox.widths[j]*_targetBox.widths[j]/_N;
+        productWidths[j] = _sBox.widths[j]*_tBox.widths[j]/_N;
 
     // Form the initialization offset map
     vector<int> pivot(q);
@@ -195,9 +194,9 @@ template<typename R,size_t d,size_t q>
 Context<R,d,q>::Context
 ( const Direction direction,
   const size_t N,
-  const Box<R,d>& sourceBox,
-  const Box<R,d>& targetBox ) 
-: _direction(direction), _N(N), _sourceBox(sourceBox), _targetBox(targetBox), 
+  const Box<R,d>& sBox,
+  const Box<R,d>& tBox ) 
+: _direction(direction), _N(N), _sBox(sBox), _tBox(tBox), 
   _chebyshevNodes( q ), _chebyshevGrid( Pow<q,d>::val )
 {
     GenerateChebyshevNodes();

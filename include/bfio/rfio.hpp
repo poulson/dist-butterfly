@@ -33,9 +33,9 @@ static bool alreadyTimed = false;
 
 static bfio::Timer timer;
 static bfio::Timer initializeWeightsTimer;
-static bfio::Timer sourceWeightRecursionTimer;
+static bfio::Timer sWeightRecursionTimer;
+static bfio::Timer tWeightRecursionTimer;
 static bfio::Timer switchToTargetInterpTimer;
-static bfio::Timer targetWeightRecursionTimer;
 static bfio::Timer sumScatterTimer;
 
 static inline void
@@ -43,9 +43,9 @@ ResetTimers()
 {
     timer.Reset();
     initializeWeightsTimer.Reset();
-    sourceWeightRecursionTimer.Reset();
+    sWeightRecursionTimer.Reset();
+    tWeightRecursionTimer.Reset();
     switchToTargetInterpTimer.Reset();
-    targetWeightRecursionTimer.Reset();
     sumScatterTimer.Reset();
 }
 
@@ -61,11 +61,11 @@ PrintTimings()
               << "InitializeWeights:     "
               << initializeWeightsTimer.TotalTime() << " seconds.\n"
               << "SourceWeightRecursion: "
-              << sourceWeightRecursionTimer.TotalTime() << " seconds.\n"
+              << sWeightRecursionTimer.TotalTime() << " seconds.\n"
               << "SwitchToTargetInterp:  "
               << switchToTargetInterpTimer.TotalTime() << " seconds.\n"
               << "TargetWeightRecursion: "
-              << targetWeightRecursionTimer.TotalTime() << " seconds.\n"
+              << tWeightRecursionTimer.TotalTime() << " seconds.\n"
               << "SumScatter:            "
               << sumScatterTimer.TotalTime() << " seconds.\n"
               << "Total: " << timer.TotalTime() << " seconds.\n" << std::endl;
@@ -93,8 +93,8 @@ transform
   const Plan<d>& plan,
   const Amplitude<R,d>& amplitude,
   const Phase<R,d>& phase,
-  const Box<R,d>& sourceBox,
-  const Box<R,d>& targetBox,
+  const Box<R,d>& sBox,
+  const Box<R,d>& tBox,
   const vector<Source<R,d>>& mySources )
 {
 #ifdef TIMING
@@ -113,48 +113,43 @@ transform
     // Get the problem-specific parameters
     const size_t N = plan.GetN();
     const size_t log2N = Log2( N );
-    const array<size_t,d>& myInitialSourceBoxCoords = 
+    const array<size_t,d>& myInitialSBoxCoords = 
         plan.GetMyInitialSourceBoxCoords();
-    const array<size_t,d>& log2InitialSourceBoxesPerDim = 
+    const array<size_t,d>& log2InitialSBoxesPerDim = 
         plan.GetLog2InitialSourceBoxesPerDim();
-    array<size_t,d> mySourceBoxCoords = myInitialSourceBoxCoords;
-    array<size_t,d> log2SourceBoxesPerDim = log2InitialSourceBoxesPerDim;
-    Box<R,d> mySourceBox;
+    array<size_t,d> mySBoxCoords = myInitialSBoxCoords;
+    array<size_t,d> log2SBoxesPerDim = log2InitialSBoxesPerDim;
+    Box<R,d> mySBox;
     for( size_t j=0; j<d; ++j )
     {
-        mySourceBox.widths[j] = 
-            sourceBox.widths[j] / (1u<<log2SourceBoxesPerDim[j]);
-        mySourceBox.offsets[j] = 
-            sourceBox.offsets[j] + mySourceBox.widths[j]*mySourceBoxCoords[j];
+        mySBox.widths[j] = sBox.widths[j] / (1u<<log2SBoxesPerDim[j]);
+        mySBox.offsets[j] = sBox.offsets[j] + mySBox.widths[j]*mySBoxCoords[j];
     }
 
-    array<size_t,d> myTargetBoxCoords, log2TargetBoxesPerDim;
-    myTargetBoxCoords.fill(0);
-    log2TargetBoxesPerDim.fill(0);
-    Box<R,d> myTargetBox;
-    myTargetBox = targetBox;
-
-    const size_t bootstrapSkip = plan.GetBootstrapSkip();
+    array<size_t,d> myTBoxCoords, log2TBoxesPerDim;
+    myTBoxCoords.fill(0);
+    log2TBoxesPerDim.fill(0);
+    Box<R,d> myTBox;
+    myTBox = tBox;
+    const size_t bootstrap = plan.GetBootstrapSkip();
 
     // Compute the number of source and target boxes that our process is 
     // responsible for initializing weights in
     size_t log2WeightGridSize = 0;
-    size_t log2LocalSourceBoxes = 0;
-    size_t log2LocalTargetBoxes = 0;
-    array<size_t,d> log2LocalSourceBoxesPerDim,
-                    log2LocalTargetBoxesPerDim;
-    log2LocalTargetBoxesPerDim.fill(0);
+    size_t log2LocalSBoxes = 0;
+    size_t log2LocalTBoxes = 0;
+    array<size_t,d> log2LocalSBoxesPerDim, log2LocalTBoxesPerDim;
+    log2LocalTBoxesPerDim.fill(0);
     for( size_t j=0; j<d; ++j )
     {
-        if( log2N-log2SourceBoxesPerDim[j] >= bootstrapSkip )
-            log2LocalSourceBoxesPerDim[j] = 
-                (log2N-log2SourceBoxesPerDim[j]) - bootstrapSkip;
+        if( log2N-log2SBoxesPerDim[j] >= bootstrap )
+            log2LocalSBoxesPerDim[j]= (log2N-log2SBoxesPerDim[j]) - bootstrap;
         else
-            log2LocalSourceBoxesPerDim[j] = 0;
-        log2LocalTargetBoxesPerDim[j] = bootstrapSkip;
-        log2LocalSourceBoxes += log2LocalSourceBoxesPerDim[j];
-        log2LocalTargetBoxes += log2LocalTargetBoxesPerDim[j];
-        log2WeightGridSize += log2N-log2SourceBoxesPerDim[j];
+            log2LocalSBoxesPerDim[j] = 0;
+        log2LocalTBoxesPerDim[j] = bootstrap;
+        log2LocalSBoxes += log2LocalSBoxesPerDim[j];
+        log2LocalTBoxes += log2LocalTBoxesPerDim[j];
+        log2WeightGridSize += log2N-log2SBoxesPerDim[j];
     }
 
     // Initialize the weights using Lagrangian interpolation on the 
@@ -164,9 +159,8 @@ transform
     rfio::initializeWeightsTimer.Start();
 #endif
     rfio::InitializeWeights
-    ( context, plan, phase, sourceBox, targetBox, mySourceBox, 
-      log2LocalSourceBoxes, log2LocalSourceBoxesPerDim, mySources, 
-      weightGridList );
+    ( context, plan, phase, sBox, tBox, mySBox, 
+      log2LocalSBoxes, log2LocalSBoxesPerDim, mySources, weightGridList );
 #ifdef TIMING
     rfio::initializeWeightsTimer.Stop();
 #endif
@@ -174,100 +168,95 @@ transform
     // Now cut the target domain if necessary
     for( size_t j=0; j<d; ++j )
     {
-        if( log2LocalSourceBoxesPerDim[j] == 0 )
+        if( log2LocalSBoxesPerDim[j] == 0 )
         {
-            log2LocalTargetBoxesPerDim[j] -= 
-                bootstrapSkip - (log2N-log2SourceBoxesPerDim[j]);
-            log2LocalTargetBoxes -=
-                bootstrapSkip - (log2N-log2SourceBoxesPerDim[j]);
+            log2LocalTBoxesPerDim[j] -= bootstrap - (log2N-log2SBoxesPerDim[j]);
+            log2LocalTBoxes -= bootstrap - (log2N-log2SBoxesPerDim[j]);
         }
     }
 
     // Start the main recursion loop
-    if( bootstrapSkip == log2N/2 )
+    if( bootstrap == log2N/2 )
     {
 #ifdef TIMING
 	rfio::switchToTargetInterpTimer.Start();
 #endif
         rfio::SwitchToTargetInterp
-        ( context, plan, amplitude, phase, sourceBox, targetBox, mySourceBox, 
-          myTargetBox, log2LocalSourceBoxes, log2LocalTargetBoxes,
-          log2LocalSourceBoxesPerDim, log2LocalTargetBoxesPerDim,
-          weightGridList );
+        ( context, plan, amplitude, phase, sBox, tBox, mySBox, myTBox, 
+          log2LocalSBoxes, log2LocalTBoxes,
+          log2LocalSBoxesPerDim, log2LocalTBoxesPerDim, weightGridList );
 #ifdef TIMING
 	rfio::switchToTargetInterpTimer.Stop();
 #endif
     }
-    for( size_t level=bootstrapSkip+1; level<=log2N; ++level )
+    for( size_t level=bootstrap+1; level<=log2N; ++level )
     {
         // Compute the width of the nodes at this level
         array<R,d> wA;
         array<R,d> wB;
         for( size_t j=0; j<d; ++j )
         {
-            wA[j] = targetBox.widths[j] / (1<<level);
-            wB[j] = sourceBox.widths[j] / (1<<(log2N-level));
+            wA[j] = tBox.widths[j] / (1<<level);
+            wB[j] = sBox.widths[j] / (1<<(log2N-level));
         }
 
-        if( log2LocalSourceBoxes >= d )
+        if( log2LocalSBoxes >= d )
         {
             // Refine target domain and coursen the source domain
             for( size_t j=0; j<d; ++j )
             {
-                --log2LocalSourceBoxesPerDim[j];
-                ++log2LocalTargetBoxesPerDim[j];
+                --log2LocalSBoxesPerDim[j];
+                ++log2LocalTBoxesPerDim[j];
             }
-            log2LocalSourceBoxes -= d;
-            log2LocalTargetBoxes += d;
+            log2LocalSBoxes -= d;
+            log2LocalTBoxes += d;
 
             // Loop over boxes in target domain. 
-            ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
+            ConstrainedHTreeWalker<d> AWalker( log2LocalTBoxesPerDim );
             WeightGridList<R,d,q> oldWeightGridList( weightGridList );
-            for( size_t targetIndex=0; 
-                 targetIndex<(1u<<log2LocalTargetBoxes); 
-                 ++targetIndex, AWalker.Walk() )
+            for( size_t tIndex=0; 
+                 tIndex<(1u<<log2LocalTBoxes); ++tIndex, AWalker.Walk() )
             {
                 const array<size_t,d> A = AWalker.State();
 
                 // Compute coordinates and center of this target box
                 array<R,d> x0A;
                 for( size_t j=0; j<d; ++j )
-                    x0A[j] = myTargetBox.offsets[j] + (A[j]+0.5)*wA[j];
+                    x0A[j] = myTBox.offsets[j] + (A[j]+0.5)*wA[j];
 
                 // Loop over the B boxes in source domain
-                ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
-                for( size_t sourceIndex=0; 
-                     sourceIndex<(1u<<log2LocalSourceBoxes); 
-                     ++sourceIndex, BWalker.Walk() )
+                ConstrainedHTreeWalker<d> BWalker( log2LocalSBoxesPerDim );
+                for( size_t sIndex=0; 
+                     sIndex<(1u<<log2LocalSBoxes); ++sIndex, BWalker.Walk() )
                 {
                     const array<size_t,d> B = BWalker.State();
 
                     // Compute coordinates and center of this source box
                     array<R,d> p0B;
                     for( size_t j=0; j<d; ++j )
-                        p0B[j] = mySourceBox.offsets[j] + (B[j]+0.5)*wB[j];
+                        p0B[j] = mySBox.offsets[j] + (B[j]+0.5)*wB[j];
 
                     // We are storing the interaction pairs source-major
-                    const size_t interactionIndex = 
-                        sourceIndex + (targetIndex<<log2LocalSourceBoxes);
+                    const size_t iIndex = sIndex + (tIndex<<log2LocalSBoxes);
 
                     // Grab the interaction offset for the parent of target box 
                     // i interacting with the children of source box k
-                    const size_t parentInteractionOffset = 
-                        ((targetIndex>>d)<<(log2LocalSourceBoxes+d)) + 
-                        (sourceIndex<<d);
+                    const size_t parentIOffset = 
+                        ((tIndex>>d)<<(log2LocalSBoxes+d)) + (sIndex<<d);
+
+                    // HERE
 
                     if( level <= log2N/2 )
                     {
 #ifdef TIMING
-			rfio::sourceWeightRecursionTimer.Start();
+			rfio::sWeightRecursionTimer.Start();
 #endif
                         rfio::SourceWeightRecursion
                         ( context, plan, phase, level, x0A, p0B, wB, 
-                          parentInteractionOffset, oldWeightGridList,
-                          weightGridList[interactionIndex] );
+                          parentIOffset, oldWeightGridList,
+                          weightGridList[iIndex] );
 #ifdef TIMING
-			rfio::sourceWeightRecursionTimer.Stop();
+			rfio::sWeightRecursionTimer.Stop();
 #endif
                     }
                     else
@@ -277,23 +266,21 @@ transform
                         size_t ARelativeToAp = 0;
                         for( size_t j=0; j<d; ++j )
                         {
-                            globalA[j] = 
-                                (myTargetBoxCoords[j]<<
-                                 log2LocalTargetBoxesPerDim[j])+A[j];
-                            x0Ap[j] = targetBox.offsets[j] + 
-                                      (globalA[j]|1)*wA[j];
+                            globalA[j] = A[j]+
+                                (myTBoxCoords[j]<<log2LocalTBoxesPerDim[j]);
+                            x0Ap[j] = tBox.offsets[j] + (globalA[j]|1)*wA[j];
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
 #ifdef TIMING
-			rfio::targetWeightRecursionTimer.Start();
+			rfio::tWeightRecursionTimer.Start();
 #endif
                         rfio::TargetWeightRecursion
                         ( context, plan, phase, level,
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
-                          parentInteractionOffset, oldWeightGridList, 
-                          weightGridList[interactionIndex] );
+                          parentIOffset, oldWeightGridList, 
+                          weightGridList[iIndex] );
 #ifdef TIMING
-			rfio::targetWeightRecursionTimer.Stop();
+			rfio::tWeightRecursionTimer.Stop();
 #endif
                     }
                 }
@@ -301,67 +288,65 @@ transform
         }
         else 
         {
-            const size_t log2NumMergingProcesses = d-log2LocalSourceBoxes;
+            const size_t log2NumMergingProcesses = d-log2LocalSBoxes;
             const size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
 
-            log2LocalSourceBoxes = 0; 
+            log2LocalSBoxes = 0; 
             for( size_t j=0; j<d; ++j )
-                log2LocalSourceBoxesPerDim[j] = 0;
+                log2LocalSBoxesPerDim[j] = 0;
 
             // Fully refine target domain and coarsen source domain.
             // We partition the target domain after the SumScatter.
-            const vector<size_t>& sourceDimsToMerge = 
+            const vector<size_t>& sDimsToMerge = 
                 plan.GetSourceDimsToMerge( level );
             for( size_t i=0; i<log2NumMergingProcesses; ++i )
             {
-                const size_t j = sourceDimsToMerge[i];
-                if( mySourceBoxCoords[j] & 1 )
-                    mySourceBox.offsets[j] -= mySourceBox.widths[j];
-                mySourceBoxCoords[j] >>= 1;
-                mySourceBox.widths[j] *= 2;
+                const size_t j = sDimsToMerge[i];
+                if( mySBoxCoords[j] & 1 )
+                    mySBox.offsets[j] -= mySBox.widths[j];
+                mySBoxCoords[j] >>= 1;
+                mySBox.widths[j] *= 2;
             }
             for( size_t j=0; j<d; ++j )
             {
-                ++log2LocalTargetBoxesPerDim[j];
-                ++log2LocalTargetBoxes;
+                ++log2LocalTBoxesPerDim[j];
+                ++log2LocalTBoxes;
             }
 
             // Compute the coordinates and center of this source box
             array<R,d> p0B;
             for( size_t j=0; j<d; ++j )
-                p0B[j] = mySourceBox.offsets[j] + 0.5*wB[j];
+                p0B[j] = mySBox.offsets[j] + 0.5*wB[j];
 
             // Form the partial weights by looping over the boxes in the  
             // target domain.
-            ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
-            WeightGridList<R,d,q> partialWeightGridList
-            ( 1<<log2LocalTargetBoxes );
-            for( size_t targetIndex=0; 
-                 targetIndex<(1u<<log2LocalTargetBoxes); 
-                 ++targetIndex, AWalker.Walk() )
+            ConstrainedHTreeWalker<d> AWalker( log2LocalTBoxesPerDim );
+            WeightGridList<R,d,q> partialWeightGridList( 1<<log2LocalTBoxes );
+            for( size_t tIndex=0; 
+                 tIndex<(1u<<log2LocalTBoxes); ++tIndex, AWalker.Walk() )
             {
                 const array<size_t,d> A = AWalker.State();
 
                 // Compute coordinates and center of this target box
                 array<R,d> x0A;
                 for( size_t j=0; j<d; ++j )
-                    x0A[j] = myTargetBox.offsets[j] + (A[j]+0.5)*wA[j];
+                    x0A[j] = myTBox.offsets[j] + (A[j]+0.5)*wA[j];
 
                 // Compute the interaction offset of A's parent interacting 
                 // with the remaining local source boxes
-                const size_t parentInteractionOffset = 
-                    ((targetIndex>>d)<<(d-log2NumMergingProcesses));
+                const size_t parentIOffset = 
+                    ((tIndex>>d)<<(d-log2NumMergingProcesses));
                 if( level <= log2N/2 )
                 {
 #ifdef TIMING
-		    rfio::sourceWeightRecursionTimer.Start();
+		    rfio::sWeightRecursionTimer.Start();
 #endif
                     rfio::SourceWeightRecursion
                     ( context, plan, phase, level, x0A, p0B, wB,
-                      parentInteractionOffset, weightGridList,
-                      partialWeightGridList[targetIndex] );
+                      parentIOffset, weightGridList,
+                      partialWeightGridList[tIndex] );
 #ifdef TIMING
-		    rfio::sourceWeightRecursionTimer.Stop();
+		    rfio::sWeightRecursionTimer.Stop();
 #endif
                 }
                 else
@@ -371,22 +356,21 @@ transform
                     size_t ARelativeToAp = 0;
                     for( size_t j=0; j<d; ++j )
                     {
-                        globalA[j] = 
-                            (myTargetBoxCoords[j]<<
-                             log2LocalTargetBoxesPerDim[j])+A[j];
-                        x0Ap[j] = targetBox.offsets[j] + (globalA[j]|1)*wA[j];
+                        globalA[j] = A[j] +
+                            (myTBoxCoords[j]<<log2LocalTBoxesPerDim[j]);
+                        x0Ap[j] = tBox.offsets[j] + (globalA[j]|1)*wA[j];
                         ARelativeToAp |= (globalA[j]&1)<<j;
                     }
 #ifdef TIMING
-		    rfio::targetWeightRecursionTimer.Start();
+		    rfio::tWeightRecursionTimer.Start();
 #endif
                     rfio::TargetWeightRecursion
                     ( context, plan, phase, level,
                       ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
-                      parentInteractionOffset, weightGridList, 
-                      partialWeightGridList[targetIndex] );
+                      parentIOffset, weightGridList, 
+                      partialWeightGridList[tIndex] );
 #ifdef TIMING
-		    rfio::targetWeightRecursionTimer.Stop();
+		    rfio::tWeightRecursionTimer.Stop();
 #endif
                 }
             }
@@ -455,22 +439,20 @@ transform
             rfio::sumScatterTimer.Stop();
 #endif
 
-            const vector<size_t>& targetDimsToCut = 
-                plan.GetTargetDimsToCut( level );
-            const vector<bool>& rightSideOfCut = 
-                plan.GetRightSideOfCut( level );
+            const vector<size_t>& tDimsToCut = plan.GetTargetDimsToCut( level );
+            const vector<bool>& rightSideOfCut=plan.GetRightSideOfCut( level );
             for( size_t i=0; i<log2NumMergingProcesses; ++i )
             {
-                const size_t j = targetDimsToCut[i];
-                myTargetBox.widths[j] *= 0.5;
-                myTargetBoxCoords[j] *= 2;
+                const size_t j = tDimsToCut[i];
+                myTBox.widths[j] *= 0.5;
+                myTBoxCoords[j] *= 2;
                 if( rightSideOfCut[i] )
                 {
-                    myTargetBoxCoords[j] |= 1;
-                    myTargetBox.offsets[j] += myTargetBox.widths[j];
+                    myTBoxCoords[j] |= 1;
+                    myTBox.offsets[j] += myTBox.widths[j];
                 }
-                --log2LocalTargetBoxesPerDim[j];
-                --log2LocalTargetBoxes;
+                --log2LocalTBoxesPerDim[j];
+                --log2LocalTBoxes;
             }
         }
         if( level==log2N/2 )
@@ -479,10 +461,9 @@ transform
 	    rfio::switchToTargetInterpTimer.Start();
 #endif
             rfio::SwitchToTargetInterp
-            ( context, plan, amplitude, phase, sourceBox, targetBox, 
-              mySourceBox, myTargetBox, log2LocalSourceBoxes, 
-              log2LocalTargetBoxes, log2LocalSourceBoxesPerDim, 
-              log2LocalTargetBoxesPerDim, weightGridList );
+            ( context, plan, amplitude, phase, sBox, tBox, mySBox, myTBox,
+              log2LocalSBoxes, log2LocalTBoxes, 
+              log2LocalSBoxesPerDim, log2LocalTBoxesPerDim, weightGridList );
 #ifdef TIMING
 	    rfio::switchToTargetInterpTimer.Stop();
 #endif
@@ -493,8 +474,8 @@ transform
     std::unique_ptr<const rfio::PotentialField<R,d,q>> 
     potentialField( 
         new rfio::PotentialField<R,d,q>
-        ( context, amplitude, phase, sourceBox, myTargetBox, 
-          myTargetBoxCoords, log2LocalTargetBoxesPerDim, weightGridList )
+        ( context, amplitude, phase, sBox, myTBox, myTBoxCoords, 
+          log2LocalTBoxesPerDim, weightGridList )
     );
 
 #ifdef TIMING
@@ -513,12 +494,12 @@ RFIO
   const Plan<d>& plan,
   const Amplitude<R,d>& amplitude,
   const Phase<R,d>& phase,
-  const Box<R,d>& sourceBox,
-  const Box<R,d>& targetBox,
+  const Box<R,d>& sBox,
+  const Box<R,d>& tBox,
   const vector<Source<R,d>>& mySources )
 {
     return rfio::transform
-    ( context, plan, amplitude, phase, sourceBox, targetBox, mySources );
+    ( context, plan, amplitude, phase, sBox, tBox, mySources );
 }
 
 template<typename R,size_t d,size_t q>
@@ -527,13 +508,13 @@ RFIO
 ( const rfio::Context<R,d,q>& context,
   const Plan<d>& plan,
   const Phase<R,d>& phase,
-  const Box<R,d>& sourceBox,
-  const Box<R,d>& targetBox,
+  const Box<R,d>& sBox,
+  const Box<R,d>& tBox,
   const vector<Source<R,d>>& mySources )
 {
     UnitAmplitude<R,d> unitAmp;
     auto u = rfio::transform
-    ( context, plan, unitAmp, phase, sourceBox, targetBox, mySources );
+    ( context, plan, unitAmp, phase, sBox, tBox, mySources );
     return u;
 }
 

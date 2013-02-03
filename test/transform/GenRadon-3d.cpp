@@ -27,7 +27,7 @@ Usage()
 
 // Define the dimension of the problem and the order of interpolation
 static const size_t d = 3;
-static const size_t q = 8;
+static const size_t q = 6;
 
 template<typename R>    
 class GenRadon : public Phase<R,d>
@@ -167,18 +167,18 @@ main( int argc, char* argv[] )
     try 
     {
         // Set our source and target boxes
-        Box<double,d> sourceBox, targetBox;
+        Box<double,d> sBox, tBox;
         for( size_t j=0; j<d; ++j )
         {
-            sourceBox.offsets[j] = -0.5*(N/F);
-            sourceBox.widths[j] = (N/F);
-            targetBox.offsets[j] = 0;
-            targetBox.widths[j] = 1;
+            sBox.offsets[j] = -0.5*(N/F);
+            sBox.widths[j] = (N/F);
+            tBox.offsets[j] = 0;
+            tBox.widths[j] = 1;
         }
 
         // Set up the general strategy for the forward transform
         Plan<d> plan( comm, FORWARD, N, bootstrapSkip );
-        Box<double,d> mySourceBox = plan.GetMyInitialSourceBox( sourceBox );
+        Box<double,d> mySBox = plan.GetMyInitialSourceBox( sBox );
 
         if( rank == 0 )
         {
@@ -199,32 +199,31 @@ main( int argc, char* argv[] )
 
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
-        vector<Source<double,d>> mySources, globalSources;
+        vector<Source<double,d>> mySources, sources;
         if( testAccuracy || store )
         {
-            globalSources.resize( M );
+            sources.resize( M );
             for( size_t i=0; i<M; ++i )
             {
                 for( size_t j=0; j<d; ++j )
                 {
-                    globalSources[i].p[j] = sourceBox.offsets[j] + 
-                        sourceBox.widths[j]*Uniform<double>(); 
+                    const double relPos = Uniform<double>();
+                    sources[i].p[j] = sBox.offsets[j] + sBox.widths[j]*relPos;
                 }
-                globalSources[i].magnitude = 1.*(2*Uniform<double>()-1); 
+                sources[i].magnitude = 1.*(2*Uniform<double>()-1); 
 
                 // Check if we should push this source onto our local list
                 bool isMine = true;
                 for( size_t j=0; j<d; ++j )
                 {
-                    double u = globalSources[i].p[j];
-                    double start = mySourceBox.offsets[j];
-                    double stop = 
-                        mySourceBox.offsets[j] + mySourceBox.widths[j];
+                    double u = sources[i].p[j];
+                    double start = mySBox.offsets[j];
+                    double stop = mySBox.offsets[j] + mySBox.widths[j];
                     if( u < start || u >= stop )
                         isMine = false;
                 }
                 if( isMine )
-                    mySources.push_back( globalSources[i] );
+                    mySources.push_back( sources[i] );
             }
         }
         else
@@ -237,9 +236,9 @@ main( int argc, char* argv[] )
             {
                 for( size_t j=0; j<d; ++j )
                 {
+                    const double relPos = Uniform<double>();
                     mySources[i].p[j] = 
-                        mySourceBox.offsets[j] + 
-                        Uniform<double>()*mySourceBox.widths[j];
+                        mySBox.offsets[j] + mySBox.widths[j]*relPos;
                 }
                 mySources[i].magnitude = 1.*(2*Uniform<double>()-1);
             }
@@ -262,8 +261,7 @@ main( int argc, char* argv[] )
             cout << "Launching transform..." << endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        auto u = RFIO
-        ( context, plan, genRadon, sourceBox, targetBox, mySources );
+        auto u = RFIO( context, plan, genRadon, sBox, tBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
         if( rank == 0 )
@@ -274,15 +272,13 @@ main( int argc, char* argv[] )
 #endif
 
         if( testAccuracy )
-            rfio::PrintErrorEstimates( comm, *u, globalSources );
-        
+            rfio::PrintErrorEstimates( comm, *u, sources );
         if( store )
         {
             if( testAccuracy )
-                rfio::WriteImage
-                ( comm, N, targetBox, *u, "genRadon3d", globalSources );
+                rfio::WriteImage( comm, N, tBox, *u, "genRadon3d", sources );
             else
-                rfio::WriteImage( comm, N, targetBox, *u, "genRadon3d" );
+                rfio::WriteImage( comm, N, tBox, *u, "genRadon3d" );
         }
     }
     catch( const exception& e )

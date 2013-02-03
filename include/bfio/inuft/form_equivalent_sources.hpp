@@ -41,12 +41,12 @@ void
 FormEquivalentSources
 ( const Context<R,1,q>& context,
   const Plan<1>& plan,
-  const Box<R,1>& mySourceBox,
-  const Box<R,1>& myTargetBox,
-  const size_t log2LocalSourceBoxes,
-  const size_t log2LocalTargetBoxes,
-  const array<size_t,1>& log2LocalSourceBoxesPerDim,
-  const array<size_t,1>& log2LocalTargetBoxesPerDim,
+  const Box<R,1>& mySBox,
+  const Box<R,1>& myTBox,
+  const size_t log2LocalSBoxes,
+  const size_t log2LocalTBoxes,
+  const array<size_t,1>& log2LocalSBoxesPerDim,
+  const array<size_t,1>& log2LocalTBoxesPerDim,
         WeightGridList<R,1,q>& weightGridList )
 {
     const size_t d = 1;
@@ -58,9 +58,9 @@ FormEquivalentSources
 
     // Store the widths of the source and target boxes
     array<R,d> wA;
-    wA[0] = myTargetBox.widths[0] / (1<<log2LocalTargetBoxesPerDim[0]);
+    wA[0] = myTBox.widths[0] / (1<<log2LocalTBoxesPerDim[0]);
     array<R,d> wB;
-    wB[0] = mySourceBox.widths[0] / (1<<log2LocalSourceBoxesPerDim[0]);
+    wB[0] = mySBox.widths[0] / (1<<log2LocalSBoxesPerDim[0]);
 
     // Iterate over the box pairs, applying M^-1 using the tensor product 
     // structure
@@ -68,16 +68,15 @@ FormEquivalentSources
     vector<R> scalingArguments( q );
     vector<R> realPrescalings( q ), imagPrescalings( q ),
               realPostscalings( q ), imagPostscalings( q );
-    ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
-    for( size_t targetIndex=0;
-         targetIndex<(1u<<log2LocalTargetBoxes);
-         ++targetIndex, AWalker.Walk() )
+    ConstrainedHTreeWalker<d> AWalker( log2LocalTBoxesPerDim );
+    for( size_t tIndex=0;
+         tIndex<(1u<<log2LocalTBoxes); ++tIndex, AWalker.Walk() )
     {
         const array<size_t,d> A = AWalker.State();
 
         // Translate the local integer coordinates into the target center
         array<R,d> x0;
-        x0[0] = myTargetBox.offsets[0] + (A[0]+0.5)*wB[0];
+        x0[0] = myTBox.offsets[0] + (A[0]+0.5)*wB[0];
 
         // Store the chebyshev grid on A
         vector<array<R,d>> xPoints( q );
@@ -89,19 +88,17 @@ FormEquivalentSources
             scalingArguments[t] = -SignedTwoPi*x0[0]*chebyshevNodes[t]*wB[0];
         SinCosBatch( scalingArguments, imagPostscalings, realPostscalings );
 
-        ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
-        for( size_t sourceIndex=0;
-             sourceIndex<(1u<<log2LocalSourceBoxes);
-             ++sourceIndex, BWalker.Walk() )
+        ConstrainedHTreeWalker<d> BWalker( log2LocalSBoxesPerDim );
+        for( size_t sIndex=0;
+             sIndex<(1u<<log2LocalSBoxes); ++sIndex, BWalker.Walk() )
         {
             const array<size_t,d> B = BWalker.State();
-            const size_t interactionIndex = 
-                sourceIndex + (targetIndex<<log2LocalSourceBoxes);
-            WeightGrid<R,d,q>& weightGrid = weightGridList[interactionIndex];
+            const size_t iIndex = sIndex + (tIndex<<log2LocalSBoxes);
+            WeightGrid<R,d,q>& weightGrid = weightGridList[iIndex];
 
             // Translate the local integer coordinates into the source center
             array<R,d> p0;
-            p0[0] = mySourceBox.offsets[0] + (B[0]+0.5)*wB[0];
+            p0[0] = mySBox.offsets[0] + (B[0]+0.5)*wB[0];
 
             //----------------------------------------------------------------//
             // Solve against the first dimension                              //
@@ -187,12 +184,12 @@ void
 FormEquivalentSources
 ( const Context<R,2,q>& context,
   const Plan<2>& plan,
-  const Box<R,2>& mySourceBox,
-  const Box<R,2>& myTargetBox,
-  const size_t log2LocalSourceBoxes,
-  const size_t log2LocalTargetBoxes,
-  const array<size_t,2>& log2LocalSourceBoxesPerDim,
-  const array<size_t,2>& log2LocalTargetBoxesPerDim,
+  const Box<R,2>& mySBox,
+  const Box<R,2>& myTBox,
+  const size_t log2LocalSBoxes,
+  const size_t log2LocalTBoxes,
+  const array<size_t,2>& log2LocalSBoxesPerDim,
+  const array<size_t,2>& log2LocalTBoxesPerDim,
         WeightGridList<R,2,q>& weightGridList )
 {
     const size_t d = 2;
@@ -206,10 +203,10 @@ FormEquivalentSources
     // Store the widths of the source and target boxes
     array<R,d> wA;
     for( size_t j=0; j<d; ++j )
-        wA[j] = myTargetBox.widths[j] / (1<<log2LocalTargetBoxesPerDim[j]);
+        wA[j] = myTBox.widths[j] / (1<<log2LocalTBoxesPerDim[j]);
     array<R,d> wB;
     for( size_t j=0; j<d; ++j )
-        wB[j] = mySourceBox.widths[j] / (1<<log2LocalSourceBoxesPerDim[j]);
+        wB[j] = mySBox.widths[j] / (1<<log2LocalSBoxesPerDim[j]);
 
     // Iterate over the box pairs, applying M^-1 using the tensor product 
     // structure
@@ -222,17 +219,16 @@ FormEquivalentSources
         realPostscalings[j].resize(q);
         imagPostscalings[j].resize(q);
     }
-    ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
-    for( size_t targetIndex=0;
-         targetIndex<(1u<<log2LocalTargetBoxes);
-         ++targetIndex, AWalker.Walk() )
+    ConstrainedHTreeWalker<d> AWalker( log2LocalTBoxesPerDim );
+    for( size_t tIndex=0;
+         tIndex<(1u<<log2LocalTBoxes); ++tIndex, AWalker.Walk() )
     {
         const array<size_t,d> A = AWalker.State();
 
         // Translate the local integer coordinates into the target center
         array<R,d> x0;
         for( size_t j=0; j<d; ++j )
-            x0[j] = myTargetBox.offsets[j] + (A[j]+0.5)*wA[j];
+            x0[j] = myTBox.offsets[j] + (A[j]+0.5)*wA[j];
 
         // Store the chebyshev grid on A
         vector<array<R,d>> xPoints( q_to_d );
@@ -249,20 +245,18 @@ FormEquivalentSources
             ( scalingArguments, imagPostscalings[j], realPostscalings[j] );
         }
 
-        ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
-        for( size_t sourceIndex=0;
-             sourceIndex<(1u<<log2LocalSourceBoxes);
-             ++sourceIndex, BWalker.Walk() )
+        ConstrainedHTreeWalker<d> BWalker( log2LocalSBoxesPerDim );
+        for( size_t sIndex=0;
+             sIndex<(1u<<log2LocalSBoxes); ++sIndex, BWalker.Walk() )
         {
             const array<size_t,d> B = BWalker.State();
-            const size_t interactionIndex = 
-                sourceIndex + (targetIndex<<log2LocalSourceBoxes);
-            WeightGrid<R,d,q>& weightGrid = weightGridList[interactionIndex];
+            const size_t iIndex = sIndex + (tIndex<<log2LocalSBoxes);
+            WeightGrid<R,d,q>& weightGrid = weightGridList[iIndex];
 
             // Translate the local integer coordinates into the source center
             array<R,d> p0;
             for( size_t j=0; j<d; ++j )
-                p0[j] = mySourceBox.offsets[j] + (B[j]+0.5)*wB[j];
+                p0[j] = mySBox.offsets[j] + (B[j]+0.5)*wB[j];
 
             //----------------------------------------------------------------//
             // Solve against the first dimension                              //
@@ -431,12 +425,12 @@ void
 FormEquivalentSources
 ( const Context<R,d,q>& context,
   const Plan<d>& plan,
-  const Box<R,d>& mySourceBox,
-  const Box<R,d>& myTargetBox,
-  const size_t log2LocalSourceBoxes,
-  const size_t log2LocalTargetBoxes,
-  const array<size_t,d>& log2LocalSourceBoxesPerDim,
-  const array<size_t,d>& log2LocalTargetBoxesPerDim,
+  const Box<R,d>& mySBox,
+  const Box<R,d>& myTBox,
+  const size_t log2LocalSBoxes,
+  const size_t log2LocalTBoxes,
+  const array<size_t,d>& log2LocalSBoxesPerDim,
+  const array<size_t,d>& log2LocalTBoxesPerDim,
         WeightGridList<R,d,q>& weightGridList )
 {
     const size_t q_to_d = Pow<q,d>::val;
@@ -449,10 +443,10 @@ FormEquivalentSources
     // Store the widths of the source and target boxes
     array<R,d> wA;
     for( size_t j=0; j<d; ++j )
-        wA[j] = myTargetBox.widths[j] / (1<<log2LocalTargetBoxesPerDim[j]);;
+        wA[j] = myTBox.widths[j] / (1<<log2LocalTBoxesPerDim[j]);
     array<R,d> wB;
     for( size_t j=0; j<d; ++j )
-        wB[j] = mySourceBox.widths[j] / (1<<log2LocalSourceBoxesPerDim[j]);
+        wB[j] = mySBox.widths[j] / (1<<log2LocalSBoxesPerDim[j]);
 
     // Iterate over the box pairs, applying M^-1 using the tensor product 
     // structure
@@ -466,17 +460,16 @@ FormEquivalentSources
     }
     vector<R> realTempWeights0( q_to_d ), imagTempWeights0( q_to_d ),
               realTempWeights1( q_to_d ), imagTempWeights1( q_to_d );
-    ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
-    for( size_t targetIndex=0;
-         targetIndex<(1u<<log2LocalTargetBoxes);
-         ++targetIndex, AWalker.Walk() )
+    ConstrainedHTreeWalker<d> AWalker( log2LocalTBoxesPerDim );
+    for( size_t tIndex=0;
+         tIndex<(1u<<log2LocalTBoxes); ++tIndex, AWalker.Walk() )
     {
         const array<size_t,d> A = AWalker.State();
 
         // Translate the local integer coordinates into the target center
         array<R,d> x0;
         for( size_t j=0; j<d; ++j )
-            x0[j] = myTargetBox.offsets[j] + (A[j]+0.5)*wA[j];
+            x0[j] = myTBox.offsets[j] + (A[j]+0.5)*wA[j];
 
         // Store the chebyshev grid on A
         vector<array<R,d>> xPoints( q_to_d );
@@ -493,20 +486,18 @@ FormEquivalentSources
             ( scalingArguments, imagPostscalings[j], realPostscalings[j] );
         }
 
-        ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
-        for( size_t sourceIndex=0;
-             sourceIndex<(1u<<log2LocalSourceBoxes);
-             ++sourceIndex, BWalker.Walk() )
+        ConstrainedHTreeWalker<d> BWalker( log2LocalSBoxesPerDim );
+        for( size_t sIndex=0;
+             sIndex<(1u<<log2LocalSBoxes); ++sIndex, BWalker.Walk() )
         {
             const array<size_t,d> B = BWalker.State();
-            const size_t interactionIndex = 
-                sourceIndex + (targetIndex<<log2LocalSourceBoxes);
-            WeightGrid<R,d,q>& weightGrid = weightGridList[interactionIndex];
+            const size_t iIndex = sIndex + (tIndex<<log2LocalSBoxes);
+            WeightGrid<R,d,q>& weightGrid = weightGridList[iIndex];
 
             // Translate the local integer coordinates into the source center
             array<R,d> p0;
             for( size_t j=0; j<d; ++j )
-                p0[j] = mySourceBox.offsets[j] + (B[j]+0.5)*wB[j];
+                p0[j] = mySBox.offsets[j] + (B[j]+0.5)*wB[j];
 
             //----------------------------------------------------------------//
             // Solve against the first dimension                              //

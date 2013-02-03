@@ -43,14 +43,14 @@ class PotentialField
     const rfio::Context<R,d,q>& _context;
     const Amplitude<R,d>* _amplitude;
     const Phase<R,d>* _phase;
-    const Box<R,d> _sourceBox;
-    const Box<R,d> _myTargetBox;
-    const array<size_t,d> _myTargetBoxCoords;
-    const array<size_t,d> _log2TargetSubboxesPerDim;
+    const Box<R,d> _sBox;
+    const Box<R,d> _myTBox;
+    const array<size_t,d> _myTBoxCoords;
+    const array<size_t,d> _log2TSubboxesPerDim;
 
     array<R,d> _wA;
     array<R,d> _p0;
-    array<size_t,d> _log2TargetSubboxesUpToDim;
+    array<size_t,d> _log2TSubboxesUpToDim;
     vector<LRP<R,d,q>> _LRPs;
 
 public:
@@ -58,10 +58,10 @@ public:
     ( const rfio::Context<R,d,q>& context,
       const Amplitude<R,d>& amplitude,
       const Phase<R,d>& phase,
-      const Box<R,d>& sourceBox,
-      const Box<R,d>& myTargetBox,
-      const array<size_t,d>& myTargetBoxCoords,
-      const array<size_t,d>& log2TargetSubboxesPerDim,
+      const Box<R,d>& sBox,
+      const Box<R,d>& myTBox,
+      const array<size_t,d>& myTBoxCoords,
+      const array<size_t,d>& log2TSubboxesPerDim,
       const WeightGridList<R,d,q>& weightGridList );
 
     ~PotentialField();
@@ -83,13 +83,13 @@ template<typename R,size_t d,size_t q>
 void PrintErrorEstimates
 ( MPI_Comm comm,
   const PotentialField<R,d,q>& u,
-  const vector<Source<R,d>>& globalSources );
+  const vector<Source<R,d>>& sources );
 
 template<typename R,size_t d,size_t q>
 void WriteImage
 ( MPI_Comm comm, 
   const size_t N,
-  const Box<R,d>& targetBox,
+  const Box<R,d>& tBox,
   const PotentialField<R,d,q>& u,
   const string& basename );
 
@@ -97,10 +97,10 @@ template<typename R,size_t d,size_t q>
 void WriteImage
 ( MPI_Comm comm, 
   const size_t N,
-  const Box<R,d>& targetBox,
+  const Box<R,d>& tBox,
   const PotentialField<R,d,q>& u,
   const string& basename,
-  const vector<Source<R,d>>& globalSources );
+  const vector<Source<R,d>>& sources );
 
 } // rfio
 
@@ -111,55 +111,52 @@ rfio::PotentialField<R,d,q>::PotentialField
 ( const rfio::Context<R,d,q>& context,
   const Amplitude<R,d>& amplitude,
   const Phase<R,d>& phase,
-  const Box<R,d>& sourceBox,
-  const Box<R,d>& myTargetBox,
-  const array<size_t,d>& myTargetBoxCoords,
-  const array<size_t,d>& log2TargetSubboxesPerDim,
+  const Box<R,d>& sBox,
+  const Box<R,d>& myTBox,
+  const array<size_t,d>& myTBoxCoords,
+  const array<size_t,d>& log2TSubboxesPerDim,
   const WeightGridList<R,d,q>& weightGridList )
 : _context(context), _amplitude(amplitude.Clone()), _phase(phase.Clone()), 
-  _sourceBox(sourceBox), _myTargetBox(myTargetBox),
-  _myTargetBoxCoords(myTargetBoxCoords),
-  _log2TargetSubboxesPerDim(log2TargetSubboxesPerDim)
+  _sBox(sBox), _myTBox(myTBox), _myTBoxCoords(myTBoxCoords),
+  _log2TSubboxesPerDim(log2TSubboxesPerDim)
 { 
     // Compute the widths of the target subboxes and the source center
     for( size_t j=0; j<d; ++j )
-        _wA[j] = myTargetBox.widths[j] / (1<<log2TargetSubboxesPerDim[j]);
+        _wA[j] = myTBox.widths[j] / (1<<log2TSubboxesPerDim[j]);
     for( size_t j=0; j<d; ++j )
-        _p0[j] = sourceBox.offsets[j] + sourceBox.widths[j]/2;
+        _p0[j] = sBox.offsets[j] + sBox.widths[j]/2;
 
     // Compute the array of the partial sums
-    _log2TargetSubboxesUpToDim[0] = 0;
+    _log2TSubboxesUpToDim[0] = 0;
     for( size_t j=1; j<d; ++j )
     {
-        _log2TargetSubboxesUpToDim[j] = 
-            _log2TargetSubboxesUpToDim[j-1] + log2TargetSubboxesPerDim[j-1];
+        _log2TSubboxesUpToDim[j] = 
+            _log2TSubboxesUpToDim[j-1] + log2TSubboxesPerDim[j-1];
     }
 
     // Figure out the size of our LRP vector by summing log2TargetSubboxesPerDim
-    size_t log2TargetSubboxes = 0;
+    size_t log2TSubboxes = 0;
     for( size_t j=0; j<d; ++j )
-        log2TargetSubboxes += log2TargetSubboxesPerDim[j];
-    _LRPs.resize( 1<<log2TargetSubboxes );
+        log2TSubboxes += log2TSubboxesPerDim[j];
+    _LRPs.resize( 1<<log2TSubboxes );
 
     // The weightGridList is assumed to be ordered by the constrained 
-    // HTree described by log2TargetSubboxesPerDim. We will unroll it 
+    // HTree described by log2TSubboxesPerDim. We will unroll it 
     // lexographically into the LRP vector.
-    ConstrainedHTreeWalker<d> AWalker( log2TargetSubboxesPerDim );
-    for( size_t targetIndex=0; 
-         targetIndex<_LRPs.size(); 
-         ++targetIndex, AWalker.Walk() )
+    ConstrainedHTreeWalker<d> AWalker( log2TSubboxesPerDim );
+    for( size_t tIndex=0; tIndex<_LRPs.size(); ++tIndex, AWalker.Walk() )
     {
         const array<size_t,d> A = AWalker.State();
 
         // Unroll the indices of A into its lexographic position
         size_t k=0; 
         for( size_t j=0; j<d; ++j )
-            k += A[j] << _log2TargetSubboxesUpToDim[j];
+            k += A[j] << _log2TSubboxesUpToDim[j];
 
         // Now fill the k'th LRP index
         for( size_t j=0; j<d; ++j )
-            _LRPs[k].x0[j] = myTargetBox.offsets[j] + (A[j]+0.5)*_wA[j];
-        _LRPs[k].weightGrid = weightGridList[targetIndex];
+            _LRPs[k].x0[j] = myTBox.offsets[j] + (A[j]+0.5)*_wA[j];
+        _LRPs[k].weightGrid = weightGridList[tIndex];
     }
 }
 
@@ -179,12 +176,10 @@ rfio::PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
 #ifndef RELEASE
     for( size_t j=0; j<d; ++j )
     {
-        if( x[j] < _myTargetBox.offsets[j] || 
-            x[j] > _myTargetBox.offsets[j]+_myTargetBox.widths[j] )
-        {
+        if( x[j] < _myTBox.offsets[j] || 
+            x[j] > _myTBox.offsets[j]+_myTBox.widths[j] )
             throw std::runtime_error
-                  ( "Tried to evaluate outside of potential range." );
-        }
+            ("Tried to evaluate outside of potential range");
     }
 #endif
 
@@ -192,8 +187,8 @@ rfio::PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
     size_t k = 0;
     for( size_t j=0; j<d; ++j )
     {
-        size_t owningIndex = size_t((x[j]-_myTargetBox.offsets[j])/_wA[j]);
-        k += owningIndex << _log2TargetSubboxesUpToDim[j];
+        size_t owningIndex = size_t((x[j]-_myTBox.offsets[j])/_wA[j]);
+        k += owningIndex << _log2TSubboxesUpToDim[j];
     }
 
     // Convert x to the reference domain of [-1/2,+1/2]^d for box k
@@ -241,7 +236,7 @@ rfio::PotentialField<R,d,q>::GetPhase() const
 template<typename R,size_t d,size_t q>
 inline const Box<R,d>&
 rfio::PotentialField<R,d,q>::GetMyTargetBox() const
-{ return _myTargetBox; }
+{ return _myTBox; }
 
 template<typename R,size_t d,size_t q>
 inline size_t
@@ -256,23 +251,23 @@ rfio::PotentialField<R,d,q>::GetSubboxWidths() const
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
 rfio::PotentialField<R,d,q>::GetMyTargetBoxCoords() const
-{ return _myTargetBoxCoords; }
+{ return _myTBoxCoords; }
 
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
 rfio::PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
-{ return _log2TargetSubboxesPerDim; }
+{ return _log2TSubboxesPerDim; }
 
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
 rfio::PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
-{ return _log2TargetSubboxesUpToDim; }
+{ return _log2TSubboxesUpToDim; }
 
 template<typename R,size_t d,size_t q>
 void rfio::PrintErrorEstimates
 ( MPI_Comm comm,
   const PotentialField<R,d,q>& u,
-  const vector<Source<R,d>>& globalSources )
+  const vector<Source<R,d>>& sources )
 {
     const size_t numAccuracyTestsPerBox = 10;
 
@@ -281,7 +276,7 @@ void rfio::PrintErrorEstimates
 
     const Amplitude<R,d>& amplitude = u.GetAmplitude();
     const Phase<R,d>& phase = u.GetPhase();
-    const Box<R,d>& myTargetBox = u.GetMyTargetBox();
+    const Box<R,d>& myTBox = u.GetMyTargetBox();
     const size_t numSubboxes = u.GetNumSubboxes();
     const size_t numTests = numSubboxes*numAccuracyTestsPerBox;
 
@@ -298,9 +293,9 @@ void rfio::PrintErrorEstimates
     }
     // Compute the L1 norm of the sources
     double L1Sources = 0.;
-    const size_t numSources = globalSources.size();
+    const size_t numSources = sources.size();
     for( size_t m=0; m<numSources; ++m )
-        L1Sources += abs(globalSources[m].magnitude);
+        L1Sources += abs(sources[m].magnitude);
     double myL2ErrorSquared = 0.;
     double myL2TruthSquared = 0.;
     double myLinfError = 0.;
@@ -309,8 +304,7 @@ void rfio::PrintErrorEstimates
         // Compute a random point in our process's target box
         array<R,d> x;
         for( size_t j=0; j<d; ++j )
-            x[j] = myTargetBox.offsets[j] +
-                   Uniform<R>()*myTargetBox.widths[j];
+            x[j] = myTBox.offsets[j] + myTBox.widths[j]*Uniform<R>();
 
         // Evaluate our potential field at x and compare against truth
         complex<R> approx = u.Evaluate( x );
@@ -318,9 +312,8 @@ void rfio::PrintErrorEstimates
         for( size_t m=0; m<numSources; ++m )
         {
             complex<R> beta =
-                amplitude( x, globalSources[m].p ) *
-                ImagExp( phase(x,globalSources[m].p) );
-            truth += beta * globalSources[m].magnitude;
+                amplitude( x, sources[m].p ) * ImagExp( phase(x,sources[m].p) );
+            truth += beta * sources[m].magnitude;
         }
         double absError = std::abs(approx-truth);
         double absTruth = std::abs(truth);
@@ -361,7 +354,7 @@ inline void
 rfio::WriteImage
 ( MPI_Comm comm,
   const size_t N,
-  const Box<R,d>& targetBox,
+  const Box<R,d>& tBox,
   const rfio::PotentialField<R,d,q>& u,
   const string& basename )
 {
@@ -376,7 +369,7 @@ rfio::WriteImage
 
     if( d <= 3 )
     {
-        const Box<R,d>& myTargetBox = u.GetMyTargetBox();
+        const Box<R,d>& myTBox = u.GetMyTargetBox();
         const array<R,d>& wA = u.GetSubboxWidths();
         const array<size_t,d>& log2SubboxesPerDim = u.GetLog2SubboxesPerDim();
         const size_t numSubboxes = u.GetNumSubboxes();
@@ -416,12 +409,12 @@ rfio::WriteImage
                 os << "0 1 ";
             os << "\" Origin=\"";
             for( size_t j=0; j<d; ++j )
-                os << targetBox.offsets[j] << " ";
+                os << tBox.offsets[j] << " ";
             for( size_t j=d; j<3; ++j )
                 os << "0 ";
             os << "\" Spacing=\"";
             for( size_t j=0; j<d; ++j )
-                os << targetBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
+                os << tBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
             for( size_t j=d; j<3; ++j )
                 os << "1 ";
             os << "\" GhostLevel=\"0\">\n"
@@ -433,8 +426,7 @@ rfio::WriteImage
                 os << "  <Piece Extent=\"";
                 for( size_t j=0; j<d; ++j )
                 {
-                    size_t width = 
-                        numSamplesPerBoxDim << log2SubboxesPerDim[j];
+                    size_t width = numSamplesPerBoxDim << log2SubboxesPerDim[j];
                     os << coords[i*d+j]*width << " "
                        << (coords[i*d+j]+1)*width << " ";
                 }
@@ -480,20 +472,19 @@ rfio::WriteImage
             os << "0 1 ";
         os << "\" Origin=\"";
         for( size_t j=0; j<d; ++j )
-            os << targetBox.offsets[j] << " ";
+            os << tBox.offsets[j] << " ";
         for( size_t j=d; j<3; ++j )
             os << "0 ";
         os << "\" Spacing=\"";
         for( size_t j=0; j<d; ++j )
-            os << targetBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
+            os << tBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
         for( size_t j=d; j<3; ++j )
             os << "1 ";
         os << "\">\n"
            << "  <Piece Extent=\"";
         for( size_t j=0; j<d; ++j )
         {
-            size_t width =
-                numSamplesPerBoxDim << log2SubboxesPerDim[j];
+            size_t width = numSamplesPerBoxDim << log2SubboxesPerDim[j];
             os << myCoords[j]*width << " " << (myCoords[j]+1)*width << " ";
         }
         for( size_t j=d; j<3; ++j )
@@ -526,11 +517,10 @@ rfio::WriteImage
             // Compute the location of our sample
             array<R,d> x;
             for( size_t j=0; j<d; ++j )
-                x[j] = myTargetBox.offsets[j] +
-                       coords[j]*wA[j]/numSamplesPerBoxDim;
+                x[j] = myTBox.offsets[j] + coords[j]*wA[j]/numSamplesPerBoxDim;
             complex<R> approx = u.Evaluate( x );
-            realFile << (float)real(approx) << " ";
-            imagFile << (float)imag(approx) << " ";
+            realFile << float(real(approx)) << " ";
+            imagFile << float(imag(approx)) << " ";
             if( (k+1) % numSamplesPerBox == 0 )
             {
                 realFile << "\n";
@@ -563,10 +553,10 @@ inline void
 rfio::WriteImage
 ( MPI_Comm comm,
   const size_t N,
-  const Box<R,d>& targetBox,
+  const Box<R,d>& tBox,
   const rfio::PotentialField<R,d,q>& u,
   const string& basename,
-  const vector<Source<R,d>>& globalSources )
+  const vector<Source<R,d>>& sources )
 {
     using namespace std;
 
@@ -582,7 +572,7 @@ rfio::WriteImage
 
     if( d <= 3 )
     {
-        const Box<R,d>& myTargetBox = u.GetMyTargetBox();
+        const Box<R,d>& myTBox = u.GetMyTargetBox();
         const array<R,d>& wA = u.GetSubboxWidths();
         const array<size_t,d>& log2SubboxesPerDim = u.GetLog2SubboxesPerDim();
         const size_t numSubboxes = u.GetNumSubboxes();
@@ -605,9 +595,9 @@ rfio::WriteImage
         {
             cout << "Creating parallel files...";
             cout.flush();
-            ofstream realTruthFile, imagTruthFile;
-            ofstream realApproxFile, imagApproxFile;
-            ofstream realErrorFile, imagErrorFile;
+            ofstream realTruthFile, imagTruthFile,
+                     realApproxFile, imagApproxFile,
+                     realErrorFile, imagErrorFile;
             ostringstream os;
             os << basename << "_realTruth.pvti";
             realTruthFile.open( os.str().c_str() );
@@ -636,12 +626,12 @@ rfio::WriteImage
                 os << "0 1 ";
             os << "\" Origin=\"";
             for( size_t j=0; j<d; ++j )
-                os << targetBox.offsets[j] << " ";
+                os << tBox.offsets[j] << " ";
             for( size_t j=d; j<3; ++j )
                 os << "0 ";
             os << "\" Spacing=\"";
             for( size_t j=0; j<d; ++j )
-                os << targetBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
+                os << tBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
             for( size_t j=d; j<3; ++j )
                 os << "1 ";
             os << "\" GhostLevel=\"0\">\n"
@@ -653,8 +643,7 @@ rfio::WriteImage
                 os << "  <Piece Extent=\"";
                 for( size_t j=0; j<d; ++j )
                 {
-                    size_t width = 
-                        numSamplesPerBoxDim << log2SubboxesPerDim[j];
+                    size_t width = numSamplesPerBoxDim << log2SubboxesPerDim[j];
                     os << coords[i*d+j]*width << " "
                        << (coords[i*d+j]+1)*width << " ";
                 }
@@ -709,9 +698,9 @@ rfio::WriteImage
             cout << "Creating serial vti files...";
             cout.flush();
         }
-        ofstream realTruthFile, imagTruthFile;
-        ofstream realApproxFile, imagApproxFile;
-        ofstream realErrorFile, imagErrorFile;
+        ofstream realTruthFile, imagTruthFile,
+                 realApproxFile, imagApproxFile,
+                 realErrorFile, imagErrorFile;
         ostringstream os;
         os << basename << "_realTruth_" << rank << ".vti";
         realTruthFile.open( os.str().c_str() );
@@ -740,20 +729,19 @@ rfio::WriteImage
             os << "0 1 ";
         os << "\" Origin=\"";
         for( size_t j=0; j<d; ++j )
-            os << targetBox.offsets[j] << " ";
+            os << tBox.offsets[j] << " ";
         for( size_t j=d; j<3; ++j )
             os << "0 ";
         os << "\" Spacing=\"";
         for( size_t j=0; j<d; ++j )
-            os << targetBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
+            os << tBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
         for( size_t j=d; j<3; ++j )
             os << "1 ";
         os << "\">\n"
            << "  <Piece Extent=\"";
         for( size_t j=0; j<d; ++j )
         {
-            size_t width =
-                numSamplesPerBoxDim << log2SubboxesPerDim[j];
+            size_t width = numSamplesPerBoxDim << log2SubboxesPerDim[j];
             os << myCoords[j]*width << " " << (myCoords[j]+1)*width << " ";
         }
         for( size_t j=d; j<3; ++j )
@@ -779,7 +767,7 @@ rfio::WriteImage
                     numSamplesPerBoxDim << log2SubboxesPerDim[i];
             }
         }
-        const size_t numSources = globalSources.size();
+        const size_t numSources = sources.size();
         for( size_t k=0; k<numSamples; ++k )
         {
             // Extract our indices in each dimension
@@ -791,8 +779,7 @@ rfio::WriteImage
             // Compute the location of our sample
             array<R,d> x;
             for( size_t j=0; j<d; ++j )
-                x[j] = myTargetBox.offsets[j] +
-                       coords[j]*wA[j]/numSamplesPerBoxDim;
+                x[j] = myTBox.offsets[j] + coords[j]*wA[j]/numSamplesPerBoxDim;
 
             // Compute the approximation
             complex<R> approx = u.Evaluate( x );
@@ -801,19 +788,17 @@ rfio::WriteImage
             complex<R> truth(0,0);
             for( size_t m=0; m<numSources; ++m )
             {
-                complex<R> beta = 
-                    ImagExp<R>( phase(x,globalSources[m].p) );
-                truth += amplitude(x,globalSources[m].p)*
-                         beta*globalSources[m].magnitude;
+                complex<R> beta = ImagExp<R>( phase(x,sources[m].p) );
+                truth += amplitude(x,sources[m].p) * beta*sources[m].magnitude;
             }
             const complex<R> error = approx-truth;
 
-            realTruthFile << (float)real(truth) << " ";
-            imagTruthFile << (float)imag(truth) << " ";
-            realApproxFile << (float)real(approx) << " ";
-            imagApproxFile << (float)imag(approx) << " ";
-            realErrorFile << (float)abs(real(error)) << " ";
-            imagErrorFile << (float)abs(imag(error)) << " ";
+            realTruthFile << float(real(truth)) << " ";
+            imagTruthFile << float(imag(truth)) << " ";
+            realApproxFile << float(real(approx)) << " ";
+            imagApproxFile << float(imag(approx)) << " ";
+            realErrorFile << float(abs(real(error))) << " ";
+            imagErrorFile << float(abs(imag(error))) << " ";
             if( (k+1) % numSamplesPerBox == 0 )
             {
                 realTruthFile << "\n";

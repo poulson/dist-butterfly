@@ -27,11 +27,10 @@ class Context
     const rfio::Context<R,d,q> _rfioContext;
     const Direction _direction;
     const size_t _N;
-    const Box<R,d> _sourceBox;
-    const Box<R,d> _targetBox;
+    const Box<R,d> _sBox, _tBox;
 
-    array<vector<R>,d> _realOffsetEvaluations;
-    array<vector<R>,d> _imagOffsetEvaluations;
+    array<vector<R>,d> _realOffsetEvaluations,
+                       _imagOffsetEvaluations;
 
     void GenerateOffsetEvaluations();
 
@@ -39,8 +38,8 @@ public:
     Context
     ( const Direction direction,
       const size_t N,
-      const Box<R,d>& sourceBox,
-      const Box<R,d>& targetBox );
+      const Box<R,d>& sBox,
+      const Box<R,d>& tBox );
 
     const rfio::Context<R,d,q>& GetRFIOContext() const;
     Direction GetDirection() const;
@@ -60,8 +59,8 @@ Context<R,d,q>::GenerateOffsetEvaluations()
     array<R,d> wAMiddle, wBMiddle;
     for( std::size_t j=0; j<d; ++j )
     {
-        wAMiddle[j] = _targetBox.widths[j] / (1<<middleLevel);
-        wBMiddle[j] = _sourceBox.widths[j] / (1<<(log2N-middleLevel));
+        wAMiddle[j] = _tBox.widths[j] / (1<<middleLevel);
+        wBMiddle[j] = _sBox.widths[j] / (1<<(log2N-middleLevel));
     }
 
     // Form the offset grid evaluations
@@ -86,9 +85,8 @@ template<typename R,size_t d,size_t q>
 inline
 Context<R,d,q>::Context
 ( Direction direction, size_t N, 
-  const Box<R,d>& sourceBox, const Box<R,d>& targetBox ) 
-: _rfioContext(), _direction(direction), _N(N), 
-  _sourceBox(sourceBox), _targetBox(targetBox)
+  const Box<R,d>& sBox, const Box<R,d>& tBox ) 
+: _rfioContext(), _direction(direction), _N(N), _sBox(sBox), _tBox(tBox)
 { GenerateOffsetEvaluations(); }
 
 template<typename R,size_t d,size_t q>

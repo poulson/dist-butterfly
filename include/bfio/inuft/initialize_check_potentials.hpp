@@ -42,11 +42,11 @@ void
 InitializeCheckPotentials
 ( const Context<R,1,q>& context,
   const Plan<1>& plan,
-  const Box<R,1>& sourceBox,
-  const Box<R,1>& targetBox,
-  const Box<R,1>& mySourceBox,
-  const size_t log2LocalSourceBoxes,
-  const array<size_t,1>& log2LocalSourceBoxesPerDim,
+  const Box<R,1>& sBox,
+  const Box<R,1>& tBox,
+  const Box<R,1>& mySBox,
+  const size_t log2LocalSBoxes,
+  const array<size_t,1>& log2LocalSBoxesPerDim,
   const vector<Source<R,1>>& mySources,
         WeightGridList<R,1,q>& weightGridList )
 {
@@ -58,13 +58,13 @@ InitializeCheckPotentials
 
     // Store the widths of the source and target boxes
     array<R,d> wA;
-    wA[0] = targetBox.widths[0];
+    wA[0] = tBox.widths[0];
     array<R,d> wB;
-    wB[0] = sourceBox.widths[0] / N;
+    wB[0] = sBox.widths[0] / N;
 
     // Compute the center of the target box
     array<R,d> x0;
-    x0[0] = targetBox.offsets[0] + wA[0]/2;
+    x0[0] = tBox.offsets[0] + wA[0]/2;
 
     // Store the Chebyshev grid on the target box
     const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
@@ -77,7 +77,7 @@ InitializeCheckPotentials
     // We throw an error if a source is outside of our source box.
     const size_t numSources = mySources.size();
     vector<array<R,d>> pPoints( numSources );
-    vector<size_t> flattenedSourceBoxIndices( numSources );
+    vector<size_t> flattenedSBoxIndices( numSources );
     for( size_t s=0; s<numSources; ++s )
     {
         const array<R,d>& p = mySources[s].p;
@@ -86,8 +86,8 @@ InitializeCheckPotentials
         // Determine which local box we're in (if any)
         array<size_t,d> B;
         {
-            R leftBound = mySourceBox.offsets[0];
-            R rightBound = leftBound + mySourceBox.widths[0];
+            R leftBound = mySBox.offsets[0];
+            R rightBound = leftBound + mySBox.widths[0];
             if( p[0] < leftBound || p[0] >= rightBound )
             {
                 std::ostringstream msg;
@@ -99,7 +99,7 @@ InitializeCheckPotentials
 
             // We must be in the box, so bitwise determine the coord. index
             B[0] = 0;
-            for( size_t k=log2LocalSourceBoxesPerDim[0]; k>0; --k )
+            for( size_t k=log2LocalSBoxesPerDim[0]; k>0; --k )
             {
                 const R middle = (rightBound+leftBound)/2.;
                 if( p[0] < middle )
@@ -116,8 +116,8 @@ InitializeCheckPotentials
         }
 
         // Flatten and store the integer coordinates of B
-        flattenedSourceBoxIndices[s] = 
-            FlattenConstrainedHTreeIndex( B, log2LocalSourceBoxesPerDim );
+        flattenedSBoxIndices[s] = 
+            FlattenConstrainedHTreeIndex( B, log2LocalSBoxesPerDim );
     }
 
     // Batch evaluate the dot products and multiply by +-TwoPi
@@ -137,10 +137,10 @@ InitializeCheckPotentials
     ( weightGridList.Buffer(), 0, weightGridList.Length()*2*q*sizeof(R) );
     for( size_t s=0; s<numSources; ++s )
     {
-        const size_t sourceIndex = flattenedSourceBoxIndices[s];
+        const size_t sIndex = flattenedSBoxIndices[s];
 
-        R* realBuffer = weightGridList[sourceIndex].RealBuffer();
-        R* imagBuffer = weightGridList[sourceIndex].ImagBuffer();
+        R* realBuffer = weightGridList[sIndex].RealBuffer();
+        R* imagBuffer = weightGridList[sIndex].ImagBuffer();
         const R realMagnitude = std::real( mySources[s].magnitude );
         const R imagMagnitude = std::imag( mySources[s].magnitude );
         const R* thisCosBuffer = &cosResults[q*s];
@@ -161,11 +161,11 @@ void
 InitializeCheckPotentials
 ( const Context<R,2,q>& context,
   const Plan<2>& plan,
-  const Box<R,2>& sourceBox,
-  const Box<R,2>& targetBox,
-  const Box<R,2>& mySourceBox,
-  const size_t log2LocalSourceBoxes,
-  const array<size_t,2>& log2LocalSourceBoxesPerDim,
+  const Box<R,2>& sBox,
+  const Box<R,2>& tBox,
+  const Box<R,2>& mySBox,
+  const size_t log2LocalSBoxes,
+  const array<size_t,2>& log2LocalSBoxesPerDim,
   const vector<Source<R,2>>& mySources,
         WeightGridList<R,2,q>& weightGridList )
 {
@@ -179,15 +179,15 @@ InitializeCheckPotentials
     // Store the widths of the source and target boxes
     array<R,d> wA;
     for( size_t j=0; j<d; ++j )
-        wA[j] = targetBox.widths[j];
+        wA[j] = tBox.widths[j];
     array<R,d> wB;
     for( size_t j=0; j<d; ++j )
-        wB[j] = sourceBox.widths[j] / N;
+        wB[j] = sBox.widths[j] / N;
 
     // Compute the center of the target box
     array<R,d> x0;
     for( size_t j=0; j<d; ++j )
-        x0[j] = targetBox.offsets[j] + wA[j]/2;
+        x0[j] = tBox.offsets[j] + wA[j]/2;
 
     // Store the Chebyshev grid on the target box
     const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
@@ -201,7 +201,7 @@ InitializeCheckPotentials
     // We throw an error if a source is outside of our source box.
     const size_t numSources = mySources.size();
     vector<array<R,d>> pPoints( numSources );
-    vector<size_t> flattenedSourceBoxIndices( numSources );
+    vector<size_t> flattenedSBoxIndices( numSources );
     for( size_t s=0; s<numSources; ++s )
     {
         const array<R,d>& p = mySources[s].p;
@@ -211,8 +211,8 @@ InitializeCheckPotentials
         array<size_t,d> B;
         for( size_t j=0; j<d; ++j )
         {
-            R leftBound = mySourceBox.offsets[j];
-            R rightBound = leftBound + mySourceBox.widths[j];
+            R leftBound = mySBox.offsets[j];
+            R rightBound = leftBound + mySBox.widths[j];
             if( p[j] < leftBound || p[j] >= rightBound )
             {
                 std::ostringstream msg;
@@ -224,7 +224,7 @@ InitializeCheckPotentials
 
             // We must be in the box, so bitwise determine the coord. index
             B[j] = 0;
-            for( size_t k=log2LocalSourceBoxesPerDim[j]; k>0; --k )
+            for( size_t k=log2LocalSBoxesPerDim[j]; k>0; --k )
             {
                 const R middle = (rightBound+leftBound)/2.;
                 if( p[j] < middle )
@@ -241,8 +241,8 @@ InitializeCheckPotentials
         }
 
         // Flatten and store the integer coordinates of B
-        flattenedSourceBoxIndices[s] = 
-            FlattenConstrainedHTreeIndex( B, log2LocalSourceBoxesPerDim );
+        flattenedSBoxIndices[s] = 
+            FlattenConstrainedHTreeIndex( B, log2LocalSBoxesPerDim );
     }
 
     // Batch evaluate the dot products and multiply by +-TwoPi
@@ -261,10 +261,10 @@ InitializeCheckPotentials
     ( weightGridList.Buffer(), 0, weightGridList.Length()*2*q_to_d*sizeof(R) );
     for( size_t s=0; s<numSources; ++s )
     {
-        const size_t sourceIndex = flattenedSourceBoxIndices[s];
+        const size_t sIndex = flattenedSBoxIndices[s];
 
-        R* realBuffer = weightGridList[sourceIndex].RealBuffer();
-        R* imagBuffer = weightGridList[sourceIndex].ImagBuffer();
+        R* realBuffer = weightGridList[sIndex].RealBuffer();
+        R* imagBuffer = weightGridList[sIndex].ImagBuffer();
         const R realMagnitude = std::real( mySources[s].magnitude );
         const R imagMagnitude = std::imag( mySources[s].magnitude );
         const R* thisCosBuffer = &cosResults[q_to_d*s];
@@ -285,11 +285,11 @@ void
 InitializeCheckPotentials
 ( const Context<R,d,q>& context,
   const Plan<d>& plan,
-  const Box<R,d>& sourceBox,
-  const Box<R,d>& targetBox,
-  const Box<R,d>& mySourceBox,
-  const size_t log2LocalSourceBoxes,
-  const array<size_t,d>& log2LocalSourceBoxesPerDim,
+  const Box<R,d>& sBox,
+  const Box<R,d>& tBox,
+  const Box<R,d>& mySBox,
+  const size_t log2LocalSBoxes,
+  const array<size_t,d>& log2LocalSBoxesPerDim,
   const vector<Source<R,d>>& mySources,
         WeightGridList<R,d,q>& weightGridList )
 {
@@ -302,15 +302,15 @@ InitializeCheckPotentials
     // Store the widths of the source and target boxes
     array<R,d> wA;
     for( size_t j=0; j<d; ++j )
-        wA[j] = targetBox.widths[j];
+        wA[j] = tBox.widths[j];
     array<R,d> wB;
     for( size_t j=0; j<d; ++j )
-        wB[j] = sourceBox.widths[j] / N;
+        wB[j] = sBox.widths[j] / N;
 
     // Compute the center of the target box
     array<R,d> x0;
     for( size_t j=0; j<d; ++j )
-        x0[j] = targetBox.offsets[j] + wA[j]/2;
+        x0[j] = tBox.offsets[j] + wA[j]/2;
 
     // Store the Chebyshev grid on the target box
     const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
@@ -324,7 +324,7 @@ InitializeCheckPotentials
     // We throw an error if a source is outside of our source box.
     const size_t numSources = mySources.size();
     vector<array<R,d>> pPoints( numSources );
-    vector<size_t> flattenedSourceBoxIndices( numSources );
+    vector<size_t> flattenedSBoxIndices( numSources );
     for( size_t s=0; s<numSources; ++s )
     {
         const array<R,d>& p = mySources[s].p;
@@ -334,8 +334,8 @@ InitializeCheckPotentials
         array<size_t,d> B;
         for( size_t j=0; j<d; ++j )
         {
-            R leftBound = mySourceBox.offsets[j];
-            R rightBound = leftBound + mySourceBox.widths[j];
+            R leftBound = mySBox.offsets[j];
+            R rightBound = leftBound + mySBox.widths[j];
             if( p[j] < leftBound || p[j] >= rightBound )
             {
                 std::ostringstream msg;
@@ -347,7 +347,7 @@ InitializeCheckPotentials
 
             // We must be in the box, so bitwise determine the coord. index
             B[j] = 0;
-            for( size_t k=log2LocalSourceBoxesPerDim[j]; k>0; --k )
+            for( size_t k=log2LocalSBoxesPerDim[j]; k>0; --k )
             {
                 const R middle = (rightBound+leftBound)/2.;
                 if( p[j] < middle )
@@ -364,8 +364,8 @@ InitializeCheckPotentials
         }
 
         // Flatten and store the integer coordinates of B
-        flattenedSourceBoxIndices[s] = 
-            FlattenConstrainedHTreeIndex( B, log2LocalSourceBoxesPerDim );
+        flattenedSBoxIndices[s] = 
+            FlattenConstrainedHTreeIndex( B, log2LocalSBoxesPerDim );
     }
 
     // Batch evaluate the dot products and multiply by +-TwoPi
@@ -384,10 +384,10 @@ InitializeCheckPotentials
     ( weightGridList.Buffer(), 0, weightGridList.Length()*2*q_to_d*sizeof(R) );
     for( size_t s=0; s<numSources; ++s )
     {
-        const size_t sourceIndex = flattenedSourceBoxIndices[s];
+        const size_t sIndex = flattenedSBoxIndices[s];
 
-        R* realBuffer = weightGridList[sourceIndex].RealBuffer();
-        R* imagBuffer = weightGridList[sourceIndex].ImagBuffer();
+        R* realBuffer = weightGridList[sIndex].RealBuffer();
+        R* imagBuffer = weightGridList[sIndex].ImagBuffer();
         const R realMagnitude = std::real( mySources[s].magnitude );
         const R imagMagnitude = std::imag( mySources[s].magnitude );
         const R* thisCosBuffer = &cosResults[q_to_d*s];

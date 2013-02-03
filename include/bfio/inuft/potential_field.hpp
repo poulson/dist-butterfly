@@ -36,21 +36,21 @@ template<typename R,size_t d,size_t q>
 class PotentialField
 {
     const Context<R,d,q>& _context;
-    const Box<R,d> _sourceBox;
-    const Box<R,d> _myTargetBox;
-    const array<size_t,d> _log2TargetSubboxesPerDim;
+    const Box<R,d> _sBox;
+    const Box<R,d> _myTBox;
+    const array<size_t,d> _log2TSubboxesPerDim;
 
     array<R,d> _wA;
-    vector<array<R,d>> _sourceChebyshevGrid;
-    array<size_t,d> _log2TargetSubboxesUpToDim;
+    vector<array<R,d>> _sChebyshevGrid;
+    array<size_t,d> _log2TSubboxesUpToDim;
     vector<LRP<R,d,q>> _LRPs;
 
 public:
     PotentialField
     ( const Context<R,d,q>& context,
-      const Box<R,d>& sourceBox,
-      const Box<R,d>& myTargetBox,
-      const array<size_t,d>& log2TargetSubboxesPerDim,
+      const Box<R,d>& sBox,
+      const Box<R,d>& myTBox,
+      const array<size_t,d>& log2TSubboxesPerDim,
       const WeightGridList<R,d,q>& weightGridList );
 
     complex<R> Evaluate( const array<R,d>& x ) const;
@@ -77,64 +77,61 @@ public:
 template<typename R,size_t d,size_t q>
 PotentialField<R,d,q>::PotentialField
 ( const Context<R,d,q>& context,
-  const Box<R,d>& sourceBox,
-  const Box<R,d>& myTargetBox,
-  const array<size_t,d>& log2TargetSubboxesPerDim,
+  const Box<R,d>& sBox,
+  const Box<R,d>& myTBox,
+  const array<size_t,d>& log2TSubboxesPerDim,
   const WeightGridList<R,d,q>& weightGridList )
-: _context(context), _sourceBox(sourceBox), _myTargetBox(myTargetBox),
-  _log2TargetSubboxesPerDim(log2TargetSubboxesPerDim)
+: _context(context), _sBox(sBox), _myTBox(myTBox),
+  _log2TSubboxesPerDim(log2TSubboxesPerDim)
 { 
     // Compute the widths of the target subboxes
     for( size_t j=0; j<d; ++j )
-        _wA[j] = myTargetBox.widths[j] / (1<<log2TargetSubboxesPerDim[j]);
+        _wA[j] = myTBox.widths[j] / (1<<log2TSubboxesPerDim[j]);
 
     // Compute the array of the partial sums
-    _log2TargetSubboxesUpToDim[0] = 0;
+    _log2TSubboxesUpToDim[0] = 0;
     for( size_t j=1; j<d; ++j )
     {
-        _log2TargetSubboxesUpToDim[j] = 
-            _log2TargetSubboxesUpToDim[j-1] + log2TargetSubboxesPerDim[j-1];
+        _log2TSubboxesUpToDim[j] = 
+            _log2TSubboxesUpToDim[j-1] + log2TSubboxesPerDim[j-1];
     }
 
-    // Figure out the size of our LRP vector by summing log2TargetSubboxesPerDim
-    size_t log2TargetSubboxes = 0;
+    // Figure out the size of our LRP vector by summing log2TSubboxesPerDim
+    size_t log2TSubboxes = 0;
     for( size_t j=0; j<d; ++j )
-        log2TargetSubboxes += log2TargetSubboxesPerDim[j];
-    _LRPs.resize( 1<<log2TargetSubboxes );
+        log2TSubboxes += log2TSubboxesPerDim[j];
+    _LRPs.resize( 1<<log2TSubboxes );
 
     // The weightGridList is assumed to be ordered by the constrained 
-    // HTree described by log2TargetSubboxesPerDim. We will unroll it
+    // HTree described by log2TSubboxesPerDim. We will unroll it
     // lexographically into the LRP vector.
-    ConstrainedHTreeWalker<d> AWalker( log2TargetSubboxesPerDim );
-    for( size_t targetIndex=0; 
-         targetIndex<_LRPs.size();
-         ++targetIndex, AWalker.Walk() )
+    ConstrainedHTreeWalker<d> AWalker( log2TSubboxesPerDim );
+    for( size_t tIndex=0; tIndex<_LRPs.size(); ++tIndex, AWalker.Walk() )
     {
         const array<size_t,d> A = AWalker.State();
 
         // Unroll the indices of A into its lexographic position
         size_t k=0;
         for( size_t j=0; j<d; ++j )
-            k += A[j] << _log2TargetSubboxesUpToDim[j];
+            k += A[j] << _log2TSubboxesUpToDim[j];
 
         // Now fill the k'th LRP index
         for( size_t j=0; j<d; ++j )
-            _LRPs[k].x0[j] = myTargetBox.offsets[j] + (A[j]+0.5)*_wA[j];
-        _LRPs[k].weightGrid = weightGridList[targetIndex];
+            _LRPs[k].x0[j] = myTBox.offsets[j] + (A[j]+0.5)*_wA[j];
+        _LRPs[k].weightGrid = weightGridList[tIndex];
     }
 
     // Compute the source center
     array<R,d> p0;
     for( size_t j=0; j<d; ++j )
-        p0[j] = sourceBox.offsets[j] + sourceBox.widths[j]/2;
+        p0[j] = sBox.offsets[j] + sBox.widths[j]/2;
 
     // Fill the Chebyshev grid on the source box
     const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
-    _sourceChebyshevGrid.resize( Pow<q,d>::val );
+    _sChebyshevGrid.resize( Pow<q,d>::val );
     for( size_t t=0; t<Pow<q,d>::val; ++t )
         for( size_t j=0; j<d; ++j )
-            _sourceChebyshevGrid[t][j] = 
-                p0[j] + chebyshevGrid[t][j]*sourceBox.widths[j];
+            _sChebyshevGrid[t][j] = p0[j] + chebyshevGrid[t][j]*sBox.widths[j];
 }
 
 template<typename R,size_t d,size_t q>
@@ -146,11 +143,11 @@ PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
 #ifndef RELEASE
     for( size_t j=0; j<d; ++j )
     {
-        if( x[j] < _myTargetBox.offsets[j] ||
-            x[j] > _myTargetBox.offsets[j] + _myTargetBox.widths[j] )
+        if( x[j] < _myTBox.offsets[j] ||
+            x[j] > _myTBox.offsets[j] + _myTBox.widths[j] )
         {
             throw std::runtime_error
-                  ( "Tried to evaluate outside of potential range." );
+            ("Tried to evaluate outside of potential range");
         }
     }
 #endif
@@ -159,8 +156,8 @@ PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
     size_t k = 0;
     for( size_t j=0; j<d; ++j ) 
     {
-        size_t owningIndex = size_t((x[j]-_myTargetBox.offsets[j])/_wA[j]);
-        k += owningIndex << _log2TargetSubboxesUpToDim[j];
+        size_t owningIndex = size_t((x[j]-_myTBox.offsets[j])/_wA[j]);
+        k += owningIndex << _log2TSubboxesUpToDim[j];
     }
     const LRP<R,d,q>& lrp = _LRPs[k];
 
@@ -177,7 +174,7 @@ PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
         // Compute the dot product of the gridpoint with the target location
         R dot = 0;
         for( size_t j=0; j<d; ++j )
-            dot += x[j]*_sourceChebyshevGrid[t][j];
+            dot += x[j]*_sChebyshevGrid[t][j];
         potential += ImagExp<R>( SignedTwoPi*dot )*weight;
     }
     return potential;
@@ -186,7 +183,7 @@ PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
 template<typename R,size_t d,size_t q>
 inline const Box<R,d>&
 PotentialField<R,d,q>::GetMyTargetBox() const
-{ return _myTargetBox; }
+{ return _myTBox; }
 
 template<typename R,size_t d,size_t q>
 inline size_t
@@ -201,12 +198,12 @@ PotentialField<R,d,q>::GetSubboxWidths() const
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
 PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
-{ return _log2TargetSubboxesPerDim; }
+{ return _log2TSubboxesPerDim; }
 
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
 PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
-{ return _log2TargetSubboxesUpToDim; }
+{ return _log2TSubboxesUpToDim; }
 
 } // inuft
 } // bfio

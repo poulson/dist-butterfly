@@ -43,11 +43,11 @@ InitializeWeights
 ( const rfio::Context<R,d,q>& context,
   const Plan<d>& plan,
   const Phase<R,d>& phase,
-  const Box<R,d>& sourceBox,
-  const Box<R,d>& targetBox,
-  const Box<R,d>& mySourceBox,
-  const size_t log2LocalSourceBoxes,
-  const array<size_t,d>& log2LocalSourceBoxesPerDim,
+  const Box<R,d>& sBox,
+  const Box<R,d>& tBox,
+  const Box<R,d>& mySBox,
+  const size_t log2LocalSBoxes,
+  const array<size_t,d>& log2LocalSBoxesPerDim,
   const vector<Source<R,d>>& mySources,
         WeightGridList<R,d,q>& weightGridList )
 {
@@ -66,7 +66,7 @@ InitializeWeights
     int rank;
     MPI_Comm_rank( comm, &rank );
 
-    const size_t bootstrapSkip = plan.GetBootstrapSkip();
+    const size_t bootstrap = plan.GetBootstrapSkip();
     MPI_Comm bootstrapComm = plan.GetBootstrapClusterComm();
     int numMergingProcesses;
     MPI_Comm_size( bootstrapComm, &numMergingProcesses );
@@ -76,12 +76,12 @@ InitializeWeights
         // Compute the source box widths
         array<R,d> wB;
         for( size_t j=0; j<d; ++j )
-            wB[j] = sourceBox.widths[j] / (N>>bootstrapSkip);
+            wB[j] = sBox.widths[j] / (N>>bootstrap);
 
         // Compute the target box widths
         array<R,d> wA;
         for( size_t j=0; j<d; ++j )
-            wA[j] = targetBox.widths[j] / (1u<<bootstrapSkip);
+            wA[j] = tBox.widths[j] / (1u<<bootstrap);
 
         // Compute the unscaled weights for each local box by looping over 
         // our sources and sorting them into the appropriate local box one 
@@ -90,7 +90,7 @@ InitializeWeights
         vector<R> phiResults, sinResults, cosResults;
         const size_t numSources = mySources.size();
         vector<array<R,d>> pPoints( numSources ), pRefPoints( numSources );
-        vector<size_t> flattenedSourceBoxIndices( numSources );
+        vector<size_t> flattenedSBoxIndices( numSources );
         for( size_t s=0; s<numSources; ++s )
         {
             const array<R,d>& p = mySources[s].p;
@@ -100,8 +100,8 @@ InitializeWeights
             array<size_t,d> B;
             for( size_t j=0; j<d; ++j )
             {
-                R leftBound = mySourceBox.offsets[j];
-                R rightBound = leftBound + mySourceBox.widths[j];
+                R leftBound = mySBox.offsets[j];
+                R rightBound = leftBound + mySBox.widths[j];
                 if( p[j] < leftBound || p[j] >= rightBound )
                 {
                     std::ostringstream msg;
@@ -115,8 +115,7 @@ InitializeWeights
 
                 // We must be in the box, so bitwise determine the coord. index
                 B[j] = 0;
-                for( size_t k=log2LocalSourceBoxesPerDim[j];
-                     k>0; --k )
+                for( size_t k=log2LocalSBoxesPerDim[j]; k>0; --k )
                 {
                     const R middle = (rightBound+leftBound)/2.;
                     if( p[j] < middle )
@@ -135,7 +134,7 @@ InitializeWeights
             // Translate the local integer coordinates into the source center.
             array<R,d> p0;
             for( size_t j=0; j<d; ++j )
-                p0[j] = mySourceBox.offsets[j] + (B[j]+0.5)*wB[j];
+                p0[j] = mySBox.offsets[j] + (B[j]+0.5)*wB[j];
 
             // In order to add this point's contribution to the unscaled weights
             // of B we will evaluate the Lagrangian polynomial on the reference 
@@ -144,8 +143,8 @@ InitializeWeights
                 pRefPoints[s][j] = (p[j]-p0[j])/wB[j];
     
             // Flatten the integer coordinates of B
-            flattenedSourceBoxIndices[s] = 
-                FlattenConstrainedHTreeIndex( B, log2LocalSourceBoxesPerDim );
+            flattenedSBoxIndices[s] = 
+                FlattenConstrainedHTreeIndex( B, log2LocalSBoxesPerDim );
         }
 
         // Set all of the weights to zero
@@ -174,16 +173,15 @@ InitializeWeights
 #endif // TIMING
 
             HTreeWalker<d> AWalker;
-            for( size_t targetIndex=0;
-                 targetIndex<(1u<<(d*bootstrapSkip));
-                 ++targetIndex, AWalker.Walk() )
+            for( size_t tIndex=0;
+                 tIndex<(1u<<(d*bootstrap)); ++tIndex, AWalker.Walk() )
             {
                 const array<size_t,d> A = AWalker.State();
 
                 // Compute the center of the target box
                 array<R,d> x0A;
                 for( size_t j=0; j<d; ++j )
-                    x0A[j] = targetBox.offsets[j] + (A[j]+0.5)*wA[j];
+                    x0A[j] = tBox.offsets[j] + (A[j]+0.5)*wA[j];
 
                 const vector<array<R,d>> xPoint( 1, x0A );
 
@@ -220,14 +218,12 @@ InitializeWeights
                     const R* RESTRICT lagrangeBuffer = &lagrangeResults[0];
                     for( size_t s=0; s<numSources; ++s )
                     {
-                        const size_t sourceIndex = 
-                            flattenedSourceBoxIndices[s];
-                        const size_t interactionIndex = 
-                            sourceIndex + 
-                            (targetIndex<<log2LocalSourceBoxes);
-                        weightGridList[interactionIndex].RealWeight(t) += 
+                        const size_t sIndex = flattenedSBoxIndices[s];
+                        const size_t iIndex = 
+                            sIndex + (tIndex<<log2LocalSBoxes);
+                        weightGridList[iIndex].RealWeight(t) += 
                             realBetaBuffer[s]*lagrangeBuffer[s];
-                        weightGridList[interactionIndex].ImagWeight(t) +=
+                        weightGridList[iIndex].ImagWeight(t) +=
                             imagBetaBuffer[s]*lagrangeBuffer[s];
                     }
 #ifdef TIMING
@@ -241,16 +237,15 @@ InitializeWeights
 #endif // TIMING
 
         HTreeWalker<d> AWalker;
-        for( size_t targetIndex=0;
-             targetIndex<(1u<<(d*bootstrapSkip));
-             ++targetIndex, AWalker.Walk() )
+        for( size_t tIndex=0;
+             tIndex<(1u<<(d*bootstrap)); ++tIndex, AWalker.Walk() )
         {
             const array<size_t,d> A = AWalker.State();
 
             // Compute the center of the target box
             array<R,d> x0A;
             for( size_t j=0; j<d; ++j )
-                x0A[j] = targetBox.offsets[j] + (A[j]+0.5)*wA[j];
+                x0A[j] = tBox.offsets[j] + (A[j]+0.5)*wA[j];
 
             const vector<array<R,d>> xPoint( 1, x0A );
 
@@ -259,23 +254,19 @@ InitializeWeights
             vector<array<R,d>> chebyshevPoints( q_to_d );
             const vector<array<R,d>>& chebyshevGrid = 
                 context.GetChebyshevGrid();
-            ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
-            for( size_t sourceIndex=0; 
-                 sourceIndex<(1u<<log2LocalSourceBoxes); 
-                 ++sourceIndex, BWalker.Walk() ) 
+            ConstrainedHTreeWalker<d> BWalker( log2LocalSBoxesPerDim );
+            for( size_t sIndex=0; 
+                 sIndex<(1u<<log2LocalSBoxes); ++sIndex, BWalker.Walk() ) 
             {
                 const array<size_t,d> B = BWalker.State();
 
                 // Translate the local coordinates into the source center 
                 array<R,d> p0;
                 for( size_t j=0; j<d; ++j )
-                    p0[j] = mySourceBox.offsets[j] + (B[j]+0.5)*wB[j];
+                    p0[j] = mySBox.offsets[j] + (B[j]+0.5)*wB[j];
 
-                const size_t interactionIndex = 
-                    sourceIndex + (targetIndex<<log2LocalSourceBoxes);
-
-                WeightGrid<R,d,q>& weightGrid = 
-                    weightGridList[interactionIndex];
+                const size_t iIndex = sIndex + (tIndex<<log2LocalSBoxes);
+                WeightGrid<R,d,q>& weightGrid = weightGridList[iIndex];
     
                 // Compute the prefactors given this p0 and multiply it by 
                 // the corresponding weights

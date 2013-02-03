@@ -43,21 +43,21 @@ protected:
     int _numProcesses;
     size_t _log2NumProcesses;
     size_t _log2N;
-    array<size_t,d> _myInitialSourceBoxCoords;
-    array<size_t,d> _myFinalTargetBoxCoords;
-    array<size_t,d> _log2InitialSourceBoxesPerDim;
-    array<size_t,d> _log2FinalTargetBoxesPerDim;
+    array<size_t,d> _myInitialSBoxCoords;
+    array<size_t,d> _myFinalTBoxCoords;
+    array<size_t,d> _log2InitialSBoxesPerDim;
+    array<size_t,d> _log2FinalTBoxesPerDim;
 
     // Depends on the problem size
     const size_t _bootstrapSkip;
     MPI_Comm _bootstrapClusterComm;
-    vector<size_t> _bootstrapSourceDimsToMerge;
-    vector<size_t> _bootstrapTargetDimsToCut;
+    vector<size_t> _bootstrapSDimsToMerge;
+    vector<size_t> _bootstrapTDimsToCut;
     vector<bool> _bootstrapRightSideOfCut;
     vector<MPI_Comm> _clusterComms;
     vector<size_t> _log2SubclusterSizes;
-    vector<vector<size_t>> _sourceDimsToMerge;
-    vector<vector<size_t>> _targetDimsToCut;
+    vector<vector<size_t>> _sDimsToMerge;
+    vector<vector<size_t>> _tDimsToCut;
     vector<vector<bool>> _rightSideOfCut;
 
     PlanBase
@@ -78,10 +78,10 @@ public:
     size_t GetBootstrapSkip() const;
 
     template<typename R>
-    Box<R,d> GetMyInitialSourceBox( const Box<R,d>& sourceBox ) const;
+    Box<R,d> GetMyInitialSourceBox( const Box<R,d>& sBox ) const;
 
     template<typename R>
-    Box<R,d> GetMyFinalTargetBox( const Box<R,d>& targetBox ) const;
+    Box<R,d> GetMyFinalTargetBox( const Box<R,d>& tBox ) const;
 
     const array<size_t,d>& GetMyInitialSourceBoxCoords() const;
     const array<size_t,d>& GetMyFinalTargetBoxCoords() const;
@@ -164,8 +164,8 @@ PlanBase<d>::PlanBase
 
     _clusterComms.resize( _log2N );
     _log2SubclusterSizes.resize( _log2N );
-    _sourceDimsToMerge.resize( _log2N );
-    _targetDimsToCut.resize( _log2N );
+    _sDimsToMerge.resize( _log2N );
+    _tDimsToCut.resize( _log2N );
     _rightSideOfCut.resize( _log2N );
 }
 
@@ -199,56 +199,54 @@ PlanBase<d>::GetBootstrapSkip() const
 template<size_t d> 
 template<typename R>
 Box<R,d> 
-PlanBase<d>::GetMyInitialSourceBox( const Box<R,d>& sourceBox ) const
+PlanBase<d>::GetMyInitialSourceBox( const Box<R,d>& sBox ) const
 {
-    Box<R,d> myInitialSourceBox;
+    Box<R,d> myInitialSBox;
     for( size_t j=0; j<d; ++j )
     {
-        myInitialSourceBox.widths[j] = 
-            sourceBox.widths[j] / (1u<<_log2InitialSourceBoxesPerDim[j]);
-        myInitialSourceBox.offsets[j] = 
-            sourceBox.offsets[j] + 
-            _myInitialSourceBoxCoords[j]*myInitialSourceBox.widths[j];
+        myInitialSBox.widths[j] = 
+            sBox.widths[j] / (1u<<_log2InitialSBoxesPerDim[j]);
+        myInitialSBox.offsets[j] = 
+            sBox.offsets[j] + _myInitialSBoxCoords[j]*myInitialSBox.widths[j];
     }
-    return myInitialSourceBox;
+    return myInitialSBox;
 }
 
 template<size_t d> 
 template<typename R>
 Box<R,d> 
-PlanBase<d>::GetMyFinalTargetBox( const Box<R,d>& targetBox ) const
+PlanBase<d>::GetMyFinalTargetBox( const Box<R,d>& tBox ) const
 {
-    Box<R,d> myFinalTargetBox;
+    Box<R,d> myFinalTBox;
     for( size_t j=0; j<d; ++j )
     {
-        myFinalTargetBox.widths[j] = 
-            targetBox.widths[j] / (1u<<_log2FinalTargetBoxesPerDim[j]);
-        myFinalTargetBox.offsets[j] = 
-            targetBox.offsets[j] + 
-            _myFinalTargetBoxCoords[j]*myFinalTargetBox.widths[j];
+        myFinalTBox.widths[j] = 
+            tBox.widths[j] / (1u<<_log2FinalTBoxesPerDim[j]);
+        myFinalTBox.offsets[j] = 
+            tBox.offsets[j] + _myFinalTBoxCoords[j]*myFinalTBox.widths[j];
     }
-    return myFinalTargetBox;
+    return myFinalTBox;
 }
 
 template<size_t d>
 inline const array<size_t,d>& 
 PlanBase<d>::GetMyInitialSourceBoxCoords() const
-{ return _myInitialSourceBoxCoords; }
+{ return _myInitialSBoxCoords; }
 
 template<size_t d>
 inline const array<size_t,d>& 
 PlanBase<d>::GetMyFinalTargetBoxCoords() const
-{ return _myFinalTargetBoxCoords; }
+{ return _myFinalTBoxCoords; }
 
 template<size_t d>
 inline const array<size_t,d>& 
 PlanBase<d>::GetLog2InitialSourceBoxesPerDim() const
-{ return _log2InitialSourceBoxesPerDim; }
+{ return _log2InitialSBoxesPerDim; }
 
 template<size_t d>
 inline const array<size_t,d>& 
 PlanBase<d>::GetLog2FinalTargetBoxesPerDim() const
-{ return _log2FinalTargetBoxesPerDim; }
+{ return _log2FinalTBoxesPerDim; }
 
 template<size_t d>
 inline MPI_Comm 
@@ -263,12 +261,12 @@ PlanBase<d>::GetBootstrapClusterComm() const
 template<size_t d>
 inline const vector<size_t>&
 PlanBase<d>::GetBootstrapSourceDimsToMerge() const
-{ return _bootstrapSourceDimsToMerge; }
+{ return _bootstrapSDimsToMerge; }
 
 template<size_t d>
 inline const vector<size_t>&
 PlanBase<d>::GetBootstrapTargetDimsToCut() const
-{ return _bootstrapTargetDimsToCut; }
+{ return _bootstrapTDimsToCut; }
 
 template<size_t d>
 inline const vector<bool>& 
@@ -283,17 +281,17 @@ PlanBase<d>::GetLog2SubclusterSize( size_t level ) const
 template<size_t d>
 inline size_t
 PlanBase<d>::GetLog2NumMergingProcesses( size_t level ) const
-{ return _sourceDimsToMerge[level-1].size(); }
+{ return _sDimsToMerge[level-1].size(); }
 
 template<size_t d>
 inline const vector<size_t>&
 PlanBase<d>::GetSourceDimsToMerge( size_t level ) const
-{ return _sourceDimsToMerge[level-1]; }
+{ return _sDimsToMerge[level-1]; }
 
 template<size_t d>
 inline const vector<size_t>& 
 PlanBase<d>::GetTargetDimsToCut( size_t level ) const
-{ return _targetDimsToCut[level-1]; }
+{ return _tDimsToCut[level-1]; }
 
 template<size_t d>
 inline const vector<bool>& 
@@ -316,7 +314,7 @@ template<size_t d>
 inline size_t
 Plan<d>::ForwardLocalToBootstrapClusterSourceIndex( size_t cLocal ) const
 {
-    return (cLocal<<this->_bootstrapSourceDimsToMerge.size()) +
+    return (cLocal<<this->_bootstrapSDimsToMerge.size()) +
            this->_myBootstrapClusterRank;
 }
 
@@ -324,7 +322,7 @@ template<size_t d>
 inline size_t
 Plan<d>::ForwardLocalToClusterSourceIndex( size_t level, size_t cLocal ) const
 {
-    return (cLocal<<this->_sourceDimsToMerge[level-1].size()) +     
+    return (cLocal<<this->_sDimsToMerge[level-1].size()) +     
            this->_myClusterRanks[level-1];
 }
 
@@ -337,28 +335,28 @@ Plan<d>::GenerateForwardPlan()
     _myClusterRanks.resize( this->_log2N );
 
     // Compute the number of source boxes per dimension and our coordinates
-    size_t nextSourceDimToCut = 0;
-    size_t lastSourceDimCut = 0; // initialize to avoid compiler warnings
+    size_t nextSDimToCut = 0;
+    size_t lastSDimCut = 0; // initialize to avoid compiler warnings
     for( size_t j=0; j<d; ++j )
     {
-        this->_myInitialSourceBoxCoords[j] = 0;
-        this->_log2InitialSourceBoxesPerDim[j] = 0;
+        this->_myInitialSBoxCoords[j] = 0;
+        this->_log2InitialSBoxesPerDim[j] = 0;
     }
     for( size_t m=this->_log2NumProcesses; m>0; --m )
     {
 #ifndef RELEASE
         if( this->_rank == 0 )
         {
-            std::cout << "Cutting source dimension " << nextSourceDimToCut
+            std::cout << "Cutting source dimension " << nextSDimToCut
                       << std::endl;
         }
 #endif
-        lastSourceDimCut = nextSourceDimToCut;
-        this->_myInitialSourceBoxCoords[nextSourceDimToCut] <<= 1;
+        lastSDimCut = nextSDimToCut;
+        this->_myInitialSBoxCoords[nextSDimToCut] <<= 1;
         if( rankBits[m-1] )
-            ++this->_myInitialSourceBoxCoords[nextSourceDimToCut];
-        ++this->_log2InitialSourceBoxesPerDim[nextSourceDimToCut];
-        nextSourceDimToCut = (nextSourceDimToCut+1) % d;
+            ++this->_myInitialSBoxCoords[nextSDimToCut];
+        ++this->_log2InitialSBoxesPerDim[nextSDimToCut];
+        nextSDimToCut = (nextSDimToCut+1) % d;
     }
 #ifndef RELEASE
     for( int p=0; p<this->_numProcesses; ++p )
@@ -367,7 +365,7 @@ Plan<d>::GenerateForwardPlan()
         {
             std::cout << "Rank " << p << "'s initial source box coords: ";
             for( size_t j=0; j<d; ++j )
-                std::cout << this->_myInitialSourceBoxCoords[j] << " ";
+                std::cout << this->_myInitialSBoxCoords[j] << " ";
             std::cout << std::endl;
         }
         MPI_Barrier( this->_comm );
@@ -376,19 +374,18 @@ Plan<d>::GenerateForwardPlan()
 #endif
 
     // Generate subcommunicator vector by walking through the forward process
-    size_t numTargetCuts = 0;
-    size_t nextTargetDimToCut = d-1;
-    size_t nextSourceDimToMerge = lastSourceDimCut;
-    size_t log2LocalSourceBoxes = 0;
+    size_t numTCuts = 0;
+    size_t nextTDimToCut = d-1;
+    size_t nextSDimToMerge = lastSDimCut;
+    size_t log2LocalSBoxes = 0;
     for( size_t j=0; j<d; ++j )
     {
-        log2LocalSourceBoxes += 
-            this->_log2N-this->_log2InitialSourceBoxesPerDim[j];
-        this->_myFinalTargetBoxCoords[j] = 0;
-        this->_log2FinalTargetBoxesPerDim[j] = 0;
+        log2LocalSBoxes += this->_log2N-this->_log2InitialSBoxesPerDim[j];
+        this->_myFinalTBoxCoords[j] = 0;
+        this->_log2FinalTBoxesPerDim[j] = 0;
     }
     // Generate the bootstrap communicator
-    if( log2LocalSourceBoxes >= d*this->_bootstrapSkip )
+    if( log2LocalSBoxes >= d*this->_bootstrapSkip )
     {
         this->_myBootstrapClusterRank = 0; 
 
@@ -403,7 +400,7 @@ Plan<d>::GenerateForwardPlan()
     else
     {
         const size_t log2NumMergingProcesses = 
-            this->_bootstrapSkip*d - log2LocalSourceBoxes;
+            this->_bootstrapSkip*d - log2LocalSBoxes;
         const size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
 
 #ifndef RELEASE
@@ -411,8 +408,8 @@ Plan<d>::GenerateForwardPlan()
         {
             std::cout << "Merging " << log2NumMergingProcesses
                       << " dimension(s) during bootstrapping, starting with "
-                      << nextSourceDimToMerge << " (cutting starting with "
-                      << nextTargetDimToCut << ")" << std::endl;
+                      << nextSDimToMerge << " (cutting starting with "
+                      << nextTDimToCut << ")" << std::endl;
         }
 #endif
 
@@ -451,22 +448,19 @@ Plan<d>::GenerateForwardPlan()
         ( this->_comm, ranks[0], this->_myBootstrapClusterRank, 
           &this->_bootstrapClusterComm );
 
-        this->_bootstrapSourceDimsToMerge.resize( log2NumMergingProcesses );
-        this->_bootstrapTargetDimsToCut.resize( log2NumMergingProcesses );
+        this->_bootstrapSDimsToMerge.resize( log2NumMergingProcesses );
+        this->_bootstrapTDimsToCut.resize( log2NumMergingProcesses );
         this->_bootstrapRightSideOfCut.resize( log2NumMergingProcesses );
-        size_t nextBootstrapSourceDimToMerge = nextSourceDimToMerge;
-        size_t nextBootstrapTargetDimToCut = nextTargetDimToCut;
+        size_t nextBootstrapSDimToMerge = nextSDimToMerge;
+        size_t nextBootstrapTDimToCut = nextTDimToCut;
         for( size_t j=0; j<log2NumMergingProcesses; ++j )
         {
-            this->_bootstrapSourceDimsToMerge[j] = 
-                nextBootstrapSourceDimToMerge;
-            this->_bootstrapTargetDimsToCut[j] = 
-                nextBootstrapTargetDimToCut;
+            this->_bootstrapSDimsToMerge[j] = nextBootstrapSDimToMerge;
+            this->_bootstrapTDimsToCut[j] = nextBootstrapTDimToCut;
             this->_bootstrapRightSideOfCut[j] = rankBits[j];
 
-            nextBootstrapTargetDimToCut = (nextBootstrapTargetDimToCut+d-1) % d;
-            nextBootstrapSourceDimToMerge = 
-                (nextBootstrapSourceDimToMerge+d-1) % d;
+            nextBootstrapTDimToCut = (nextBootstrapTDimToCut+d-1) % d;
+            nextBootstrapSDimToMerge = (nextBootstrapSDimToMerge+d-1) % d;
         }
 #ifndef RELEASE
         for( int p=0; p<this->_numProcesses; ++p )
@@ -492,9 +486,9 @@ Plan<d>::GenerateForwardPlan()
     // Generate the single-level communicators
     for( size_t level=1; level<=this->_log2N; ++level )
     {
-        if( log2LocalSourceBoxes >= d )
+        if( log2LocalSBoxes >= d )
         {
-            log2LocalSourceBoxes -= d;
+            log2LocalSBoxes -= d;
 
             this->_myClusterRanks[level-1] = 0;
             
@@ -506,29 +500,29 @@ Plan<d>::GenerateForwardPlan()
             if( this->_rank == 0 )
             {
                 std::cout << "No communication at level " << level
-                          << ", there are now 2^" << log2LocalSourceBoxes
+                          << ", there are now 2^" << log2LocalSBoxes
                           << " local source boxes." << std::endl;
             }
 #endif
         }
         else
         {
-            const size_t log2NumMergingProcesses = d-log2LocalSourceBoxes;
+            const size_t log2NumMergingProcesses = d-log2LocalSBoxes;
             const size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
-            log2LocalSourceBoxes = 0;
+            log2LocalSBoxes = 0;
 
 #ifndef RELEASE
             if( this->_rank == 0 )
             {
                 std::cout << "Merging " << log2NumMergingProcesses
                           << " dimension(s), starting with "
-                          << nextSourceDimToMerge << " (cutting starting with "
-                          << nextTargetDimToCut << ")" << std::endl;
+                          << nextSDimToMerge << " (cutting starting with "
+                          << nextTDimToCut << ")" << std::endl;
             }
 #endif
 
             // Construct the communicator for our current cluster
-            const size_t log2Stride = numTargetCuts;
+            const size_t log2Stride = numTCuts;
             const int startRank = 
                 this->_rank & ~((numMergingProcesses-1)<<log2Stride);
             vector<int> ranks( numMergingProcesses );
@@ -574,25 +568,25 @@ Plan<d>::GenerateForwardPlan()
 
             this->_log2SubclusterSizes[level-1] = 0;
 
-            this->_sourceDimsToMerge[level-1].resize( log2NumMergingProcesses );
-            this->_targetDimsToCut[level-1].resize( log2NumMergingProcesses );
+            this->_sDimsToMerge[level-1].resize( log2NumMergingProcesses );
+            this->_tDimsToCut[level-1].resize( log2NumMergingProcesses );
             this->_rightSideOfCut[level-1].resize( log2NumMergingProcesses );
             for( size_t j=0; j<log2NumMergingProcesses; ++j )
             {
-                const size_t thisBit = numTargetCuts;
+                const size_t thisBit = numTCuts;
 
-                this->_sourceDimsToMerge[level-1][j] = nextSourceDimToMerge;
-                this->_targetDimsToCut[level-1][j] = nextTargetDimToCut;
+                this->_sDimsToMerge[level-1][j] = nextSDimToMerge;
+                this->_tDimsToCut[level-1][j] = nextTDimToCut;
                 this->_rightSideOfCut[level-1][j] = rankBits[thisBit];
 
-                this->_myFinalTargetBoxCoords[nextTargetDimToCut] <<= 1;
+                this->_myFinalTBoxCoords[nextTDimToCut] <<= 1;
                 if( rankBits[thisBit] )
-                    ++this->_myFinalTargetBoxCoords[nextTargetDimToCut];
-                ++this->_log2FinalTargetBoxesPerDim[nextTargetDimToCut];
+                    ++this->_myFinalTBoxCoords[nextTDimToCut];
+                ++this->_log2FinalTBoxesPerDim[nextTDimToCut];
 
-                ++numTargetCuts;
-                nextTargetDimToCut = (nextTargetDimToCut+d-1) % d;
-                nextSourceDimToMerge = (nextSourceDimToMerge+d-1) % d;
+                ++numTCuts;
+                nextTDimToCut = (nextTDimToCut+d-1) % d;
+                nextSDimToMerge = (nextSDimToMerge+d-1) % d;
             }
 #ifndef RELEASE
             for( int p=0; p<this->_numProcesses; ++p )
@@ -622,7 +616,7 @@ inline size_t
 Plan<d>::AdjointLocalToBootstrapClusterSourceIndex( size_t cLocal ) const
 {
     return (this->_myBootstrapMappedRank<<
-            (this->_bootstrapSkip*d-this->_bootstrapSourceDimsToMerge.size()))
+            (this->_bootstrapSkip*d-this->_bootstrapSDimsToMerge.size()))
            + cLocal;
 }
 
@@ -631,7 +625,7 @@ inline size_t
 Plan<d>::AdjointLocalToClusterSourceIndex( size_t level, size_t cLocal ) const
 {
     return (this->_myMappedRanks[level-1]<<
-            (d-this->_sourceDimsToMerge[level-1].size())) + cLocal;
+            (d-this->_sDimsToMerge[level-1].size())) + cLocal;
 }
 
 template<size_t d>
@@ -642,28 +636,28 @@ Plan<d>::GenerateAdjointPlan()
     _myMappedRanks.resize( this->_log2N );
 
     // Compute the number of source boxes per dimension and our coordinates
-    size_t nextSourceDimToCut = d-1;
-    size_t lastSourceDimCut = 0; // initialize to avoid compiler warnings
+    size_t nextSDimToCut = d-1;
+    size_t lastSDimCut = 0; // initialize to avoid compiler warnings
     for( size_t j=0; j<d; ++j )
     {
-        this->_myInitialSourceBoxCoords[j] = 0;
-        this->_log2InitialSourceBoxesPerDim[j] = 0;
+        this->_myInitialSBoxCoords[j] = 0;
+        this->_log2InitialSBoxesPerDim[j] = 0;
     }
     for( size_t m=0; m<this->_log2NumProcesses; ++m )
     {
 #ifndef RELEASE
         if( this->_rank == 0 )
         {
-            std::cout << "Cutting source dimension " << nextSourceDimToCut
+            std::cout << "Cutting source dimension " << nextSDimToCut
                       << std::endl;
         }
 #endif
-        lastSourceDimCut = nextSourceDimToCut;
-        this->_myInitialSourceBoxCoords[nextSourceDimToCut] <<= 1;
+        lastSDimCut = nextSDimToCut;
+        this->_myInitialSBoxCoords[nextSDimToCut] <<= 1;
         if( rankBits[m] )
-            ++this->_myInitialSourceBoxCoords[nextSourceDimToCut];
-        ++this->_log2InitialSourceBoxesPerDim[nextSourceDimToCut];
-        nextSourceDimToCut = (nextSourceDimToCut+d-1) % d;
+            ++this->_myInitialSBoxCoords[nextSDimToCut];
+        ++this->_log2InitialSBoxesPerDim[nextSDimToCut];
+        nextSDimToCut = (nextSDimToCut+d-1) % d;
     }
 #ifndef RELEASE
     for( int p=0; p<this->_numProcesses; ++p )
@@ -672,7 +666,7 @@ Plan<d>::GenerateAdjointPlan()
         {
             std::cout << "Rank " << p << "'s initial source box coords: ";
             for( size_t j=0; j<d; ++j )
-                std::cout << this->_myInitialSourceBoxCoords[j] << " ";
+                std::cout << this->_myInitialSBoxCoords[j] << " ";
             std::cout << std::endl;
         }
         MPI_Barrier( this->_comm );
@@ -684,19 +678,18 @@ Plan<d>::GenerateAdjointPlan()
     //
     // The following choice ensures that the first communication partitions 
     // dimensions of the form 0 -> c, and the rest are of the form 0 -> d-1.
-    size_t numTargetCuts = 0;
-    size_t nextTargetDimToCut = 0;
-    size_t nextSourceDimToMerge = lastSourceDimCut;
-    size_t log2LocalSourceBoxes = 0;
+    size_t numTCuts = 0;
+    size_t nextTDimToCut = 0;
+    size_t nextSDimToMerge = lastSDimCut;
+    size_t log2LocalSBoxes = 0;
     for( size_t j=0; j<d; ++j )
     {
-        log2LocalSourceBoxes +=
-            this->_log2N-this->_log2InitialSourceBoxesPerDim[j];
-        this->_myFinalTargetBoxCoords[j] = 0;
-        this->_log2FinalTargetBoxesPerDim[j] = 0;
+        log2LocalSBoxes += this->_log2N-this->_log2InitialSBoxesPerDim[j];
+        this->_myFinalTBoxCoords[j] = 0;
+        this->_log2FinalTBoxesPerDim[j] = 0;
     }
     // Generate the bootstrap communicator
-    if( log2LocalSourceBoxes >= d*this->_bootstrapSkip )
+    if( log2LocalSBoxes >= d*this->_bootstrapSkip )
     {
         this->_myBootstrapMappedRank = 0;
 
@@ -711,7 +704,7 @@ Plan<d>::GenerateAdjointPlan()
     else
     {
         const size_t log2NumMergingProcesses =
-            this->_bootstrapSkip*d - log2LocalSourceBoxes;
+            this->_bootstrapSkip*d - log2LocalSBoxes;
         const size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
 
 #ifndef RELEASE
@@ -719,8 +712,8 @@ Plan<d>::GenerateAdjointPlan()
         {
             std::cout << "Merging " << log2NumMergingProcesses
                       << " dimension(s) during bootstrapping, starting with "
-                      << nextSourceDimToMerge << " (cutting starting with "
-                      << nextTargetDimToCut << ")" << std::endl;
+                      << nextSDimToMerge << " (cutting starting with "
+                      << nextTDimToCut << ")" << std::endl;
         }
 #endif
 
@@ -763,24 +756,21 @@ Plan<d>::GenerateAdjointPlan()
         ( this->_comm, ranks[0], this->_myBootstrapMappedRank, 
           &this->_bootstrapClusterComm );
 
-        this->_bootstrapSourceDimsToMerge.resize( log2NumMergingProcesses );
-        this->_bootstrapTargetDimsToCut.resize( log2NumMergingProcesses );
+        this->_bootstrapSDimsToMerge.resize( log2NumMergingProcesses );
+        this->_bootstrapTDimsToCut.resize( log2NumMergingProcesses );
         this->_bootstrapRightSideOfCut.resize( log2NumMergingProcesses );
-        size_t nextBootstrapSourceDimToMerge = nextSourceDimToMerge;
-        size_t nextBootstrapTargetDimToCut = nextTargetDimToCut;
+        size_t nextBootstrapSDimToMerge = nextSDimToMerge;
+        size_t nextBootstrapTDimToCut = nextTDimToCut;
         for( size_t j=0; j<log2NumMergingProcesses; ++j )
         {
             const size_t thisBit = (this->_log2NumProcesses-1)-j;
 
-            this->_bootstrapSourceDimsToMerge[j] =
-                nextBootstrapSourceDimToMerge;
-            this->_bootstrapTargetDimsToCut[j] =
-                nextBootstrapTargetDimToCut;
+            this->_bootstrapSDimsToMerge[j] = nextBootstrapSDimToMerge;
+            this->_bootstrapTDimsToCut[j] = nextBootstrapTDimToCut;
             this->_bootstrapRightSideOfCut[j] = rankBits[thisBit];
 
-            nextBootstrapTargetDimToCut = (nextBootstrapTargetDimToCut+1) % d;
-            nextBootstrapSourceDimToMerge =
-                (nextBootstrapSourceDimToMerge+1) % d;
+            nextBootstrapTDimToCut = (nextBootstrapTDimToCut+1) % d;
+            nextBootstrapSDimToMerge = (nextBootstrapSDimToMerge+1) % d;
         }
 #ifndef RELEASE
         for( int p=0; p<this->_numProcesses; ++p )
@@ -806,10 +796,10 @@ Plan<d>::GenerateAdjointPlan()
     // Generate the single-level communicators
     for( size_t level=1; level<=this->_log2N; ++level )
     {
-        if( log2LocalSourceBoxes >= d )
+        if( log2LocalSBoxes >= d )
         {
 
-            log2LocalSourceBoxes -= d;
+            log2LocalSBoxes -= d;
 
             this->_myMappedRanks[level-1] = 0;
 
@@ -822,40 +812,40 @@ Plan<d>::GenerateAdjointPlan()
             if( this->_rank == 0 )
             {
                 std::cout << "No communication at level " << level 
-                          << ", there are now 2^" << log2LocalSourceBoxes
+                          << ", there are now 2^" << log2LocalSBoxes
                           << " local source boxes." << std::endl;
             }
 #endif
         }
         else
         {
-            const size_t log2NumMergingProcesses = d-log2LocalSourceBoxes;
+            const size_t log2NumMergingProcesses = d-log2LocalSBoxes;
             const size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
-            log2LocalSourceBoxes = 0;
+            log2LocalSBoxes = 0;
 
 #ifndef RELEASE
             if( this->_rank == 0 )
             {
                 std::cout << "Merging " << log2NumMergingProcesses 
                           << " dimension(s), starting with " 
-                          << nextSourceDimToMerge << " (cutting starting with "
-                          << nextTargetDimToCut << ")" << std::endl;
+                          << nextSDimToMerge << " (cutting starting with "
+                          << nextTDimToCut << ")" << std::endl;
             }
 #endif
 
             // Construct the communicator for our current cluster
             const size_t log2Stride = 
-                this->_log2NumProcesses-numTargetCuts-log2NumMergingProcesses;
+                this->_log2NumProcesses-numTCuts-log2NumMergingProcesses;
             const int startRank = 
                 this->_rank & ~((numMergingProcesses-1)<<log2Stride);
             vector<int> ranks( numMergingProcesses ); 
             {
                 // The bits of j must be shuffled according to the ordering 
                 // on the partition dimensions:
-                //  - The last d-nextTargetDimToCut bits are reversed and last
+                //  - The last d-nextTDimToCut bits are reversed and last
                 //  - The remaining bits are reversed but occur first
                 const size_t lastBitsetSize = 
-                    std::min(d-nextTargetDimToCut,log2NumMergingProcesses);
+                    std::min(d-nextTDimToCut,log2NumMergingProcesses);
                 const size_t firstBitsetSize = 
                     log2NumMergingProcesses-lastBitsetSize;
                 for( size_t j=0; j<numMergingProcesses; ++j )
@@ -892,7 +882,7 @@ Plan<d>::GenerateAdjointPlan()
 
             {
                 const size_t lastBitsetSize = 
-                    std::min(d-nextSourceDimToMerge,log2NumMergingProcesses);
+                    std::min(d-nextSDimToMerge,log2NumMergingProcesses);
                 const size_t firstBitsetSize = 
                     log2NumMergingProcesses-lastBitsetSize;
                 // Apply the same transformation to our shifted rank
@@ -929,26 +919,26 @@ Plan<d>::GenerateAdjointPlan()
             this->_log2SubclusterSizes[level-1] = 
                 this->_log2NumProcesses % d;
 
-            this->_sourceDimsToMerge[level-1].resize( log2NumMergingProcesses );
-            this->_targetDimsToCut[level-1].resize( log2NumMergingProcesses );
+            this->_sDimsToMerge[level-1].resize( log2NumMergingProcesses );
+            this->_tDimsToCut[level-1].resize( log2NumMergingProcesses );
             this->_rightSideOfCut[level-1].resize( log2NumMergingProcesses );
             for( size_t j=0; j<log2NumMergingProcesses; ++j )
             {
                 const size_t thisBit = 
-                    (this->_log2NumProcesses-1) - numTargetCuts;
+                    (this->_log2NumProcesses-1) - numTCuts;
 
-                this->_sourceDimsToMerge[level-1][j] =  nextSourceDimToMerge;
-                this->_targetDimsToCut[level-1][j] = nextTargetDimToCut;
+                this->_sDimsToMerge[level-1][j] =  nextSDimToMerge;
+                this->_tDimsToCut[level-1][j] = nextTDimToCut;
                 this->_rightSideOfCut[level-1][j] =  rankBits[thisBit];
 
-                this->_myFinalTargetBoxCoords[nextTargetDimToCut] <<= 1;
+                this->_myFinalTBoxCoords[nextTDimToCut] <<= 1;
                 if( rankBits[thisBit] )
-                    ++this->_myFinalTargetBoxCoords[nextTargetDimToCut];
-                ++this->_log2FinalTargetBoxesPerDim[nextTargetDimToCut];
+                    ++this->_myFinalTBoxCoords[nextTDimToCut];
+                ++this->_log2FinalTBoxesPerDim[nextTDimToCut];
 
-                ++numTargetCuts;
-                nextTargetDimToCut = (nextTargetDimToCut+1) % d;
-                nextSourceDimToMerge = (nextSourceDimToMerge+1) % d;
+                ++numTCuts;
+                nextTDimToCut = (nextTDimToCut+1) % d;
+                nextSDimToMerge = (nextSDimToMerge+1) % d;
             }
             
 #ifndef RELEASE

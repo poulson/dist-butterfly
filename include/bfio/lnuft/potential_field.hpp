@@ -36,10 +36,10 @@ class PotentialField
 public:
     PotentialField
     ( const Context<R,d,q>& context,
-      const Box<R,d>& sourceBox,
-      const Box<R,d>& myTargetBox,
-      const array<size_t,d>& myTargetBoxCoords,
-      const array<size_t,d>& log2TargetSubboxesPerDim,
+      const Box<R,d>& sBox,
+      const Box<R,d>& myTBox,
+      const array<size_t,d>& myTBoxCoords,
+      const array<size_t,d>& log2TSubboxesPerDim,
       const WeightGridList<R,d,q>& weightGridList );
 
     // This is the point of the potential field
@@ -60,13 +60,13 @@ template<typename R,size_t d,size_t q>
 void PrintErrorEstimates
 ( MPI_Comm comm,
   const PotentialField<R,d,q>& u,
-  const vector<Source<R,d>>& globalSources );
+  const vector<Source<R,d>>& sources );
 
 template<typename R,size_t d,size_t q>
 void WriteImage
 ( MPI_Comm comm, 
   const size_t N,
-  const Box<R,d>& targetBox,
+  const Box<R,d>& tBox,
   const PotentialField<R,d,q>& u,
   const string& basename );
 
@@ -74,20 +74,20 @@ template<typename R,size_t d,size_t q>
 void WriteImage
 ( MPI_Comm comm, 
   const size_t N,
-  const Box<R,d>& targetBox,
+  const Box<R,d>& tBox,
   const PotentialField<R,d,q>& u,
   const string& basename,
-  const vector<Source<R,d>>& globalSources );
+  const vector<Source<R,d>>& sources );
 
 // Implementations
 
 template<typename R,size_t d,size_t q>
 PotentialField<R,d,q>::PotentialField
 ( const Context<R,d,q>& nuftContext,
-  const Box<R,d>& sourceBox,
-  const Box<R,d>& targetBox,
-  const array<size_t,d>& myTargetBoxCoords,
-  const array<size_t,d>& log2TargetSubboxesPerDim,
+  const Box<R,d>& sBox,
+  const Box<R,d>& tBox,
+  const array<size_t,d>& myTBoxCoords,
+  const array<size_t,d>& log2TSubboxesPerDim,
   const WeightGridList<R,d,q>& weightGridList )
 : _nuftContext(nuftContext), 
   _rfioPotential
@@ -96,10 +96,10 @@ PotentialField<R,d,q>::PotentialField
     ( nuftContext.GetDirection()==FORWARD ? 
       (const FTPhase<R,d>&)ForwardFTPhase<R,d>() : 
       (const FTPhase<R,d>&)AdjointFTPhase<R,d>() ),
-    sourceBox,
-    targetBox,
-    myTargetBoxCoords,
-    log2TargetSubboxesPerDim,
+    sBox,
+    tBox,
+    myTBoxCoords,
+    log2TSubboxesPerDim,
     weightGridList )
 { }
 
@@ -158,10 +158,9 @@ inline void
 PrintErrorEstimates
 ( MPI_Comm comm,
   const PotentialField<R,d,q>& u,
-  const vector<Source<R,d>>& globalSources )
+  const vector<Source<R,d>>& sources )
 {
-    rfio::PrintErrorEstimates    
-    ( comm, u.GetRFIOPotentialField(), globalSources );
+    rfio::PrintErrorEstimates( comm, u.GetRFIOPotentialField(), sources );
 }
 
 template<typename R,size_t d,size_t q>
@@ -169,12 +168,11 @@ inline void
 WriteImage
 ( MPI_Comm comm, 
   const size_t N,
-  const Box<R,d>& targetBox,
+  const Box<R,d>& tBox,
   const PotentialField<R,d,q>& u,
   const string& basename )
 {
-    rfio::WriteImage
-    ( comm, N, targetBox, u.GetRFIOPotentialField(), basename );
+    rfio::WriteImage( comm, N, tBox, u.GetRFIOPotentialField(), basename );
 }
 
 template<typename R,size_t d,size_t q>
@@ -182,13 +180,13 @@ inline void
 WriteImage
 ( MPI_Comm comm, 
   const size_t N,
-  const Box<R,d>& targetBox,
+  const Box<R,d>& tBox,
   const PotentialField<R,d,q>& u,
   const string& basename,
-  const vector<Source<R,d>>& globalSources )
+  const vector<Source<R,d>>& sources )
 {
     rfio::WriteImage
-    ( comm, N, targetBox, u.GetRFIOPotentialField(), basename, globalSources );
+    ( comm, N, tBox, u.GetRFIOPotentialField(), basename, sources );
 }
 
 } // lnuft

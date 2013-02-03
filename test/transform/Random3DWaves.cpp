@@ -269,18 +269,18 @@ main( int argc, char* argv[] )
     try 
     {
         // Define the source and target boxes
-        Box<double,d> sourceBox, targetBox; 
+        Box<double,d> sBox, tBox; 
         for( size_t j=0; j<d; ++j )
         {
-            sourceBox.offsets[j] = -0.5*N;
-            sourceBox.widths[j] = N;
-            targetBox.offsets[j] = 0;
-            targetBox.widths[j] = 1;
+            sBox.offsets[j] = -0.5*N;
+            sBox.widths[j] = N;
+            tBox.offsets[j] = 0;
+            tBox.widths[j] = 1;
         }
 
         // Set up the general strategy for the forward transform
         Plan<d> plan( comm, FORWARD, N, bootstrapSkip );
-        Box<double,d> mySourceBox = plan.GetMyInitialSourceBox( sourceBox );
+        Box<double,d> mySBox = plan.GetMyInitialSourceBox( sBox );
 
         if( rank == 0 )
         {
@@ -310,9 +310,8 @@ main( int argc, char* argv[] )
         {
             for( size_t j=0; j<d; ++j )
             {
-                mySources[i].p[j] = 
-                    mySourceBox.offsets[j] +
-                    Uniform<double>()*mySourceBox.widths[j];
+                const double relPos = Uniform<double>();
+                mySources[i].p[j] = mySBox.offsets[j] + mySBox.widths[j]*relPos;
             }
             mySources[i].magnitude = 200*Uniform<double>()-100;
         }
@@ -341,8 +340,7 @@ main( int argc, char* argv[] )
                           << "  Starting upWave transform...";
                 cout.flush();
             }
-            auto u = RFIO
-            ( context, plan, upWave, sourceBox, targetBox, mySources );
+            auto u = RFIO( context, plan, upWave, sBox, tBox, mySources );
             if( rank == 0 )
                 cout << "done" << endl;
 #ifdef TIMING
@@ -355,8 +353,7 @@ main( int argc, char* argv[] )
                 cout << "  Starting downWave transform...";
                 cout.flush();
             }
-            auto v = RFIO
-            ( context, plan, downWave, sourceBox, targetBox, mySources );
+            auto v = RFIO( context, plan, downWave, sBox, tBox, mySources );
             if( rank == 0 )
                 cout << "done" << endl;
 #ifdef TIMING
@@ -367,7 +364,7 @@ main( int argc, char* argv[] )
             // Store this timeslice
             ostringstream fileStream;
             fileStream << "randomWaves-" << i;
-            rfio::WriteImage( comm, N, targetBox, *u, fileStream.str() );
+            rfio::WriteImage( comm, N, tBox, *u, fileStream.str() );
         }
     }
     catch( const exception& e )

@@ -39,14 +39,14 @@ SwitchToTargetInterp
   const Plan<d>& plan,
   const Amplitude<R,d>& amplitude,
   const Phase<R,d>& phase,
-  const Box<R,d>& sourceBox,
-  const Box<R,d>& targetBox,
-  const Box<R,d>& mySourceBox,
-  const Box<R,d>& myTargetBox,
-  const size_t log2LocalSourceBoxes,
-  const size_t log2LocalTargetBoxes,
-  const array<size_t,d>& log2LocalSourceBoxesPerDim,
-  const array<size_t,d>& log2LocalTargetBoxesPerDim,
+  const Box<R,d>& sBox,
+  const Box<R,d>& tBox,
+  const Box<R,d>& mySBox,
+  const Box<R,d>& myTBox,
+  const size_t log2LocalSBoxes,
+  const size_t log2LocalTBoxes,
+  const array<size_t,d>& log2LocalSBoxesPerDim,
+  const array<size_t,d>& log2LocalTBoxesPerDim,
         WeightGridList<R,d,q>& weightGridList )
 {
     typedef complex<R> C;
@@ -59,22 +59,22 @@ SwitchToTargetInterp
     array<R,d> wA, wB;
     for( size_t j=0; j<d; ++j )
     {
-        wA[j] = targetBox.widths[j] / (1<<level);
-        wB[j] = sourceBox.widths[j] / (1<<(log2N-level));
+        wA[j] = tBox.widths[j] / (1<<level);
+        wB[j] = sBox.widths[j] / (1<<(log2N-level));
     }
 
     vector<R> oldRealWeights( q_to_d ), oldImagWeights( q_to_d );
     const bool unitAmplitude = amplitude.IsUnity();
     const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
-    ConstrainedHTreeWalker<d> AWalker( log2LocalTargetBoxesPerDim );
-    for( size_t i=0; i<(1u<<log2LocalTargetBoxes); ++i, AWalker.Walk() )
+    ConstrainedHTreeWalker<d> AWalker( log2LocalTBoxesPerDim );
+    for( size_t i=0; i<(1u<<log2LocalTBoxes); ++i, AWalker.Walk() )
     {
         const array<size_t,d> A = AWalker.State();
 
         // Compute the coordinates and center of this target box
         array<R,d> x0A;
         for( size_t j=0; j<d; ++j )
-            x0A[j] = myTargetBox.offsets[j] + (A[j]+0.5)*wA[j];
+            x0A[j] = myTBox.offsets[j] + (A[j]+0.5)*wA[j];
 
         vector<array<R,d>> xPoints( q_to_d );
         {
@@ -90,15 +90,15 @@ SwitchToTargetInterp
 
         vector<C> ampResults;
         vector<R> phiResults, sinResults, cosResults;
-        ConstrainedHTreeWalker<d> BWalker( log2LocalSourceBoxesPerDim );
-        for( size_t k=0; k<(1u<<log2LocalSourceBoxes); ++k, BWalker.Walk() )
+        ConstrainedHTreeWalker<d> BWalker( log2LocalSBoxesPerDim );
+        for( size_t k=0; k<(1u<<log2LocalSBoxes); ++k, BWalker.Walk() )
         {
             const array<size_t,d> B = BWalker.State();
 
             // Compute the coordinates and center of this source box
             array<R,d> p0B;
             for( size_t j=0; j<d; ++j )
-                p0B[j] = mySourceBox.offsets[j] + (B[j]+0.5)*wB[j];
+                p0B[j] = mySBox.offsets[j] + (B[j]+0.5)*wB[j];
 
             vector<array<R,d>> pPoints( q_to_d );
             {
@@ -114,7 +114,7 @@ SwitchToTargetInterp
 
             phase.BatchEvaluate( xPoints, pPoints, phiResults );
             SinCosBatch( phiResults, sinResults, cosResults );
-            const size_t key = k+(i<<log2LocalSourceBoxes);
+            const size_t key = k+(i<<log2LocalSBoxes);
 
             memcpy
             ( &oldRealWeights[0], weightGridList[key].RealBuffer(), 
