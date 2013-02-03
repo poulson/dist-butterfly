@@ -143,25 +143,25 @@ SwitchToTargetInterp
             // TODO: Replace with Gemv's
             Gemm
             ( 'N', 'N', q, 1, q,
-              (R)1, &realOffsetEvals[0][0], q,
+              R(1), &realOffsetEvals[0][0], q,
                     &realOldWeights[0],     q,
-              (R)0, &realTempWeights[0],    q );
+              R(0), &realTempWeights[0],    q );
             Gemm
             ( 'N', 'N', q, 1, q,
-              (R)-1, &imagOffsetEvals[0][0], q,
+              R(-1), &imagOffsetEvals[0][0], q,
                      &imagOldWeights[0],     q,
-              (R)+1, &realTempWeights[0],    q );
+              R(+1), &realTempWeights[0],    q );
             // Form imaginary part
             Gemm
             ( 'N', 'N', q, 1, q,
-              (R)1, &realOffsetEvals[0][0], q,
+              R(1), &realOffsetEvals[0][0], q,
                     &imagOldWeights[0],     q,
-              (R)0, &imagTempWeights[0],    q );
+              R(0), &imagTempWeights[0],    q );
             Gemm
             ( 'N', 'N', q, 1, q,
-              (R)-1, &imagOffsetEvals[0][0], q,
+              R(-1), &imagOffsetEvals[0][0], q,
                      &realOldWeights[0],     q,
-              (R)+1, &imagTempWeights[0],    q );
+              R(+1), &imagTempWeights[0],    q );
 
             // Post process scaling
             // Apply the exp( +-TwoPi i (x0,p0) ) and exp( +-TwoPi i (dx,p0) ) 
@@ -327,25 +327,25 @@ SwitchToTargetInterp
             // Form real part
             Gemm
             ( 'N', 'N', q, q, q,
-              (R)1, &realOffsetEvals[0][0], q,
+              R(1), &realOffsetEvals[0][0], q,
                     &realOldWeights[0],     q,
-              (R)0, &realTempWeights[0],    q );
+              R(0), &realTempWeights[0],    q );
             Gemm
             ( 'N', 'N', q, q, q,
-              (R)-1, &imagOffsetEvals[0][0], q,
+              R(-1), &imagOffsetEvals[0][0], q,
                      &imagOldWeights[0],     q,
-              (R)+1, &realTempWeights[0],    q );
+              R(+1), &realTempWeights[0],    q );
             // Form imaginary part
             Gemm
             ( 'N', 'N', q, q, q,
-              (R)1, &realOffsetEvals[0][0], q,
+              R(1), &realOffsetEvals[0][0], q,
                     &imagOldWeights[0],     q,
-              (R)0, &imagTempWeights[0],    q );
+              R(0), &imagTempWeights[0],    q );
             Gemm
             ( 'N', 'N', q, q, q,
-              (R)+1, &imagOffsetEvals[0][0], q,
+              R(+1), &imagOffsetEvals[0][0], q,
                      &realOldWeights[0],     q,
-              (R)+1, &imagTempWeights[0],    q );
+              R(+1), &imagTempWeights[0],    q );
 
             // Switch over second dimension
             // Scale
@@ -372,25 +372,25 @@ SwitchToTargetInterp
             // Form the real and imaginary parts
             Gemm
             ( 'N', 'T', q, q, q,
-              (R)+1, &realTempWeights[0], q,
+              R(+1), &realTempWeights[0], q,
                      &realOffsetEvals[1][0], q,
-              (R)+1, weightGridList[key].RealBuffer(), q );
+              R(+1), weightGridList[key].RealBuffer(), q );
             Gemm
             ( 'N', 'T', q, q, q,
-              (R)-1, &imagTempWeights[0], q,
+              R(-1), &imagTempWeights[0], q,
                      &imagOffsetEvals[1][0], q,
-              (R)+1, weightGridList[key].RealBuffer(), q );
+              R(+1), weightGridList[key].RealBuffer(), q );
 
             Gemm
             ( 'N', 'T', q, q, q,
-              (R)+1, &imagTempWeights[0], q,
+              R(+1), &imagTempWeights[0], q,
                      &realOffsetEvals[1][0], q,
-              (R)+1, weightGridList[key].ImagBuffer(), q );
+              R(+1), weightGridList[key].ImagBuffer(), q );
             Gemm
             ( 'N', 'T', q, q, q,
-              (R)+1, &realTempWeights[0], q,
+              R(+1), &realTempWeights[0], q,
                      &imagOffsetEvals[1][0], q,
-              (R)+1, weightGridList[key].ImagBuffer(), q );
+              R(+1), weightGridList[key].ImagBuffer(), q );
 
             // Post process scaling
             //
@@ -573,25 +573,25 @@ SwitchToTargetInterp
             // Form real part
             Gemm
             ( 'N', 'N', q, Pow<q,d-1>::val, q,
-              (R)1, &realOffsetEvals[0][0], q,
+              R(1), &realOffsetEvals[0][0], q,
                     &realOldWeights[0],     q,
-              (R)0, &realTempWeights[0],    q );
+              R(0), &realTempWeights[0],    q );
             Gemm
             ( 'N', 'N', q, Pow<q,d-1>::val, q,
-              (R)-1, &imagOffsetEvals[0][0], q,
+              R(-1), &imagOffsetEvals[0][0], q,
                      &imagOldWeights[0],     q,
-              (R)+1, &realTempWeights[0],    q );
+              R(+1), &realTempWeights[0],    q );
             // Form imaginary part
             Gemm
             ( 'N', 'N', q, Pow<q,d-1>::val, q,
-              (R)1, &realOffsetEvals[0][0], q,
+              R(1), &realOffsetEvals[0][0], q,
                     &imagOldWeights[0],     q,
-              (R)0, &imagTempWeights[0],    q );
+              R(0), &imagTempWeights[0],    q );
             Gemm
             ( 'N', 'N', q, Pow<q,d-1>::val, q,
-              (R)+1, &imagOffsetEvals[0][0], q,
+              R(+1), &imagOffsetEvals[0][0], q,
                      &realOldWeights[0],     q,
-              (R)+1, &imagTempWeights[0],    q );
+              R(+1), &imagTempWeights[0],    q );
 
             // Switch over second dimension
             // Scale
@@ -622,25 +622,25 @@ SwitchToTargetInterp
             {
                 Gemm
                 ( 'N', 'T', q, q, q,
-                  (R)1, &realTempWeights[w*q*q], q,
+                  R(1), &realTempWeights[w*q*q], q,
                         &realOffsetEvals[1][0],  q,
-                  (R)0, &realOldWeights[w*q*q],  q );
+                  R(0), &realOldWeights[w*q*q],  q );
                 Gemm
                 ( 'N', 'T', q, q, q,
-                  (R)-1, &imagTempWeights[w*q*q], q,
+                  R(-1), &imagTempWeights[w*q*q], q,
                          &imagOffsetEvals[1][0],  q,
-                  (R)+1, &realOldWeights[w*q*q],  q );
+                  R(+1), &realOldWeights[w*q*q],  q );
 
                 Gemm
                 ( 'N', 'T', q, q, q,
-                  (R)1, &imagTempWeights[w*q*q], q,
+                  R(1), &imagTempWeights[w*q*q], q,
                         &realOffsetEvals[1][0],  q,
-                  (R)0, &imagOldWeights[w*q*q],  q );
+                  R(0), &imagOldWeights[w*q*q],  q );
                 Gemm
                 ( 'N', 'T', q, q, q,
-                  (R)1, &realTempWeights[w*q*q], q,
+                  R(1), &realTempWeights[w*q*q], q,
                         &imagOffsetEvals[1][0],  q,
-                  (R)1, &imagOldWeights[w*q*q],  q );
+                  R(1), &imagOldWeights[w*q*q],  q );
             }
 
             // Switch over remaining dimensions

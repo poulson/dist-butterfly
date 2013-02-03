@@ -105,25 +105,25 @@ FormCheckPotentials
             // Form the real part
             Gemv
             ( 'N', q, q,
-              (R)1, &realForwardMap[0], q,
+              R(1), &realForwardMap[0], q,
                     &realTempWeights0[0], 1,
-              (R)0, &realTempWeights1[0], 1 );
+              R(0), &realTempWeights1[0], 1 );
             Gemv
             ( 'N', q, q,
-              (R)-1, &imagForwardMap[0], q,
+              R(-1), &imagForwardMap[0], q,
                      &imagTempWeights0[0], 1,
-              (R)+1, &realTempWeights1[0], 1 );
+              R(+1), &realTempWeights1[0], 1 );
             // Form the imaginary part
             Gemv
             ( 'N', q, q,
-              (R)1, &realForwardMap[0], q,
+              R(1), &realForwardMap[0], q,
                     &imagTempWeights0[0], 1,
-              (R)0, &imagTempWeights1[0], 1 );
+              R(0), &imagTempWeights1[0], 1 );
             Gemv
             ( 'N', q, q,
-              (R)1, &imagForwardMap[0], q,
+              R(1), &imagForwardMap[0], q,
                     &realTempWeights0[0], 1,
-              (R)1, &imagTempWeights1[0], 1 );
+              R(1), &imagTempWeights1[0], 1 );
         }
         // Postscaling
         for( size_t t=0; t<q; ++t )
@@ -233,25 +233,25 @@ FormCheckPotentials
             // Form the real part
             Gemm
             ( 'N', 'N', q, q, q,
-              (R)1, &realForwardMap[0], q,
+              R(1), &realForwardMap[0], q,
                     &realTempWeights0[0], q,
-              (R)0, &realTempWeights1[0], q );
+              R(0), &realTempWeights1[0], q );
             Gemm
             ( 'N', 'N', q, q, q,
-              (R)-1, &imagForwardMap[0], q,
+              R(-1), &imagForwardMap[0], q,
                      &imagTempWeights0[0], q,
-              (R)+1, &realTempWeights1[0], q );
+              R(+1), &realTempWeights1[0], q );
             // Form the imaginary part
             Gemm
             ( 'N', 'N', q, q, q,
-              (R)1, &realForwardMap[0], q,
+              R(1), &realForwardMap[0], q,
                     &imagTempWeights0[0], q,
-              (R)0, &imagTempWeights1[0], q );
+              R(0), &imagTempWeights1[0], q );
             Gemm
             ( 'N', 'N', q, q, q,
-              (R)1, &imagForwardMap[0], q,
+              R(1), &imagForwardMap[0], q,
                     &realTempWeights0[0], q,
-              (R)1, &imagTempWeights1[0], q );
+              R(1), &imagTempWeights1[0], q );
         }
         // Postscale
         for( size_t t=0; t<q; ++t )
@@ -312,25 +312,25 @@ FormCheckPotentials
             // Form the real part
             Gemm
             ( 'N', 'T', q, q, q,
-              (R)1, &realTempWeights1[0], q,
+              R(1), &realTempWeights1[0], q,
                     &realForwardMap[0], q,
-              (R)0, &realTempWeights0[0], q );
+              R(0), &realTempWeights0[0], q );
             Gemm
             ( 'N', 'T', q, q, q,
-              (R)-1, &imagTempWeights1[0], q,
+              R(-1), &imagTempWeights1[0], q,
                      &imagForwardMap[0], q,
-              (R)+1, &realTempWeights0[0], q );
+              R(+1), &realTempWeights0[0], q );
             // Form the imaginary part
             Gemm
             ( 'N', 'T', q, q, q,
-              (R)1, &imagTempWeights1[0], q,
+              R(1), &imagTempWeights1[0], q,
                     &realForwardMap[0], q,
-              (R)0, &imagTempWeights0[0], q );
+              R(0), &imagTempWeights0[0], q );
             Gemm
             ( 'N', 'T', q, q, q,
-              (R)1, &realTempWeights1[0], q,
+              R(1), &realTempWeights1[0], q,
                     &imagForwardMap[0], q,
-              (R)1, &imagTempWeights0[0], q );
+              R(1), &imagTempWeights0[0], q );
         }
         // Postscale
         for( size_t t=0; t<q; ++t )
@@ -442,25 +442,25 @@ FormCheckPotentials
             // Form the real part
             Gemm
             ( 'N', 'N', q, Pow<q,d-1>::val, q,
-              (R)1, &realForwardMap[0], q,
+              R(1), &realForwardMap[0], q,
                     &realTempWeights0[0], q,
-              (R)0, &realTempWeights1[0], q );
+              R(0), &realTempWeights1[0], q );
             Gemm
             ( 'N', 'N', q, Pow<q,d-1>::val, q,
-              (R)-1, &imagForwardMap[0], q,
+              R(-1), &imagForwardMap[0], q,
                      &imagTempWeights0[0], q,
-              (R)+1, &realTempWeights1[0], q );
+              R(+1), &realTempWeights1[0], q );
             // Form the imaginary part
             Gemm
             ( 'N', 'N', q, Pow<q,d-1>::val, q,
-              (R)1, &realForwardMap[0], q,
+              R(1), &realForwardMap[0], q,
                     &imagTempWeights0[0], q,
-              (R)0, &imagTempWeights1[0], q );
+              R(0), &imagTempWeights1[0], q );
             Gemm
             ( 'N', 'N', q, Pow<q,d-1>::val, q,
-              (R)1, &imagForwardMap[0], q,
+              R(1), &imagForwardMap[0], q,
                     &realTempWeights0[0], q,
-              (R)1, &imagTempWeights1[0], q );
+              R(1), &imagTempWeights1[0], q );
         }
         // Postscale
         for( size_t t=0; t<q; ++t )
@@ -525,25 +525,25 @@ FormCheckPotentials
                 // Form the real part
                 Gemm
                 ( 'N', 'T', q, q, q,
-                  (R)1, &realTempWeights1[w*q*q], q,
+                  R(1), &realTempWeights1[w*q*q], q,
                         &realForwardMap[0], q,
-                  (R)0, &realTempWeights0[w*q*q], q );
+                  R(0), &realTempWeights0[w*q*q], q );
                 Gemm
                 ( 'N', 'T', q, q, q,
-                  (R)-1, &imagTempWeights1[w*q*q], q,
+                  R(-1), &imagTempWeights1[w*q*q], q,
                          &imagForwardMap[0], q,
-                  (R)+1, &realTempWeights0[w*q*q], q );
+                  R(+1), &realTempWeights0[w*q*q], q );
                 // Form the imaginary part
                 Gemm
                 ( 'N', 'T', q, q, q,
-                  (R)1, &imagTempWeights1[w*q*q], q,
+                  R(1), &imagTempWeights1[w*q*q], q,
                         &realForwardMap[0], q,
-                  (R)0, &imagTempWeights0[w*q*q], q );
+                  R(0), &imagTempWeights0[w*q*q], q );
                 Gemm
                 ( 'N', 'T', q, q, q,
-                  (R)1, &realTempWeights1[w*q*q], q,
+                  R(1), &realTempWeights1[w*q*q], q,
                         &imagForwardMap[0], q,
-                  (R)1, &imagTempWeights0[w*q*q], q );
+                  R(1), &imagTempWeights0[w*q*q], q );
             }
         }
         // Postscale

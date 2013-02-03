@@ -250,7 +250,7 @@ InitializeCheckPotentials
     Gemm
     ( 'T', 'N', q_to_d, numSources, d,
       SignedTwoPi, &xPoints[0][0], d, &pPoints[0][0], d,
-      (R)0, &phiResults[0], q_to_d );
+      R(0), &phiResults[0], q_to_d );
 
     // Grab the real and imaginary parts of the phase
     vector<R> sinResults, cosResults;
@@ -373,7 +373,7 @@ InitializeCheckPotentials
     Gemm
     ( 'T', 'N', q_to_d, numSources, d,
       SignedTwoPi, &xPoints[0][0], d, &pPoints[0][0], d,
-      (R)0, &phiResults[0], q_to_d );
+      R(0), &phiResults[0], q_to_d );
 
     // Grab the real and imaginary parts of the phase
     vector<R> sinResults, cosResults;

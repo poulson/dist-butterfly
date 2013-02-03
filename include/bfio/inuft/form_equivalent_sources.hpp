@@ -134,25 +134,25 @@ FormEquivalentSources
                 // Form the real part
                 Gemv
                 ( 'N', q, q,
-                  (R)1, &realInverseMap[0], q,
+                  R(1), &realInverseMap[0], q,
                         weightGrid.RealBuffer(), 1,
-                  (R)0, &realTempWeights[0], 1 );
+                  R(0), &realTempWeights[0], 1 );
                 Gemv
                 ( 'N', q, q,
-                  (R)-1, &imagInverseMap[0], q,
+                  R(-1), &imagInverseMap[0], q,
                          weightGrid.ImagBuffer(), 1,
-                  (R)+1, &realTempWeights[0], 1 );
+                  R(+1), &realTempWeights[0], 1 );
                 // Form the imaginary part
                 Gemv
                 ( 'N', q, q,
-                  (R)1, &realInverseMap[0], q,
+                  R(1), &realInverseMap[0], q,
                         weightGrid.ImagBuffer(), 1,
-                  (R)0, &imagTempWeights[0], 1 );
+                  R(0), &imagTempWeights[0], 1 );
                 Gemv
                 ( 'N', q, q,
-                  (R)1, &imagInverseMap[0], q,
+                  R(1), &imagInverseMap[0], q,
                         weightGrid.RealBuffer(), 1,
-                  (R)1, &imagTempWeights[0], 1 );
+                  R(1), &imagTempWeights[0], 1 );
             }
             // Post scale
             {
@@ -295,25 +295,25 @@ FormEquivalentSources
                 // Form the real part
                 Gemm
                 ( 'N', 'N', q, q, q,
-                  (R)1, &realInverseMap[0], q,
+                  R(1), &realInverseMap[0], q,
                         weightGrid.RealBuffer(), q,
-                  (R)0, &realTempWeights[0], q );
+                  R(0), &realTempWeights[0], q );
                 Gemm
                 ( 'N', 'N', q, q, q,
-                  (R)-1, &imagInverseMap[0], q,
+                  R(-1), &imagInverseMap[0], q,
                          weightGrid.ImagBuffer(), q,
-                  (R)+1, &realTempWeights[0], q );
+                  R(+1), &realTempWeights[0], q );
                 // Form the imaginary part
                 Gemm
                 ( 'N', 'N', q, q, q,
-                  (R)1, &realInverseMap[0], q,
+                  R(1), &realInverseMap[0], q,
                         weightGrid.ImagBuffer(), q,
-                  (R)0, &imagTempWeights[0], q );
+                  R(0), &imagTempWeights[0], q );
                 Gemm
                 ( 'N', 'N', q, q, q,
-                 (R)1, &imagInverseMap[0], q,
+                 R(1), &imagInverseMap[0], q,
                        weightGrid.RealBuffer(), q,
-                 (R)1, &imagTempWeights[0], q );
+                 R(1), &imagTempWeights[0], q );
             }
             // Post scale
             {
@@ -374,25 +374,25 @@ FormEquivalentSources
                 // Form the real part
                 Gemm
                 ( 'N', 'T', q, q, q,
-                  (R)1, &realTempWeights[0], q,
+                  R(1), &realTempWeights[0], q,
                         &realInverseMap[0], q,
-                  (R)0, weightGrid.RealBuffer(), q );
+                  R(0), weightGrid.RealBuffer(), q );
                 Gemm
                 ( 'N', 'T', q, q, q,
-                  (R)-1, &imagTempWeights[0], q,
+                  R(-1), &imagTempWeights[0], q,
                          &imagInverseMap[0], q,
-                  (R)+1, weightGrid.RealBuffer(), q );
+                  R(+1), weightGrid.RealBuffer(), q );
                 // Form the imaginary part
                 Gemm
                 ( 'N', 'T', q, q, q,
-                  (R)1, &imagTempWeights[0], q,
+                  R(1), &imagTempWeights[0], q,
                         &realInverseMap[0], q,
-                  (R)0, weightGrid.ImagBuffer(), q );
+                  R(0), weightGrid.ImagBuffer(), q );
                 Gemm
                 ( 'N', 'T', q, q, q,
-                  (R)1, &realTempWeights[0], q,
+                  R(1), &realTempWeights[0], q,
                         &imagInverseMap[0], q,
-                  (R)1, weightGrid.ImagBuffer(), q );
+                  R(1), weightGrid.ImagBuffer(), q );
             }
             // Postscale
             {
@@ -536,25 +536,25 @@ FormEquivalentSources
                 // Form the real part
                 Gemm
                 ( 'N', 'N', q, Pow<q,d-1>::val, q,
-                  (R)1, &realInverseMap[0], q,
+                  R(1), &realInverseMap[0], q,
                         weightGrid.RealBuffer(), q,
-                  (R)0, &realTempWeights0[0], q );
+                  R(0), &realTempWeights0[0], q );
                 Gemm
                 ( 'N', 'N', q, Pow<q,d-1>::val, q,
-                  (R)-1, &imagInverseMap[0], q,
+                  R(-1), &imagInverseMap[0], q,
                          weightGrid.ImagBuffer(), q,
-                  (R)+1, &realTempWeights0[0], q );
+                  R(+1), &realTempWeights0[0], q );
                 // Form the imaginary part
                 Gemm
                 ( 'N', 'N', q, Pow<q,d-1>::val, q,
-                  (R)1, &realInverseMap[0], q,
+                  R(1), &realInverseMap[0], q,
                         weightGrid.ImagBuffer(), q,
-                  (R)0, &imagTempWeights0[0], q );
+                  R(0), &imagTempWeights0[0], q );
                 Gemm
                 ( 'N', 'N', q, Pow<q,d-1>::val, q,
-                 (R)1, &imagInverseMap[0], q,
+                 R(1), &imagInverseMap[0], q,
                        weightGrid.RealBuffer(), q,
-                 (R)1, &imagTempWeights0[0], q );
+                 R(1), &imagTempWeights0[0], q );
             }
             // Post scale
             {
@@ -619,26 +619,26 @@ FormEquivalentSources
                     // Form the real part
                     Gemm
                     ( 'N', 'T', q, q, q,
-                      (R)1, &realTempWeights0[w*q*q], q,
+                      R(1), &realTempWeights0[w*q*q], q,
                             &realInverseMap[0], q,
-                      (R)0, &realTempWeights1[w*q*q], q );
+                      R(0), &realTempWeights1[w*q*q], q );
                     Gemm
                     ( 'N', 'T', q, q, q,
-                      (R)-1, &imagTempWeights0[w*q*q], q,
+                      R(-1), &imagTempWeights0[w*q*q], q,
                              &imagInverseMap[0], q,
-                      (R)+1, &realTempWeights1[w*q*q], q );
+                      R(+1), &realTempWeights1[w*q*q], q );
 
                     // Form the imaginary part
                     Gemm
                     ( 'N', 'T', q, q, q,
-                      (R)1, &imagTempWeights0[w*q*q], q,
+                      R(1), &imagTempWeights0[w*q*q], q,
                             &realInverseMap[0], q,
-                      (R)0, &imagTempWeights1[w*q*q], q );
+                      R(0), &imagTempWeights1[w*q*q], q );
                     Gemm
                     ( 'N', 'T', q, q, q,
-                      (R)1, &realTempWeights0[w*q*q], q,
+                      R(1), &realTempWeights0[w*q*q], q,
                             &imagInverseMap[0], q,
-                      (R)1, &imagTempWeights1[w*q*q], q );
+                      R(1), &imagTempWeights1[w*q*q], q );
                 }
             }
             // Postscale
