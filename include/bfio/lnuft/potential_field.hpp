@@ -82,6 +82,7 @@ void WriteImage
 // Implementations
 
 template<typename R,size_t d,size_t q>
+inline
 PotentialField<R,d,q>::PotentialField
 ( const Context<R,d,q>& nuftContext,
   const Box<R,d>& sBox,
@@ -104,7 +105,7 @@ PotentialField<R,d,q>::PotentialField
 { }
 
 template<typename R,size_t d,size_t q>
-complex<R>
+inline complex<R>
 PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
 { return _rfioPotential.Evaluate( x ); }
 

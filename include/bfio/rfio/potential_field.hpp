@@ -37,10 +37,11 @@ using std::string;
 using std::vector;
 
 namespace rfio {
+
 template<typename R,size_t d,size_t q>
 class PotentialField
 {
-    const rfio::Context<R,d,q>& _context;
+    const Context<R,d,q>& _context;
     const Amplitude<R,d>* _amplitude;
     const Phase<R,d>* _phase;
     const Box<R,d> _sBox;
@@ -55,7 +56,7 @@ class PotentialField
 
 public:
     PotentialField
-    ( const rfio::Context<R,d,q>& context,
+    ( const Context<R,d,q>& context,
       const Amplitude<R,d>& amplitude,
       const Phase<R,d>& phase,
       const Box<R,d>& sBox,
@@ -102,13 +103,12 @@ void WriteImage
   const string& basename,
   const vector<Source<R,d>>& sources );
 
-} // rfio
-
 // Implementations
 
 template<typename R,size_t d,size_t q>
-rfio::PotentialField<R,d,q>::PotentialField
-( const rfio::Context<R,d,q>& context,
+inline
+PotentialField<R,d,q>::PotentialField
+( const Context<R,d,q>& context,
   const Amplitude<R,d>& amplitude,
   const Phase<R,d>& phase,
   const Box<R,d>& sBox,
@@ -161,15 +161,16 @@ rfio::PotentialField<R,d,q>::PotentialField
 }
 
 template<typename R,size_t d,size_t q>
-rfio::PotentialField<R,d,q>::~PotentialField()
+inline
+PotentialField<R,d,q>::~PotentialField()
 {
     delete _amplitude;
     delete _phase;
 }
 
 template<typename R,size_t d,size_t q>
-complex<R>
-rfio::PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
+inline complex<R>
+PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
 {
     typedef complex<R> C;
 
@@ -225,46 +226,46 @@ rfio::PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
 
 template<typename R,size_t d,size_t q>
 inline const Amplitude<R,d>&
-rfio::PotentialField<R,d,q>::GetAmplitude() const
+PotentialField<R,d,q>::GetAmplitude() const
 { return *_amplitude; }
 
 template<typename R,size_t d,size_t q>
 inline const Phase<R,d>&
-rfio::PotentialField<R,d,q>::GetPhase() const
+PotentialField<R,d,q>::GetPhase() const
 { return *_phase; }
 
 template<typename R,size_t d,size_t q>
 inline const Box<R,d>&
-rfio::PotentialField<R,d,q>::GetMyTargetBox() const
+PotentialField<R,d,q>::GetMyTargetBox() const
 { return _myTBox; }
 
 template<typename R,size_t d,size_t q>
 inline size_t
-rfio::PotentialField<R,d,q>::GetNumSubboxes() const
+PotentialField<R,d,q>::GetNumSubboxes() const
 { return _LRPs.size(); }
 
 template<typename R,size_t d,size_t q>
 inline const array<R,d>&
-rfio::PotentialField<R,d,q>::GetSubboxWidths() const
+PotentialField<R,d,q>::GetSubboxWidths() const
 { return _wA; }
 
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
-rfio::PotentialField<R,d,q>::GetMyTargetBoxCoords() const
+PotentialField<R,d,q>::GetMyTargetBoxCoords() const
 { return _myTBoxCoords; }
 
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
-rfio::PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
+PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
 { return _log2TSubboxesPerDim; }
 
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
-rfio::PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
+PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
 { return _log2TSubboxesUpToDim; }
 
 template<typename R,size_t d,size_t q>
-void rfio::PrintErrorEstimates
+void PrintErrorEstimates
 ( MPI_Comm comm,
   const PotentialField<R,d,q>& u,
   const vector<Source<R,d>>& sources )
@@ -351,11 +352,11 @@ void rfio::PrintErrorEstimates
 // Just write out the real and imag components of the approximation
 template<typename R,size_t d,size_t q>
 inline void
-rfio::WriteImage
+WriteImage
 ( MPI_Comm comm,
   const size_t N,
   const Box<R,d>& tBox,
-  const rfio::PotentialField<R,d,q>& u,
+  const PotentialField<R,d,q>& u,
   const string& basename )
 {
     using namespace std;
@@ -550,11 +551,11 @@ rfio::WriteImage
 // and the error.
 template<typename R,size_t d,size_t q>
 inline void
-rfio::WriteImage
+WriteImage
 ( MPI_Comm comm,
   const size_t N,
   const Box<R,d>& tBox,
-  const rfio::PotentialField<R,d,q>& u,
+  const PotentialField<R,d,q>& u,
   const string& basename,
   const vector<Source<R,d>>& sources )
 {
@@ -836,6 +837,7 @@ rfio::WriteImage
     }
 }
 
+} // rfio
 } // bfio
 
 #endif // ifndef BFIO_RFIO_POTENTIAL_FIELD_HPP

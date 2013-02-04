@@ -34,7 +34,19 @@ static bool alreadyTimed = false;
 static bfio::Timer timer;
 static bfio::Timer initializeWeightsTimer;
 static bfio::Timer sWeightRecursionTimer;
+static bfio::Timer sWeightRecursionTimer1;
+static bfio::Timer sWeightRecursionTimer1Phase;
+static bfio::Timer sWeightRecursionTimer1SinCos;
+static bfio::Timer sWeightRecursionTimer2;
+static bfio::Timer sWeightRecursionTimer3;
+
 static bfio::Timer tWeightRecursionTimer;
+static bfio::Timer tWeightRecursionTimer1;
+static bfio::Timer tWeightRecursionTimer1Phase;
+static bfio::Timer tWeightRecursionTimer1SinCos;
+static bfio::Timer tWeightRecursionTimer2;
+static bfio::Timer tWeightRecursionTimer3;
+
 static bfio::Timer switchToTargetInterpTimer;
 static bfio::Timer sumScatterTimer;
 
@@ -44,7 +56,17 @@ ResetTimers()
     timer.Reset();
     initializeWeightsTimer.Reset();
     sWeightRecursionTimer.Reset();
+    sWeightRecursionTimer1.Reset();
+    sWeightRecursionTimer1Phase.Reset();
+    sWeightRecursionTimer1SinCos.Reset();
+    sWeightRecursionTimer2.Reset();
+    sWeightRecursionTimer3.Reset();
     tWeightRecursionTimer.Reset();
+    tWeightRecursionTimer1.Reset();
+    tWeightRecursionTimer1Phase.Reset();
+    tWeightRecursionTimer1SinCos.Reset();
+    tWeightRecursionTimer2.Reset();
+    tWeightRecursionTimer3.Reset();
     switchToTargetInterpTimer.Reset();
     sumScatterTimer.Reset();
 }
@@ -62,10 +84,30 @@ PrintTimings()
               << initializeWeightsTimer.TotalTime() << " seconds.\n"
               << "SourceWeightRecursion: "
               << sWeightRecursionTimer.TotalTime() << " seconds.\n"
+              << "  Stage 1: "
+              << sWeightRecursionTimer1.TotalTime() << " seconds.\n"
+              << "    Phase: "
+              << sWeightRecursionTimer1Phase.TotalTime() << " seconds.\n"
+              << "    SinCos: "
+              << sWeightRecursionTimer1SinCos.TotalTime() << " seconds.\n"
+              << "  Stage 2: "
+              << sWeightRecursionTimer2.TotalTime() << " seconds.\n"
+              << "  Stage 3: "
+              << sWeightRecursionTimer3.TotalTime() << " seconds.\n"
               << "SwitchToTargetInterp:  "
               << switchToTargetInterpTimer.TotalTime() << " seconds.\n"
               << "TargetWeightRecursion: "
               << tWeightRecursionTimer.TotalTime() << " seconds.\n"
+              << "  Stage 1: "
+              << tWeightRecursionTimer1.TotalTime() << " seconds.\n"
+              << "    Phase: "
+              << tWeightRecursionTimer1Phase.TotalTime() << " seconds.\n"
+              << "    SinCos: "
+              << tWeightRecursionTimer1SinCos.TotalTime() << " seconds.\n"
+              << "  Stage 2: "
+              << tWeightRecursionTimer2.TotalTime() << " seconds.\n"
+              << "  Stage 3: "
+              << tWeightRecursionTimer3.TotalTime() << " seconds.\n"
               << "SumScatter:            "
               << sumScatterTimer.TotalTime() << " seconds.\n"
               << "Total: " << timer.TotalTime() << " seconds.\n" << std::endl;
@@ -243,8 +285,6 @@ transform
                     // i interacting with the children of source box k
                     const size_t parentIOffset = 
                         ((tIndex>>d)<<(log2LocalSBoxes+d)) + (sIndex<<d);
-
-                    // HERE
 
                     if( level <= log2N/2 )
                     {

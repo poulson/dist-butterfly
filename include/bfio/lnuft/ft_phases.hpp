@@ -72,10 +72,12 @@ public:
 // Implementations
 
 template<typename R,size_t d>
+inline
 ForwardFTPhase<R,d>::ForwardFTPhase()
 { }
 
 template<typename R,size_t d>
+inline
 AdjointFTPhase<R,d>::AdjointFTPhase()
 { }
 
@@ -116,7 +118,7 @@ AdjointFTPhase<R,d>::operator()
 }
 
 template<typename R,size_t d>
-void
+inline void
 ForwardFTPhase<R,d>::BatchEvaluate
 ( const vector<array<R,d>>& xPoints,
   const vector<array<R,d>>& pPoints,
@@ -145,7 +147,7 @@ ForwardFTPhase<R,d>::BatchEvaluate
 }
 
 template<typename R,size_t d>
-void
+inline void
 AdjointFTPhase<R,d>::BatchEvaluate
 ( const vector<array<R,d>>& xPoints,
   const vector<array<R,d>>& pPoints,

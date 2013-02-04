@@ -36,9 +36,9 @@ namespace rfio {
 
 // 1d specialization
 template<typename R,size_t q>
-void
+inline void
 TargetWeightRecursion
-( const rfio::Context<R,1,q>& context,
+( const Context<R,1,q>& context,
   const Plan<1>& plan,
   const Phase<R,1>& phase,
   const size_t level,
@@ -67,6 +67,9 @@ TargetWeightRecursion
         //--------------------------------------------------------------------//
         // Step 1                                                             //
         //--------------------------------------------------------------------//
+#ifdef TIMING
+        tWeightRecursionTimer1.Start();
+#endif
         const size_t iIndex = parentIOffset + cLocal;
         const size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
 
@@ -80,8 +83,18 @@ TargetWeightRecursion
                 xPointsBuffer[tPrime] = 
                     x0ApBuffer[0] + 2*wABuffer[0]*chebyshevBuffer[tPrime];
         }
+#ifdef TIMING
+        tWeightRecursionTimer1Phase.Start();
+#endif
         phase.BatchEvaluate( xPoints, pPoint, phiResults );
+#ifdef TIMING
+        tWeightRecursionTimer1Phase.Stop();
+        tWeightRecursionTimer1SinCos.Start();
+#endif
         SinCosBatch( phiResults, sinResults, cosResults );
+#ifdef TIMING
+        tWeightRecursionTimer1SinCos.Stop();
+#endif
 
         WeightGrid<R,1,q> scaledWeightGrid;
         {
@@ -101,10 +114,16 @@ TargetWeightRecursion
                 scaledImags[tPrime] = imagPhase*realWeight+realPhase*imagWeight;
             }
         }
+#ifdef TIMING
+        tWeightRecursionTimer1.Stop();
+#endif
 
         //--------------------------------------------------------------------//
         // Step 2                                                             //
         //--------------------------------------------------------------------//
+#ifdef TIMING
+        tWeightRecursionTimer2.Start();
+#endif
         // TODO: Create a preprocessor flag for switching to two Gemv's, as 
         //       Gemm is probably not optimized for only 2 right-hand sides.
         WeightGrid<R,1,q> expandedWeightGrid;
@@ -117,10 +136,16 @@ TargetWeightRecursion
                     scaledWeightGrid.Buffer(),   q,
               R(0), expandedWeightGrid.Buffer(), q );
         }
+#ifdef TIMING
+        tWeightRecursionTimer2.Stop();
+#endif
 
         //--------------------------------------------------------------------//
         // Step 3                                                             //
         //--------------------------------------------------------------------//
+#ifdef TIMING
+        tWeightRecursionTimer3.Start();
+#endif
         {
             R* RESTRICT xPointsBuffer = &xPoints[0][0];
             const R* RESTRICT wABuffer = &wA[0];
@@ -149,14 +174,17 @@ TargetWeightRecursion
                 imags[t] += imagPhase*realWeight + realPhase*imagWeight;
             }
         }
+#ifdef TIMING
+        tWeightRecursionTimer3.Stop();
+#endif
     }
 }
 
 // 2d specialization
 template<typename R,size_t q>
-void
+inline void
 TargetWeightRecursion
-( const rfio::Context<R,2,q>& context,
+( const Context<R,2,q>& context,
   const Plan<2>& plan,
   const Phase<R,2>& phase,
   const size_t level,
@@ -185,6 +213,9 @@ TargetWeightRecursion
         //--------------------------------------------------------------------//
         // Step 1                                                             //
         //--------------------------------------------------------------------//
+#ifdef TIMING
+        tWeightRecursionTimer1.Start();
+#endif
         const size_t iIndex = parentIOffset + cLocal;
         const size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
 
@@ -201,8 +232,18 @@ TargetWeightRecursion
                         x0ApBuffer[j] + 
                         2*wABuffer[j]*chebyshevBuffer[tPrime*2+j];
         }
+#ifdef TIMING
+        tWeightRecursionTimer1Phase.Start();
+#endif
         phase.BatchEvaluate( xPoints, pPoint, phiResults );
+#ifdef TIMING
+        tWeightRecursionTimer1Phase.Stop();
+        tWeightRecursionTimer1SinCos.Start();
+#endif
         SinCosBatch( phiResults, sinResults, cosResults );
+#ifdef TIMING
+        tWeightRecursionTimer1SinCos.Stop();
+#endif
 
         WeightGrid<R,2,q> scaledWeightGrid;
         {
@@ -222,10 +263,16 @@ TargetWeightRecursion
                 scaledImags[tPrime] = imagPhase*realWeight+realPhase*imagWeight;
             }
         }
+#ifdef TIMING
+        tWeightRecursionTimer1.Stop();
+#endif
 
         //--------------------------------------------------------------------//
         // Step 2                                                             //
         //--------------------------------------------------------------------//
+#ifdef TIMING
+        tWeightRecursionTimer2.Start();
+#endif
         // Interpolate over the first dimension. We can take care of the real
         // and imaginary weights at once
         WeightGrid<R,2,q> tempWeightGrid;
@@ -256,10 +303,16 @@ TargetWeightRecursion
                     mapBuffer,                       q,
               R(0), expandedWeightGrid.ImagBuffer(), q );
         }
+#ifdef TIMING
+        tWeightRecursionTimer2.Stop();
+#endif
 
         //--------------------------------------------------------------------//
         // Step 3                                                             //
         //--------------------------------------------------------------------//
+#ifdef TIMING
+        tWeightRecursionTimer3.Start();
+#endif
         {
             R* RESTRICT xPointsBuffer = &xPoints[0][0];
             const R* RESTRICT wABuffer = &wA[0];
@@ -289,14 +342,17 @@ TargetWeightRecursion
                 imags[t] += imagPhase*realWeight + realPhase*imagWeight;
             }
         }
+#ifdef TIMING
+        tWeightRecursionTimer3.Stop();
+#endif
     }
 }
 
 // Fallback for 3d and above
 template<typename R,size_t d,size_t q>
-void
+inline void
 TargetWeightRecursion
-( const rfio::Context<R,d,q>& context,
+( const Context<R,d,q>& context,
   const Plan<d>& plan,
   const Phase<R,d>& phase,
   const size_t level,
@@ -326,6 +382,9 @@ TargetWeightRecursion
         //--------------------------------------------------------------------//
         // Step 1                                                             //
         //--------------------------------------------------------------------//
+#ifdef TIMING
+        tWeightRecursionTimer1.Start();
+#endif
         const size_t iIndex = parentIOffset + cLocal;
         const size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
 
@@ -342,8 +401,18 @@ TargetWeightRecursion
                         x0ApBuffer[j] + 
                         2*wABuffer[j]*chebyshevBuffer[tPrime*d+j];
         }
+#ifdef TIMING
+        tWeightRecursionTimer1Phase.Start();
+#endif
         phase.BatchEvaluate( xPoints, pPoint, phiResults );
+#ifdef TIMING
+        tWeightRecursionTimer1Phase.Stop();
+        tWeightRecursionTimer1SinCos.Start();
+#endif
         SinCosBatch( phiResults, sinResults, cosResults );
+#ifdef TIMING
+        tWeightRecursionTimer1SinCos.Stop();
+#endif
 
         WeightGrid<R,d,q> scaledWeightGrid;
         {
@@ -363,10 +432,16 @@ TargetWeightRecursion
                 scaledImags[tPrime] = imagPhase*realWeight+realPhase*imagWeight;
             }
         }
+#ifdef TIMING
+        tWeightRecursionTimer1.Stop();
+#endif
 
         //--------------------------------------------------------------------//
         // Step 2                                                             //
         //--------------------------------------------------------------------//
+#ifdef TIMING
+        tWeightRecursionTimer2.Start();
+#endif
 
         // Interpolate over the first dimension. We can take care of the real
         // and imaginary weights at once
@@ -473,10 +548,16 @@ TargetWeightRecursion
             }
             q_to_j *= q;
         }
+#ifdef TIMING
+        tWeightRecursionTimer2.Stop();
+#endif
 
         //--------------------------------------------------------------------//
         // Step 3                                                             //
         //--------------------------------------------------------------------//
+#ifdef TIMING
+        tWeightRecursionTimer3.Start();
+#endif
         {
             R* RESTRICT xPointsBuffer = &xPoints[0][0];
             const R* RESTRICT wABuffer = &wA[0];
@@ -506,6 +587,9 @@ TargetWeightRecursion
                 imags[t] += imagPhase*realWeight + realPhase*imagWeight;
             }
         }
+#ifdef TIMING
+        tWeightRecursionTimer3.Stop();
+#endif
     }
 }
 

@@ -22,6 +22,7 @@ using std::size_t;
 using std::vector;
 
 namespace rfio {
+
 template<typename R,size_t d,size_t q>
 class Context
 {
@@ -59,21 +60,20 @@ public:
     const vector<R>& GetRightChebyshevMap() const;
     const vector<array<R,d>>& GetSourceChildGrids() const;
 };
-} // rfio
 
 // Implementations
 
 template<typename R,size_t d,size_t q>
-void 
-rfio::Context<R,d,q>::GenerateChebyshevNodes()
+inline void 
+Context<R,d,q>::GenerateChebyshevNodes()
 {
     for( size_t t=0; t<q; ++t )
         _chebyshevNodes[t] = 0.5*cos(R(t*Pi/(q-1)));
 }
 
 template<typename R,size_t d,size_t q>
-void 
-rfio::Context<R,d,q>::GenerateChebyshevIndices()
+inline void 
+Context<R,d,q>::GenerateChebyshevIndices()
 {
     const size_t q_to_d = _chebyshevIndices.size();
 
@@ -90,8 +90,8 @@ rfio::Context<R,d,q>::GenerateChebyshevIndices()
 }
 
 template<typename R,size_t d,size_t q>
-void 
-rfio::Context<R,d,q>::GenerateChebyshevGrid()
+inline void 
+Context<R,d,q>::GenerateChebyshevGrid()
 {
     const size_t q_to_d = _chebyshevGrid.size();
 
@@ -108,8 +108,8 @@ rfio::Context<R,d,q>::GenerateChebyshevGrid()
 }
 
 template<typename R,size_t d,size_t q>
-void
-rfio::Context<R,d,q>::GenerateChebyshevMaps()
+inline void
+Context<R,d,q>::GenerateChebyshevMaps()
 {
     // Create 1d Lagrangian evaluation maps being left and right of the center
     for( size_t i=0; i<q; ++i )
@@ -123,8 +123,8 @@ rfio::Context<R,d,q>::GenerateChebyshevMaps()
 }
 
 template<typename R,size_t d,size_t q>
-void 
-rfio::Context<R,d,q>::GenerateChildGrids()
+inline void 
+Context<R,d,q>::GenerateChildGrids()
 {
     const size_t q_to_d = _chebyshevGrid.size();
 
@@ -145,7 +145,7 @@ rfio::Context<R,d,q>::GenerateChildGrids()
 }
 
 template<typename R,size_t d,size_t q>
-rfio::Context<R,d,q>::Context() 
+inline Context<R,d,q>::Context() 
 : _chebyshevNodes( q ),
   _leftChebyshevMap( q*q ),
   _rightChebyshevMap( q*q ),
@@ -161,8 +161,8 @@ rfio::Context<R,d,q>::Context()
 }
 
 template<typename R,size_t d,size_t q>
-R
-rfio::Context<R,d,q>::Lagrange1d( size_t i, R p ) const
+inline R
+Context<R,d,q>::Lagrange1d( size_t i, R p ) const
 {
     R product = R(1);
     const R* chebyshevNodeBuffer = &_chebyshevNodes[0];
@@ -179,8 +179,8 @@ rfio::Context<R,d,q>::Lagrange1d( size_t i, R p ) const
 }
 
 template<typename R,size_t d,size_t q>
-R
-rfio::Context<R,d,q>::Lagrange( size_t t, const array<R,d>& p ) const
+inline R
+Context<R,d,q>::Lagrange( size_t t, const array<R,d>& p ) const
 {
     R product = static_cast<R>(1);
     const R* RESTRICT pBuffer = &p[0];
@@ -205,8 +205,8 @@ rfio::Context<R,d,q>::Lagrange( size_t t, const array<R,d>& p ) const
 }
 
 template<typename R,size_t d,size_t q>
-void
-rfio::Context<R,d,q>::LagrangeBatch
+inline void
+Context<R,d,q>::LagrangeBatch
 ( size_t t, 
   const vector<array<R,d>>& p, 
         vector<R         >& results ) const
@@ -238,34 +238,35 @@ rfio::Context<R,d,q>::LagrangeBatch
 
 template<typename R,size_t d,size_t q>
 inline const vector<R>&
-rfio::Context<R,d,q>::GetChebyshevNodes() const
+Context<R,d,q>::GetChebyshevNodes() const
 { return _chebyshevNodes; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<array<size_t,d>>&
-rfio::Context<R,d,q>::GetChebyshevIndices() const
+Context<R,d,q>::GetChebyshevIndices() const
 { return _chebyshevIndices; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<array<R,d>>&
-rfio::Context<R,d,q>::GetChebyshevGrid() const
+Context<R,d,q>::GetChebyshevGrid() const
 { return _chebyshevGrid; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<R>& 
-rfio::Context<R,d,q>::GetLeftChebyshevMap() const
+Context<R,d,q>::GetLeftChebyshevMap() const
 { return _leftChebyshevMap; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<R>& 
-rfio::Context<R,d,q>::GetRightChebyshevMap() const
+Context<R,d,q>::GetRightChebyshevMap() const
 { return _rightChebyshevMap; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<array<R,d>>&
-rfio::Context<R,d,q>::GetSourceChildGrids() const
+Context<R,d,q>::GetSourceChildGrids() const
 { return _sourceChildGrids; }
 
+} // rfio
 } // bfio
 
 #endif // ifndef BFIO_RFIO_CONTEXT_HPP

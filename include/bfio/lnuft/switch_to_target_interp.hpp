@@ -33,7 +33,7 @@ namespace lnuft {
 
 // 1d specialization
 template<typename R,size_t q>
-void
+inline void
 SwitchToTargetInterp
 ( const Context<R,1,q>& nuftContext,
   const Plan<1>& plan,
@@ -197,7 +197,7 @@ SwitchToTargetInterp
 
 // 2d specialization
 template<typename R,size_t q>
-void
+inline void
 SwitchToTargetInterp
 ( const Context<R,2,q>& nuftContext,
   const Plan<2>& plan,
@@ -444,7 +444,7 @@ SwitchToTargetInterp
 
 // Fallback for 3d and above
 template<typename R,size_t d,size_t q>
-void
+inline void
 SwitchToTargetInterp
 ( const Context<R,d,q>& nuftContext,
   const Plan<d>& plan,

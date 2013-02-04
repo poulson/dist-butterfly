@@ -38,7 +38,7 @@ namespace inuft {
 
 // 1d specialization
 template<typename R,size_t q>
-void
+inline void
 InitializeCheckPotentials
 ( const Context<R,1,q>& context,
   const Plan<1>& plan,
@@ -157,7 +157,7 @@ InitializeCheckPotentials
 
 // 2d specialization
 template<typename R,size_t q>
-void
+inline void
 InitializeCheckPotentials
 ( const Context<R,2,q>& context,
   const Plan<2>& plan,
@@ -281,7 +281,7 @@ InitializeCheckPotentials
 
 // Fallback for 3d and above
 template<typename R,size_t d,size_t q>
-void
+inline void
 InitializeCheckPotentials
 ( const Context<R,d,q>& context,
   const Plan<d>& plan,

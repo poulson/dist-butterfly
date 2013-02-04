@@ -63,7 +63,7 @@ public:
 // Implementations
 
 template<typename R,size_t d,size_t q>
-void 
+inline void 
 Context<R,d,q>::GenerateChebyshevNodes()
 {
     for( size_t t=0; t<q; ++t )
@@ -71,7 +71,7 @@ Context<R,d,q>::GenerateChebyshevNodes()
 }
 
 template<typename R,size_t d,size_t q>
-void
+inline void
 Context<R,d,q>::GenerateChebyshevGrid()
 {
     const size_t q_to_d = _chebyshevGrid.size();   
@@ -89,7 +89,7 @@ Context<R,d,q>::GenerateChebyshevGrid()
 }
 
 template<typename R,size_t d,size_t q>
-void
+inline void
 Context<R,d,q>::GenerateOffsetMaps()
 {
     for( size_t j=0; j<d; ++j )
@@ -191,6 +191,7 @@ Context<R,d,q>::GenerateOffsetMaps()
 }
 
 template<typename R,size_t d,size_t q>
+inline
 Context<R,d,q>::Context
 ( const Direction direction,
   const size_t N,

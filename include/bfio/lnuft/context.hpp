@@ -50,7 +50,7 @@ public:
 // Implementations
 
 template<typename R,size_t d,size_t q>
-void
+inline void
 Context<R,d,q>::GenerateOffsetEvaluations()
 {
     const size_t log2N = Log2( _N );

@@ -38,9 +38,9 @@ using std::vector;
 namespace rfio {
 
 template<typename R,size_t d,size_t q>
-void
+inline void
 InitializeWeights
-( const rfio::Context<R,d,q>& context,
+( const Context<R,d,q>& context,
   const Plan<d>& plan,
   const Phase<R,d>& phase,
   const Box<R,d>& sBox,

@@ -37,7 +37,7 @@ namespace inuft {
 
 // 1d specialization
 template<typename R,size_t q>
-void
+inline void
 FormEquivalentSources
 ( const Context<R,1,q>& context,
   const Plan<1>& plan,
@@ -180,7 +180,7 @@ FormEquivalentSources
 
 // 2d specialization
 template<typename R,size_t q>
-void
+inline void
 FormEquivalentSources
 ( const Context<R,2,q>& context,
   const Plan<2>& plan,
@@ -421,7 +421,7 @@ FormEquivalentSources
 
 // Fallback for 3d and above
 template<typename R,size_t d,size_t q>
-void
+inline void
 FormEquivalentSources
 ( const Context<R,d,q>& context,
   const Plan<d>& plan,
