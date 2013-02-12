@@ -25,10 +25,12 @@ include_directories(${MPI_CXX_INCLUDE_PATH})
 
 # Initialize CXXFLAGS.
 # NOTE: Adapted from Matthias Vallentin's StackExchange post
+set(CMAKE_CXX_FLAGS "-Wall -std=c++11 ${MPI_CXX_COMPILE_FLAGS}")
+if(RELEASE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+endif()
 if(APPLE)
-  set(CMAKE_CXX_FLAGS "-Wall -std=c++11 ${MPI_CXX_COMPILE_FLAGS} -fast")
-else()
-  set(CMAKE_CXX_FLAGS "-Wall -std=c++11 ${MPI_CXX_COMPILE_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fast")
 endif()
 # Compiler-specific C++11 activation.
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")

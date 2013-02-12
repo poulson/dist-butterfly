@@ -405,19 +405,37 @@ WriteImage
                << "<VTKFile type=\"PImageData\" version=\"0.1\">\n"
                << " <PImageData WholeExtent=\"";
             for( size_t j=0; j<d; ++j )
-                os << "0 " << N*numSamplesPerBoxDim << " ";
-            for( size_t j=d; j<3; ++j )
-                os << "0 1 ";
+            {
+                os << "0 " << N*numSamplesPerBoxDim;
+                if( j != d-1 )
+                    os << " ";
+            }
+            if( d == 1 )
+                os << " 0 1 0 1";
+            else if( d == 2 )
+                os << " 0 1";
             os << "\" Origin=\"";
             for( size_t j=0; j<d; ++j )
-                os << tBox.offsets[j] << " ";
-            for( size_t j=d; j<3; ++j )
-                os << "0 ";
+            {
+                os << tBox.offsets[j];
+                if( j != d-1 )
+                    os << " ";
+            }
+            if( d == 1 )
+                os << " 0 0";
+            else if( d == 2 )
+                os << " 0";
             os << "\" Spacing=\"";
             for( size_t j=0; j<d; ++j )
-                os << tBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
-            for( size_t j=d; j<3; ++j )
-                os << "1 ";
+            {
+                os << tBox.widths[j]/(N*numSamplesPerBoxDim);
+                if( j != d-1 )
+                    os << " ";
+            }
+            if( d == 1 )
+                os << " 1 1";
+            else if( d == 2 )
+                os << " 1";
             os << "\" GhostLevel=\"0\">\n"
                << "  <PCellData Scalars=\"cell_scalars\">\n"
                << "   <PDataArray type=\"Float32\" Name=\"cell_scalars\"/>\n"
@@ -428,11 +446,14 @@ WriteImage
                 for( size_t j=0; j<d; ++j )
                 {
                     size_t width = numSamplesPerBoxDim << log2SubboxesPerDim[j];
-                    os << coords[i*d+j]*width << " "
-                       << (coords[i*d+j]+1)*width << " ";
+                    os << coords[i*d+j]*width << " " << (coords[i*d+j]+1)*width;
+                    if( j != d-1 )
+                        os << " ";
                 }
-                for( size_t j=d; j<3; ++j )
-                    os << "0 1 ";
+                if( d == 1 )
+                    os << " 0 1 0 1";
+                else if( d == 2 )
+                    os << " 0 1";
                 realFile << os.str();
                 imagFile << os.str();
                 os.clear(); os.str("");
@@ -468,28 +489,50 @@ WriteImage
            << "<VTKFile type=\"ImageData\" version=\"0.1\">\n"
            << " <ImageData WholeExtent=\"";
         for( size_t j=0; j<d; ++j )
-            os << "0 " << N*numSamplesPerBoxDim << " ";
-        for( size_t j=d; j<3; ++j )
-            os << "0 1 ";
+        {
+            os << "0 " << N*numSamplesPerBoxDim;
+            if( j != d-1 )
+                os << " ";
+        }
+        if( d == 1 )
+            os << " 0 1 0 1";
+        else if( d == 2 )
+            os << " 0 1";
         os << "\" Origin=\"";
         for( size_t j=0; j<d; ++j )
-            os << tBox.offsets[j] << " ";
-        for( size_t j=d; j<3; ++j )
-            os << "0 ";
+        {
+            os << tBox.offsets[j];
+            if( j != d-1 )
+                os << " ";
+        }
+        if( d == 1 )
+            os << " 0 0";
+        else if( d == 2 )
+            os << " 0";
         os << "\" Spacing=\"";
         for( size_t j=0; j<d; ++j )
-            os << tBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
-        for( size_t j=d; j<3; ++j )
-            os << "1 ";
+        {
+            os << tBox.widths[j]/(N*numSamplesPerBoxDim);
+            if( j != d-1 )
+                os << " ";
+        }
+        if( d == 1 )
+            os << " 1 1";
+        else if( d == 2 )
+            os << " 1";
         os << "\">\n"
            << "  <Piece Extent=\"";
         for( size_t j=0; j<d; ++j )
         {
             size_t width = numSamplesPerBoxDim << log2SubboxesPerDim[j];
-            os << myCoords[j]*width << " " << (myCoords[j]+1)*width << " ";
+            os << myCoords[j]*width << " " << (myCoords[j]+1)*width;
+            if( j != d-1 )
+                os << " ";
         }
-        for( size_t j=d; j<3; ++j )
-            os << "0 1 ";
+        if( d == 1 )
+            os << " 0 1 0 1";
+        else if( d == 2 )
+            os << " 0 1";
         os << "\">\n"
            << "   <CellData Scalars=\"cell_scalars\">\n"
            << "    <DataArray type=\"Float32\" Name=\"cell_scalars\""
@@ -528,8 +571,7 @@ WriteImage
                 imagFile << "\n";
             }
         }
-        os << "\n"
-           << "    </DataArray>\n"
+        os << "    </DataArray>\n"
            << "   </CellData>\n"
            << "  </Piece>\n"
            << " </ImageData>\n"
@@ -622,19 +664,37 @@ WriteImage
                << "<VTKFile type=\"PImageData\" version=\"0.1\">\n"
                << " <PImageData WholeExtent=\"";
             for( size_t j=0; j<d; ++j )
-                os << "0 " << N*numSamplesPerBoxDim << " ";
-            for( size_t j=d; j<3; ++j )
-                os << "0 1 ";
+            {
+                os << "0 " << N*numSamplesPerBoxDim;
+                if( j != d-1 )
+                    os << " ";
+            }
+            if( d == 1 )
+                os << " 0 1 0 1";
+            else if( d == 2 )
+                os << " 0 1";
             os << "\" Origin=\"";
             for( size_t j=0; j<d; ++j )
-                os << tBox.offsets[j] << " ";
-            for( size_t j=d; j<3; ++j )
-                os << "0 ";
+            {
+                os << tBox.offsets[j];
+                if( j != d-1 )
+                    os << " ";
+            }
+            if( d == 1 )
+                os << " 0 0";
+            else if( d == 2 )
+                os << " 0";
             os << "\" Spacing=\"";
             for( size_t j=0; j<d; ++j )
-                os << tBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
-            for( size_t j=d; j<3; ++j )
-                os << "1 ";
+            {
+                os << tBox.widths[j]/(N*numSamplesPerBoxDim);
+                if( j != d-1 )
+                    os << " ";
+            }
+            if( d == 1 )
+                os << " 1 1";
+            else if( d == 2 )
+                os << " 1";
             os << "\" GhostLevel=\"0\">\n"
                << "  <PCellData Scalars=\"cell_scalars\">\n"
                << "   <PDataArray type=\"Float32\" Name=\"cell_scalars\"/>\n"
@@ -645,11 +705,14 @@ WriteImage
                 for( size_t j=0; j<d; ++j )
                 {
                     size_t width = numSamplesPerBoxDim << log2SubboxesPerDim[j];
-                    os << coords[i*d+j]*width << " "
-                       << (coords[i*d+j]+1)*width << " ";
+                    os << coords[i*d+j]*width << " " << (coords[i*d+j]+1)*width;
+                    if( j != d-1 )
+                        os << " ";
                 }
-                for( size_t j=d; j<3; ++j )
-                    os << "0 1 ";
+                if( d == 1 )
+                    os << " 0 1 0 1";
+                else if( d == 2 )
+                    os << " 0 1";
                 realTruthFile << os.str();
                 imagTruthFile << os.str();
                 realApproxFile << os.str();
@@ -725,28 +788,50 @@ WriteImage
            << "<VTKFile type=\"ImageData\" version=\"0.1\">\n"
            << " <ImageData WholeExtent=\"";
         for( size_t j=0; j<d; ++j )
-            os << "0 " << N*numSamplesPerBoxDim << " ";
-        for( size_t j=d; j<3; ++j )
-            os << "0 1 ";
+        {
+            os << "0 " << N*numSamplesPerBoxDim;
+            if( j != d-1 )
+                os << " ";
+        }
+        if( d == 1 )
+            os << " 0 1 0 1";
+        else if( d == 2 )
+            os << " 0 1";
         os << "\" Origin=\"";
         for( size_t j=0; j<d; ++j )
-            os << tBox.offsets[j] << " ";
-        for( size_t j=d; j<3; ++j )
-            os << "0 ";
+        {
+            os << tBox.offsets[j];
+            if( j != d-1 )
+                os << " ";
+        }
+        if( d == 1 )
+            os << " 0 0";
+        else if( d == 2 )
+            os << " 0";
         os << "\" Spacing=\"";
         for( size_t j=0; j<d; ++j )
-            os << tBox.widths[j]/(N*numSamplesPerBoxDim) << " ";
-        for( size_t j=d; j<3; ++j )
-            os << "1 ";
+        {
+            os << tBox.widths[j]/(N*numSamplesPerBoxDim);
+            if( j != d-1 )
+                os << " ";
+        }
+        if( d == 1 )
+            os << " 1 1";
+        else if( d == 2 )
+            os << " 1";
         os << "\">\n"
            << "  <Piece Extent=\"";
         for( size_t j=0; j<d; ++j )
         {
             size_t width = numSamplesPerBoxDim << log2SubboxesPerDim[j];
-            os << myCoords[j]*width << " " << (myCoords[j]+1)*width << " ";
+            os << myCoords[j]*width << " " << (myCoords[j]+1)*width;
+            if( j != d-1 )
+                os << " ";
         }
-        for( size_t j=d; j<3; ++j )
-            os << "0 1 ";
+        if( d == 1 )
+            os << " 0 1 0 1";
+        else if( d == 2 )
+            os << " 0 1";
         os << "\">\n"
            << "   <CellData Scalars=\"cell_scalars\">\n"
            << "    <DataArray type=\"Float32\" Name=\"cell_scalars\""
@@ -810,8 +895,7 @@ WriteImage
                 imagErrorFile << "\n";
             }
         }
-        os << "\n"
-           << "    </DataArray>\n"
+        os << "    </DataArray>\n"
            << "   </CellData>\n"
            << "  </Piece>\n"
            << " </ImageData>\n"
