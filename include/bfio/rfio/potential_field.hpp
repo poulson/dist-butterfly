@@ -352,7 +352,7 @@ void PrintErrorEstimates
                   << LinfError/L1Sources << "\n" 
                   << "---------------------------------------------\n";
 #ifdef TIMING
-        std::cout << "Time for accuracy test: " << accTimer.TotalTime() 
+        std::cout << "Time for accuracy test: " << accTimer.Total() 
                   << " seconds\n";
 #endif // ifdef TIMING
         std::cout << std::endl;

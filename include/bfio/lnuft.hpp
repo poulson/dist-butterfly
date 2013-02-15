@@ -58,16 +58,16 @@ PrintTimings()
     std::cout << "LNUFT timings:\n"
               << "------------------------------------------\n" 
 	      << "InitializeWeights:     " 
-	      << initializeWeightsTimer.TotalTime() << " seconds.\n"
+	      << initializeWeightsTimer.Total() << " seconds.\n"
 	      << "SourceWeightRecursion: " 
-	      << sWeightRecursionTimer.TotalTime() << " seconds.\n"
+	      << sWeightRecursionTimer.Total() << " seconds.\n"
 	      << "SwitchToTargetInterp:  "
-	      << switchToTargetInterpTimer.TotalTime() << " seconds.\n"
+	      << switchToTargetInterpTimer.Total() << " seconds.\n"
 	      << "TargetWeightRecursion: "
-	      << tWeightRecursionTimer.TotalTime() << " seconds.\n"
+	      << tWeightRecursionTimer.Total() << " seconds.\n"
 	      << "SumScatter:            "
-	      << sumScatterTimer.TotalTime() << " seconds.\n"
-	      << "Total: " << timer.TotalTime() << " seconds.\n" << std::endl;
+	      << sumScatterTimer.Total() << " seconds.\n"
+	      << "Total: " << timer.Total() << " seconds.\n" << std::endl;
 }
 
 } // lnuft

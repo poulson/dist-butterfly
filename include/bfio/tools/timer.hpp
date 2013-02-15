@@ -9,16 +9,20 @@
 #ifndef BFIO_TOOLS_TIMER_HPP
 #define BFIO_TOOLS_TIMER_HPP
 
+#include <chrono>
 #include <stdexcept>
-#include "mpi.h"
 
 namespace bfio {
+
+using std::chrono::duration;
+using std::chrono::duration_cast;
+using std::chrono::steady_clock;
 
 class Timer
 {
     bool running_;
-    double lastStartTime_;
     double totalTime_;
+    steady_clock::time_point lastTime_;    
     const std::string name_;
 public:        
     Timer();
@@ -29,7 +33,7 @@ public:
     void Reset();
 
     const std::string& Name() const;
-    double TotalTime() const;
+    double Total() const;
 };
 
 } // bfio
@@ -50,7 +54,7 @@ bfio::Timer::Start()
     if( running_ )
 	throw std::logic_error("Forgot to stop timer before restarting.");
 #endif
-    lastStartTime_ = MPI_Wtime();
+    lastTime_ = steady_clock::now();
     running_ = true;
 }
 
@@ -61,7 +65,9 @@ bfio::Timer::Stop()
     if( !running_ )
 	throw std::logic_error("Tried to stop a timer before starting it.");
 #endif
-    totalTime_ += MPI_Wtime()-lastStartTime_;
+    auto now = steady_clock::now();
+    auto timeSpan = duration_cast<duration<double>>(now-lastTime_);
+    totalTime_ += timeSpan.count();
     running_ = false;
 }
 
@@ -74,7 +80,7 @@ bfio::Timer::Name() const
 { return name_; }
 
 inline double 
-bfio::Timer::TotalTime() const
+bfio::Timer::Total() const
 { 
 #ifndef RELEASE
     if( running_ )

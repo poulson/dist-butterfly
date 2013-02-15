@@ -57,14 +57,14 @@ PrintTimings()
     std::cout << "INUFT timings:\n"
               << "------------------------------------------\n"
               << "InitializeCheckPotentials: "
-              << initializeCheckPotentialsTimer.TotalTime() << " seconds.\n"
+              << initializeCheckPotentialsTimer.Total() << " seconds.\n"
               << "FormCheckPotentials:       "
-              << formCheckPotentialsTimer.TotalTime() << " seconds.\n"
+              << formCheckPotentialsTimer.Total() << " seconds.\n"
               << "FormEquivalentSources:     "
-              << formEquivalentSourcesTimer.TotalTime() << " seconds.\n"
+              << formEquivalentSourcesTimer.Total() << " seconds.\n"
               << "SumScatter:                "
-              << sumScatterTimer.TotalTime() << " seconds.\n"
-              << "Total: " << timer.TotalTime() << " seconds.\n" << std::endl;
+              << sumScatterTimer.Total() << " seconds.\n"
+              << "Total: " << timer.Total() << " seconds.\n" << std::endl;
 }
 
 } // inuft
