@@ -40,7 +40,7 @@ Log2( unsigned N )
     N |= N >> 8;
     N |= N >> 16;
     N = MultiplyDeBruijnBitPosition[(unsigned)(N*0x07C4ACDDU)>>27];
-    return static_cast<std::size_t>(N);
+    return std::size_t(N);
 }
 
 // This is a modification of Sean Eron Anderson's binary search algorithm
@@ -88,7 +88,7 @@ NumberOfTrailingOnes( unsigned N )
         }
         c -= !(N & 0x1);
     }
-    return static_cast<std::size_t>(c);
+    return std::size_t(c);
 }
 
 } // bfio

@@ -12,6 +12,7 @@
 #include <array>
 #include <complex>
 #include <fstream>
+#include <random>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -294,6 +295,11 @@ void PrintErrorEstimates
                   << " N^d = " << numTests << " samples..."
                   << std::endl;
     }
+    // Build an RNG for uniformly sampling (0,1)
+    std::random_device rd;
+    std::default_random_engine engine( rd() );
+    std::uniform_real_distribution<R> uniform_dist(0.f,1.f);
+    auto uniform = std::bind( uniform_dist, std::ref(engine) );
     // Compute the L1 norm of the sources
     double L1Sources = 0.;
     const size_t numSources = sources.size();
@@ -307,7 +313,7 @@ void PrintErrorEstimates
         // Compute a random point in our process's target box
         array<R,d> x;
         for( size_t j=0; j<d; ++j )
-            x[j] = myTBox.offsets[j] + myTBox.widths[j]*Uniform<R>();
+            x[j] = myTBox.offsets[j] + myTBox.widths[j]*uniform();
 
         // Evaluate our potential field at x and compare against truth
         complex<R> approx = u.Evaluate( x );

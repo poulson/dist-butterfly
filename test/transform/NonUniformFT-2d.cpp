@@ -5,9 +5,6 @@
    License, which can be found in the LICENSE file in the root directory, or at
    <http://www.gnu.org/licenses/>.
 */
-#include <ctime>
-#include <fstream>
-#include <memory>
 #include "bfio.hpp"
 using namespace std;
 using namespace bfio;
@@ -132,11 +129,16 @@ main( int argc, char* argv[] )
         }
 
         // Consistently randomly seed all of the processes' PRNG.
-        long seed;
+        unsigned seed;
         if( rank == 0 )
-            seed = time(0);
-        MPI_Bcast( &seed, 1, MPI_LONG, 0, comm );
-        srand( seed );
+        {
+            random_device rd;
+            seed = rd();
+        }
+        MPI_Bcast( &seed, 1, MPI_UNSIGNED, 0, comm );
+        default_random_engine engine( seed );
+        uniform_real_distribution<double> uniform_dist(0.,1.);
+        auto uniform = bind( uniform_dist, ref(engine) );
 
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
@@ -147,11 +149,8 @@ main( int argc, char* argv[] )
             for( size_t i=0; i<M; ++i )
             {
                 for( size_t j=0; j<d; ++j )
-                {
-                    const double relPos = Uniform<double>();
-                    sources[i].p[j] = sBox.offsets[j] + sBox.widths[j]*relPos;
-                }
-                sources[i].magnitude = 1.*(2*Uniform<double>()-1); 
+                    sources[i].p[j] = sBox.offsets[j]+sBox.widths[j]*uniform();
+                sources[i].magnitude = 1.*(2*uniform()-1); 
 
                 // Check if we should push this source onto our local list
                 bool isMine = true;
@@ -170,18 +169,15 @@ main( int argc, char* argv[] )
         else
         {
             size_t numLocalSources = 
-                ( rank<(int)(M%numProcesses) 
+                ( rank<int(M%numProcesses) 
                   ? M/numProcesses+1 : M/numProcesses );
             mySources.resize( numLocalSources );
             for( size_t i=0; i<numLocalSources; ++i )
             {
                 for( size_t j=0; j<d; ++j )
-                {
-                    const double relPos = Uniform<double>();
                     mySources[i].p[j] = 
-                        mySBox.offsets[j] + mySBox.widths[j]*relPos;
-                }
-                mySources[i].magnitude = 1.*(2*Uniform<double>()-1);
+                        mySBox.offsets[j] + mySBox.widths[j]*uniform();
+                mySources[i].magnitude = 1.*(2*uniform()-1);
             }
         }
 

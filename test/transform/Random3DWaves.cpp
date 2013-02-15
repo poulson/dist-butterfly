@@ -5,8 +5,6 @@
    License, which can be found in the LICENSE file in the root directory, or at
    <http://www.gnu.org/licenses/>.
 */
-#include <ctime>
-#include <memory>
 #include "bfio.hpp"
 using namespace std;
 using namespace bfio;
@@ -295,11 +293,16 @@ main( int argc, char* argv[] )
         }
 
         // Consistently seed all of the processes' PRNGs
-        long seed;
+        unsigned seed;
         if( rank == 0 )
-            seed = time(0);
-        MPI_Bcast( &seed, 1, MPI_LONG, 0, comm );
-        srand( seed );
+        {
+            random_device rd;
+            seed = rd();
+        }
+        MPI_Bcast( &seed, 1, MPI_UNSIGNED, 0, comm );
+        default_random_engine engine( seed );
+        uniform_real_distribution<double> uniform_dist(0.,1.);
+        auto uniform = bind( uniform_dist, ref(engine) );
 
         // Now generate random sources in our frequency box
         size_t numLocalSources = 
@@ -309,11 +312,8 @@ main( int argc, char* argv[] )
         for( size_t i=0; i<numLocalSources; ++i )
         {
             for( size_t j=0; j<d; ++j )
-            {
-                const double relPos = Uniform<double>();
-                mySources[i].p[j] = mySBox.offsets[j] + mySBox.widths[j]*relPos;
-            }
-            mySources[i].magnitude = 200*Uniform<double>()-100;
+                mySources[i].p[j]=mySBox.offsets[j]+mySBox.widths[j]*uniform();
+            mySources[i].magnitude = 200*uniform()-100;
         }
 
         // Set up our phase functors
