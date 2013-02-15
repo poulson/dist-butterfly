@@ -28,14 +28,14 @@ namespace inuft {
 template<typename R,size_t d,size_t q>
 class Context
 {
-    const Direction _direction;
-    const size_t _N;
-    const Box<R,d> _sBox, _tBox;
+    const Direction direction_;
+    const size_t N_;
+    const Box<R,d> sBox_, tBox_;
 
-    vector<R> _chebyshevNodes;
-    vector<array<R,d>> _chebyshevGrid;
-    array<vector<R>,d> _realInverseMaps, _imagInverseMaps,
-                       _realForwardMaps, _imagForwardMaps;
+    vector<R> chebyshevNodes_;
+    vector<array<R,d>> chebyshevGrid_;
+    array<vector<R>,d> realInverseMaps_, imagInverseMaps_,
+                       realForwardMaps_, imagForwardMaps_;
 
     void GenerateChebyshevNodes();
     void GenerateChebyshevGrid();
@@ -67,14 +67,14 @@ inline void
 Context<R,d,q>::GenerateChebyshevNodes()
 {
     for( size_t t=0; t<q; ++t )
-        _chebyshevNodes[t] = 0.5*cos(static_cast<R>(t*Pi/(q-1)));
+        chebyshevNodes_[t] = 0.5*cos(R(t*Pi/(q-1)));
 }
 
 template<typename R,size_t d,size_t q>
 inline void
 Context<R,d,q>::GenerateChebyshevGrid()
 {
-    const size_t q_to_d = _chebyshevGrid.size();   
+    const size_t q_to_d = chebyshevGrid_.size();
 
     for( size_t t=0; t<q_to_d; ++t )
     {
@@ -82,7 +82,7 @@ Context<R,d,q>::GenerateChebyshevGrid()
         for( size_t j=0; j<d; ++j )
         {
             size_t i = (t/q_to_j) % q;
-            _chebyshevGrid[t][j] = 0.5*cos(R(i*Pi/(q-1)));
+            chebyshevGrid_[t][j] = 0.5*cos(R(i*Pi/(q-1)));
             q_to_j *= q;
         }
     }
@@ -94,24 +94,23 @@ Context<R,d,q>::GenerateOffsetMaps()
 {
     for( size_t j=0; j<d; ++j )
     {
-        _realInverseMaps[j].resize( q*q );
-        _imagInverseMaps[j].resize( q*q );
-        _realForwardMaps[j].resize( q*q );
-        _imagForwardMaps[j].resize( q*q );
+        realInverseMaps_[j].resize( q*q );
+        imagInverseMaps_[j].resize( q*q );
+        realForwardMaps_[j].resize( q*q );
+        imagForwardMaps_[j].resize( q*q );
     }
 
     array<R,d> productWidths;
     for( size_t j=0; j<d; ++j )
-        productWidths[j] = _sBox.widths[j]*_tBox.widths[j]/_N;
+        productWidths[j] = sBox_.widths[j]*tBox_.widths[j]/N_;
 
     // Form the initialization offset map
     vector<int> pivot(q);
-    vector<complex<R>> A( q*q );
-    vector<complex<R>> work( q*q );
+    vector<complex<R>> A( q*q ), work( q*q );
     for( size_t j=0; j<d; ++j )
     {
         // Form
-        if( _direction == FORWARD )
+        if( direction_ == FORWARD )
         {
             for( size_t t=0; t<q; ++t )
             {
@@ -119,7 +118,7 @@ Context<R,d,q>::GenerateOffsetMaps()
                 {
                     A[t*q+tPrime] = 
                         ImagExp<R>
-                        ( -TwoPi*_chebyshevNodes[t]*_chebyshevNodes[tPrime]*
+                        ( -TwoPi*chebyshevNodes_[t]*chebyshevNodes_[tPrime]*
                           productWidths[j] );
                 }
             }
@@ -132,7 +131,7 @@ Context<R,d,q>::GenerateOffsetMaps()
                 {
                     A[t*q+tPrime] = 
                         ImagExp<R>
-                        ( TwoPi*_chebyshevNodes[t]*_chebyshevNodes[tPrime]*
+                        ( TwoPi*chebyshevNodes_[t]*chebyshevNodes_[tPrime]*
                           productWidths[j] );
                 }
             }
@@ -145,14 +144,14 @@ Context<R,d,q>::GenerateOffsetMaps()
         {
             for( size_t tPrime=0; tPrime<q; ++tPrime )
             {
-                _realInverseMaps[j][t*q+tPrime] = std::real( A[t*q+tPrime] );
-                _imagInverseMaps[j][t*q+tPrime] = std::imag( A[t*q+tPrime] );
+                realInverseMaps_[j][t*q+tPrime] = A[t*q+tPrime].real();
+                imagInverseMaps_[j][t*q+tPrime] = A[t*q+tPrime].imag();
             }
         }
     }
 
     // Form the weight recursion offset map
-    if( _direction == FORWARD )
+    if( direction_ == FORWARD )
     {
         for( size_t j=0; j<d; ++j )
         {
@@ -162,10 +161,10 @@ Context<R,d,q>::GenerateOffsetMaps()
                 {
                     complex<R> alpha = 
                         ImagExp<R>
-                        ( -TwoPi*_chebyshevNodes[t]*_chebyshevNodes[tPrime]*
+                        ( -TwoPi*chebyshevNodes_[t]*chebyshevNodes_[tPrime]*
                           productWidths[j]/2 );
-                    _realForwardMaps[j][t*q+tPrime] = std::real( alpha );
-                    _imagForwardMaps[j][t*q+tPrime] = std::imag( alpha );
+                    realForwardMaps_[j][t*q+tPrime] = alpha.real();
+                    imagForwardMaps_[j][t*q+tPrime] = alpha.imag();
                 }
             }
         }
@@ -180,10 +179,10 @@ Context<R,d,q>::GenerateOffsetMaps()
                 {
                     complex<R> alpha = 
                         ImagExp<R>
-                        ( TwoPi*_chebyshevNodes[t]*_chebyshevNodes[tPrime]*
+                        ( TwoPi*chebyshevNodes_[t]*chebyshevNodes_[tPrime]*
                           productWidths[j]/2 );
-                    _realForwardMaps[j][t*q+tPrime] = std::real( alpha );
-                    _imagForwardMaps[j][t*q+tPrime] = std::imag( alpha );
+                    realForwardMaps_[j][t*q+tPrime] = alpha.real();
+                    imagForwardMaps_[j][t*q+tPrime] = alpha.imag();
                 }
             }
         }
@@ -197,8 +196,8 @@ Context<R,d,q>::Context
   const size_t N,
   const Box<R,d>& sBox,
   const Box<R,d>& tBox ) 
-: _direction(direction), _N(N), _sBox(sBox), _tBox(tBox), 
-  _chebyshevNodes( q ), _chebyshevGrid( Pow<q,d>::val )
+: direction_(direction), N_(N), sBox_(sBox), tBox_(tBox), 
+  chebyshevNodes_( q ), chebyshevGrid_( Pow<q,d>::val )
 {
     GenerateChebyshevNodes();
     GenerateChebyshevGrid();
@@ -208,37 +207,37 @@ Context<R,d,q>::Context
 template<typename R,size_t d,size_t q>
 inline Direction
 Context<R,d,q>::GetDirection() const
-{ return _direction; }
+{ return direction_; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<R>&
 Context<R,d,q>::GetChebyshevNodes() const
-{ return _chebyshevNodes; }
+{ return chebyshevNodes_; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<array<R,d>>&
 Context<R,d,q>::GetChebyshevGrid() const
-{ return _chebyshevGrid; }
+{ return chebyshevGrid_; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<R>&
 Context<R,d,q>::GetRealInverseMap( const size_t j ) const
-{ return _realInverseMaps[j]; }
+{ return realInverseMaps_[j]; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<R>&
 Context<R,d,q>::GetImagInverseMap( const size_t j ) const
-{ return _imagInverseMaps[j]; }
+{ return imagInverseMaps_[j]; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<R>&
 Context<R,d,q>::GetRealForwardMap( const size_t j ) const
-{ return _realForwardMaps[j]; }
+{ return realForwardMaps_[j]; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<R>&
 Context<R,d,q>::GetImagForwardMap( const size_t j ) const
-{ return _imagForwardMaps[j]; }
+{ return imagForwardMaps_[j]; }
 
 } // inuft
 } // bfio

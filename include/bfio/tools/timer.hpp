@@ -16,10 +16,10 @@ namespace bfio {
 
 class Timer
 {
-    bool _running;
-    double _lastStartTime;
-    double _totalTime;
-    const std::string _name;
+    bool running_;
+    double lastStartTime_;
+    double totalTime_;
+    const std::string name_;
 public:        
     Timer();
     Timer( const std::string& name );
@@ -36,51 +36,51 @@ public:
 
 // Implementations
 inline bfio::Timer::Timer()
-: _running(false), _totalTime(0), _name("[blank]")
+: running_(false), totalTime_(0), name_("[blank]")
 { }
 
 inline bfio::Timer::Timer( const std::string& name )
-: _running(false), _totalTime(0), _name(name)
+: running_(false), totalTime_(0), name_(name)
 { }
 
 inline void 
 bfio::Timer::Start()
 { 
 #ifndef RELEASE
-    if( _running )
+    if( running_ )
 	throw std::logic_error("Forgot to stop timer before restarting.");
 #endif
-    _lastStartTime = MPI_Wtime();
-    _running = true;
+    lastStartTime_ = MPI_Wtime();
+    running_ = true;
 }
 
 inline void 
 bfio::Timer::Stop()
 {
 #ifndef RELEASE
-    if( !_running )
+    if( !running_ )
 	throw std::logic_error("Tried to stop a timer before starting it.");
 #endif
-    _totalTime += MPI_Wtime()-_lastStartTime;
-    _running = false;
+    totalTime_ += MPI_Wtime()-lastStartTime_;
+    running_ = false;
 }
 
 inline void 
 bfio::Timer::Reset()
-{ _totalTime = 0; }
+{ totalTime_ = 0; }
 
 inline const std::string& 
 bfio::Timer::Name() const
-{ return _name; }
+{ return name_; }
 
 inline double 
 bfio::Timer::TotalTime() const
 { 
 #ifndef RELEASE
-    if( _running )
+    if( running_ )
 	throw std::logic_error("Asked for total time while still timing.");
 #endif
-    return _totalTime; 
+    return totalTime_; 
 }
 
 #endif // ifndef BFIO_TOOLS_TIMER_HPP

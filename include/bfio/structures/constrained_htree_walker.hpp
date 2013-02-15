@@ -24,12 +24,12 @@ using std::size_t;
 template<size_t d>
 class ConstrainedHTreeWalker
 {
-    bool _overflowed;
-    size_t _firstOpenDim;
-    size_t _nextZeroDim;
-    size_t _nextZeroLevel;
-    array<size_t,d> _state;
-    array<size_t,d> _log2BoxesPerDim;
+    bool overflowed_;
+    size_t firstOpenDim_;
+    size_t nextZeroDim_;
+    size_t nextZeroLevel_;
+    array<size_t,d> state_;
+    array<size_t,d> log2BoxesPerDim_;
 public:
     ConstrainedHTreeWalker( const array<size_t,d>& log2BoxesPerDim );
     ~ConstrainedHTreeWalker();
@@ -44,14 +44,14 @@ public:
 template<size_t d>
 ConstrainedHTreeWalker<d>::ConstrainedHTreeWalker
 ( const array<size_t,d>& log2BoxesPerDim ) 
-: _overflowed(false), _nextZeroLevel(0),
-  _log2BoxesPerDim(log2BoxesPerDim) 
+: overflowed_(false), nextZeroLevel_(0),
+  log2BoxesPerDim_(log2BoxesPerDim) 
 {
-    _state.fill(0);
-    for( _firstOpenDim=0; _firstOpenDim<d; ++_firstOpenDim )
-        if( log2BoxesPerDim[_firstOpenDim] != 0 )
+    state_.fill(0);
+    for( firstOpenDim_=0; firstOpenDim_<d; ++firstOpenDim_ )
+        if( log2BoxesPerDim[firstOpenDim_] != 0 )
             break;
-    _nextZeroDim = _firstOpenDim;
+    nextZeroDim_ = firstOpenDim_;
 }
 
 template<size_t d>
@@ -64,10 +64,10 @@ inline array<size_t,d>
 ConstrainedHTreeWalker<d>::State() const
 { 
 #ifndef RELEASE
-    if( _overflowed )
+    if( overflowed_ )
         throw std::logic_error( "Overflowed HTree" );
 #endif
-    return _state; 
+    return state_; 
 }
 
 template<size_t d>
@@ -75,23 +75,23 @@ void
 ConstrainedHTreeWalker<d>::Walk()
 {
 #ifndef RELEASE
-    if( _nextZeroDim == d )
+    if( nextZeroDim_ == d )
     {
-        _overflowed = true;
+        overflowed_ = true;
         return;
     }
 #endif
 
-    const size_t zeroDim = _nextZeroDim;
-    const size_t zeroLevel = _nextZeroLevel;
+    const size_t zeroDim = nextZeroDim_;
+    const size_t zeroLevel = nextZeroLevel_;
 
-    if( zeroDim == _firstOpenDim )
+    if( zeroDim == firstOpenDim_ )
     {
         // Zero the first (zeroLevel-1) bits of all coordinates
         // and then increment at level zeroLevel
         for( size_t j=0; j<d; ++j )
-            _state[j] &= ~((1u<<zeroLevel)-1);
-        _state[zeroDim] |= 1u<<zeroLevel;
+            state_[j] &= ~((1u<<zeroLevel)-1);
+        state_[zeroDim] |= 1u<<zeroLevel;
 
         // Set up for the next walk
         // We need to find the dimension with the first unconstrained
@@ -101,28 +101,28 @@ ConstrainedHTreeWalker<d>::Walk()
         array<size_t,d> numberOfTrailingOnes;
         for( size_t j=0; j<d; ++j )
         {
-            numberOfTrailingOnes[j] = NumberOfTrailingOnes( _state[j] );
+            numberOfTrailingOnes[j] = NumberOfTrailingOnes( state_[j] );
             if( (numberOfTrailingOnes[j] < minTrailingOnes) &&
-                (numberOfTrailingOnes[j] != _log2BoxesPerDim[j]) )
+                (numberOfTrailingOnes[j] != log2BoxesPerDim_[j]) )
             {
                 minDim = j;
                 minTrailingOnes = numberOfTrailingOnes[j];
             }
         }
-        _nextZeroDim = minDim;
-        _nextZeroLevel = minTrailingOnes;
+        nextZeroDim_ = minDim;
+        nextZeroLevel_ = minTrailingOnes;
     }
     else
     {
         for( size_t j=0; j<=zeroDim; ++j )
-            _state[j] &= ~((1u<<(zeroLevel+1))-1);
+            state_[j] &= ~((1u<<(zeroLevel+1))-1);
         for( size_t j=zeroDim+1; j<d; ++j )
-            _state[j] &= ~((1u<<zeroLevel)-1);
-        _state[zeroDim] |= 1u<<zeroLevel;
+            state_[j] &= ~((1u<<zeroLevel)-1);
+        state_[zeroDim] |= 1u<<zeroLevel;
 
         // Set up for the next walk
-        _nextZeroDim = _firstOpenDim;
-        _nextZeroLevel = 0;
+        nextZeroDim_ = firstOpenDim_;
+        nextZeroLevel_ = 0;
     }
 }
 

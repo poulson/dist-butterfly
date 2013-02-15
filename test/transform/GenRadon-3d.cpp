@@ -56,7 +56,7 @@ inline R GenRadon<R>::operator()
 {
     R a = p[0]*(2+sin(TwoPi*x[0])*sin(TwoPi*x[1]))/3;
     R b = p[1]*(2+cos(TwoPi*x[0])*cos(TwoPi*x[1]))/3;
-    return TwoPi*(x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + sqrt(a*a+b*b));
+    return Pi*(x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + sqrt(a*a+b*b));
 }
 
 template<typename R>
@@ -133,7 +133,7 @@ void GenRadon<R>::BatchEvaluate
                     xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] + 
                     xPointsBuffer[i*d+2]*pPointsBuffer[j*d+2] +
                     sqrtBuffer[i*pSize+j];
-                resultsBuffer[i*pSize+j] *= TwoPi;
+                resultsBuffer[i*pSize+j] *= Pi;
             }
         }
     }
@@ -160,7 +160,7 @@ main( int argc, char* argv[] )
     const size_t N = atoi(argv[++argNum]);
     const size_t F = atoi(argv[++argNum]);
     const size_t M = atoi(argv[++argNum]);
-    const size_t bootstrapSkip = atoi(argv[++argNum]);
+    const size_t bootstrap = atoi(argv[++argNum]);
     const bool testAccuracy = atoi(argv[++argNum]);
     const bool store = atoi(argv[++argNum]);
 
@@ -177,7 +177,7 @@ main( int argc, char* argv[] )
         }
 
         // Set up the general strategy for the forward transform
-        Plan<d> plan( comm, FORWARD, N, bootstrapSkip );
+        Plan<d> plan( comm, FORWARD, N, bootstrap );
         Box<double,d> mySBox = plan.GetMyInitialSourceBox( sBox );
 
         if( rank == 0 )

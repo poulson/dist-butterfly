@@ -30,8 +30,8 @@ namespace lnuft {
 template<typename R,size_t d,size_t q>
 class PotentialField
 {
-    const Context<R,d,q>& _nuftContext;
-    const rfio::PotentialField<R,d,q> _rfioPotential;
+    const Context<R,d,q>& nuftContext_;
+    const rfio::PotentialField<R,d,q> rfioPotential_;
 
 public:
     PotentialField
@@ -90,8 +90,8 @@ PotentialField<R,d,q>::PotentialField
   const array<size_t,d>& myTBoxCoords,
   const array<size_t,d>& log2TSubboxesPerDim,
   const WeightGridList<R,d,q>& weightGridList )
-: _nuftContext(nuftContext), 
-  _rfioPotential
+: nuftContext_(nuftContext), 
+  rfioPotential_
   ( nuftContext.GetRFIOContext(),
     UnitAmplitude<R,d>(),
     ( nuftContext.GetDirection()==FORWARD ? 
@@ -107,52 +107,52 @@ PotentialField<R,d,q>::PotentialField
 template<typename R,size_t d,size_t q>
 inline complex<R>
 PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
-{ return _rfioPotential.Evaluate( x ); }
+{ return rfioPotential_.Evaluate( x ); }
 
 template<typename R,size_t d,size_t q>
 inline const Amplitude<R,d>&
 PotentialField<R,d,q>::GetAmplitude() const
-{ return _rfioPotential.GetAmplitude(); }
+{ return rfioPotential_.GetAmplitude(); }
 
 template<typename R,size_t d,size_t q>
 inline const Phase<R,d>&
 PotentialField<R,d,q>::GetPhase() const
-{ return _rfioPotential.GetPhase(); }
+{ return rfioPotential_.GetPhase(); }
 
 template<typename R,size_t d,size_t q>
 inline const Box<R,d>&
 PotentialField<R,d,q>::GetMyTargetBox() const
-{ return _rfioPotential.GetMyTargetBox(); }
+{ return rfioPotential_.GetMyTargetBox(); }
 
 template<typename R,size_t d,size_t q>
 inline size_t
 PotentialField<R,d,q>::GetNumSubboxes() const
-{ return _rfioPotential.GetNumSubboxes(); }
+{ return rfioPotential_.GetNumSubboxes(); }
 
 template<typename R,size_t d,size_t q>
 inline const array<R,d>&
 PotentialField<R,d,q>::GetSubboxWidths() const
-{ return _rfioPotential.GetSubboxWidths(); }
+{ return rfioPotential_.GetSubboxWidths(); }
 
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
 PotentialField<R,d,q>::GetMyTargetBoxCoords() const
-{ return _rfioPotential.GetMyTargetBoxCoords(); }
+{ return rfioPotential_.GetMyTargetBoxCoords(); }
 
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
 PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
-{ return _rfioPotential.GetLog2SubboxesPerDim(); }
+{ return rfioPotential_.GetLog2SubboxesPerDim(); }
 
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
 PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
-{ return _rfioPotential.GetLog2SubboxesUpToDim(); }
+{ return rfioPotential_.GetLog2SubboxesUpToDim(); }
 
 template<typename R,size_t d,size_t q>
 const rfio::PotentialField<R,d,q>& 
 PotentialField<R,d,q>::GetRFIOPotentialField() const
-{ return _rfioPotential; }
+{ return rfioPotential_; }
 
 template<typename R,size_t d,size_t q>
 inline void 

@@ -24,13 +24,13 @@ namespace lnuft {
 template<typename R,size_t d,size_t q>
 class Context
 {
-    const rfio::Context<R,d,q> _rfioContext;
-    const Direction _direction;
-    const size_t _N;
-    const Box<R,d> _sBox, _tBox;
+    const rfio::Context<R,d,q> rfioContext_;
+    const Direction direction_;
+    const size_t N_;
+    const Box<R,d> sBox_, tBox_;
 
-    array<vector<R>,d> _realOffsetEvaluations,
-                       _imagOffsetEvaluations;
+    array<vector<R>,d> realOffsetEvaluations_,
+                       imagOffsetEvaluations_;
 
     void GenerateOffsetEvaluations();
 
@@ -53,20 +53,20 @@ template<typename R,size_t d,size_t q>
 inline void
 Context<R,d,q>::GenerateOffsetEvaluations()
 {
-    const size_t log2N = Log2( _N );
+    const size_t log2N = Log2( N_ );
     const size_t middleLevel = log2N/2;
 
     array<R,d> wAMiddle, wBMiddle;
     for( std::size_t j=0; j<d; ++j )
     {
-        wAMiddle[j] = _tBox.widths[j] / (1<<middleLevel);
-        wBMiddle[j] = _sBox.widths[j] / (1<<(log2N-middleLevel));
+        wAMiddle[j] = tBox_.widths[j] / (1<<middleLevel);
+        wBMiddle[j] = sBox_.widths[j] / (1<<(log2N-middleLevel));
     }
 
     // Form the offset grid evaluations
-    const R SignedTwoPi = ( _direction==FORWARD ? -TwoPi : TwoPi ); 
+    const R SignedTwoPi = ( direction_==FORWARD ? -TwoPi : TwoPi ); 
     vector<R> phaseEvaluations(q*q);
-    const vector<R>& chebyshevNodes = _rfioContext.GetChebyshevNodes();
+    const vector<R>& chebyshevNodes = rfioContext_.GetChebyshevNodes();
     const R* chebyshevBuffer = &chebyshevNodes[0];
     for( size_t j=0; j<d; ++j )
     {
@@ -77,37 +77,36 @@ Context<R,d,q>::GenerateOffsetEvaluations()
                     chebyshevBuffer[t]*chebyshevBuffer[tPrime];
         SinCosBatch
         ( phaseEvaluations, 
-          _imagOffsetEvaluations[j], _realOffsetEvaluations[j] );
+          imagOffsetEvaluations_[j], realOffsetEvaluations_[j] );
     }
 }
 
 template<typename R,size_t d,size_t q>
 inline
 Context<R,d,q>::Context
-( Direction direction, size_t N, 
-  const Box<R,d>& sBox, const Box<R,d>& tBox ) 
-: _rfioContext(), _direction(direction), _N(N), _sBox(sBox), _tBox(tBox)
+( Direction direction, size_t N, const Box<R,d>& sBox, const Box<R,d>& tBox ) 
+: rfioContext_(), direction_(direction), N_(N), sBox_(sBox), tBox_(tBox)
 { GenerateOffsetEvaluations(); }
 
 template<typename R,size_t d,size_t q>
 inline const rfio::Context<R,d,q>&
 Context<R,d,q>::GetRFIOContext() const
-{ return _rfioContext; }
+{ return rfioContext_; }
 
 template<typename R,size_t d,size_t q>
 inline Direction
 Context<R,d,q>::GetDirection() const
-{ return _direction; }
+{ return direction_; }
 
 template<typename R,size_t d,size_t q>
 inline const array<vector<R>,d>&
 Context<R,d,q>::GetRealOffsetEvaluations() const
-{ return _realOffsetEvaluations; }
+{ return realOffsetEvaluations_; }
 
 template<typename R,size_t d,size_t q>
 inline const array<vector<R>,d>&
 Context<R,d,q>::GetImagOffsetEvaluations() const
-{ return _imagOffsetEvaluations; }
+{ return imagOffsetEvaluations_; }
 
 } // lnuft
 } // bfio

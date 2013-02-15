@@ -21,11 +21,11 @@ class WeightGrid
     // We know the size is 2*q^d, but it's a bad idea to keep this on the stack.
     // We will use this to contiguously store the real, and then imaginary, 
     // components of the weights.
-    bool _hasBuffer;
-    bool _ownsBuffer;
-    R* _buffer;
-    R* _realBuffer;
-    R* _imagBuffer;
+    bool hasBuffer_;
+    bool ownsBuffer_;
+    R* buffer_;
+    R* realBuffer_;
+    R* imagBuffer_;
 
 public:
     WeightGrid();
@@ -57,50 +57,50 @@ public:
 
 template<typename R,std::size_t d,std::size_t q>
 WeightGrid<R,d,q>::WeightGrid()
-: _hasBuffer(true), _ownsBuffer(true)
+: hasBuffer_(true), ownsBuffer_(true)
 {
     const std::size_t q_to_d = Pow<q,d>::val;
-    _buffer = new R[2*q_to_d];
-    _realBuffer = &_buffer[0];
-    _imagBuffer = &_buffer[q_to_d];
+    buffer_ = new R[2*q_to_d];
+    realBuffer_ = &buffer_[0];
+    imagBuffer_ = &buffer_[q_to_d];
 }
 
 template<typename R,std::size_t d,std::size_t q>
 WeightGrid<R,d,q>::WeightGrid( bool createBuffer ) 
-: _hasBuffer(createBuffer), _ownsBuffer(createBuffer)
+: hasBuffer_(createBuffer), ownsBuffer_(createBuffer)
 {
     if( createBuffer )
     {
         const std::size_t q_to_d = Pow<q,d>::val;
-        _buffer = new R[2*q_to_d];
-        _realBuffer = &_buffer[0];
-        _imagBuffer = &_buffer[q_to_d];
+        buffer_ = new R[2*q_to_d];
+        realBuffer_ = &buffer_[0];
+        imagBuffer_ = &buffer_[q_to_d];
     }
     else
     {
-        _buffer = 0;
-        _realBuffer = 0;
-        _imagBuffer = 0;
+        buffer_ = 0;
+        realBuffer_ = 0;
+        imagBuffer_ = 0;
     }
 }
 
 template<typename R,std::size_t d,std::size_t q>
 WeightGrid<R,d,q>::WeightGrid( const WeightGrid<R,d,q>& weightGrid )
-: _hasBuffer(weightGrid.HasBuffer()), _ownsBuffer(weightGrid.HasBuffer())
+: hasBuffer_(weightGrid.HasBuffer()), ownsBuffer_(weightGrid.HasBuffer())
 {
     if( weightGrid.HasBuffer() )
     {
         const std::size_t q_to_d = Pow<q,d>::val;
-        _buffer = new R[2*q_to_d];
-        std::memcpy( _buffer, weightGrid.Buffer(), 2*q_to_d*sizeof(R) );
-        _realBuffer = &_buffer[0];
-        _imagBuffer = &_buffer[q_to_d];
+        buffer_ = new R[2*q_to_d];
+        std::memcpy( buffer_, weightGrid.Buffer(), 2*q_to_d*sizeof(R) );
+        realBuffer_ = &buffer_[0];
+        imagBuffer_ = &buffer_[q_to_d];
     }
     else
     {
-        _buffer = 0;
-        _realBuffer = 0;
-        _imagBuffer = 0;
+        buffer_ = 0;
+        realBuffer_ = 0;
+        imagBuffer_ = 0;
     }
 }
 
@@ -108,8 +108,8 @@ template<typename R,std::size_t d,std::size_t q>
 inline
 WeightGrid<R,d,q>::~WeightGrid() 
 { 
-    if( _ownsBuffer ) 
-        delete[] _buffer;
+    if( ownsBuffer_ ) 
+        delete[] buffer_;
 }
 
 // This buffer must be of length 2*q^d
@@ -117,75 +117,75 @@ template<typename R,std::size_t d,std::size_t q>
 void
 WeightGrid<R,d,q>::AttachBuffer( R* buffer, bool givingBuffer )
 { 
-    if( _ownsBuffer )
-        delete[] _buffer;
-    _buffer = buffer;
-    _realBuffer = &_buffer[0];
-    _imagBuffer = &_buffer[Pow<q,d>::val];
+    if( ownsBuffer_ )
+        delete[] buffer_;
+    buffer_ = buffer;
+    realBuffer_ = &buffer_[0];
+    imagBuffer_ = &buffer_[Pow<q,d>::val];
 
-    _hasBuffer = true;
-    _ownsBuffer = givingBuffer;
+    hasBuffer_ = true;
+    ownsBuffer_ = givingBuffer;
 }
 
 template<typename R,std::size_t d,std::size_t q>
 inline bool
 WeightGrid<R,d,q>::HasBuffer() const
-{ return _hasBuffer; }
+{ return hasBuffer_; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline bool
 WeightGrid<R,d,q>::OwnsBuffer() const
-{ return _ownsBuffer; }
+{ return ownsBuffer_; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const R*
 WeightGrid<R,d,q>::Buffer() const
-{ return _buffer; }
+{ return buffer_; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline R*
 WeightGrid<R,d,q>::Buffer()
-{ return _buffer; }
+{ return buffer_; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const R*
 WeightGrid<R,d,q>::RealBuffer() const
-{ return _realBuffer; }
+{ return realBuffer_; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline R*
 WeightGrid<R,d,q>::RealBuffer()
-{ return _realBuffer; }
+{ return realBuffer_; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const R*
 WeightGrid<R,d,q>::ImagBuffer() const
-{ return _imagBuffer; }
+{ return imagBuffer_; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline R*
 WeightGrid<R,d,q>::ImagBuffer()
-{ return _imagBuffer; }
+{ return imagBuffer_; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const R&
 WeightGrid<R,d,q>::RealWeight( std::size_t i ) const
-{ return _realBuffer[i]; }
+{ return realBuffer_[i]; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline R&
 WeightGrid<R,d,q>::RealWeight( std::size_t i )
-{ return _realBuffer[i]; }
+{ return realBuffer_[i]; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const R&
 WeightGrid<R,d,q>::ImagWeight( std::size_t i ) const
-{ return _imagBuffer[i]; }
+{ return imagBuffer_[i]; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline R&
 WeightGrid<R,d,q>::ImagWeight( std::size_t i ) 
-{ return _imagBuffer[i]; }
+{ return imagBuffer_[i]; }
 
 template<typename R,std::size_t d,std::size_t q>
 const WeightGrid<R,d,q>&
@@ -193,26 +193,25 @@ WeightGrid<R,d,q>::operator=( const WeightGrid<R,d,q>& weightGrid )
 { 
     if( weightGrid.HasBuffer() )
     {
-        if( !_hasBuffer )
+        if( !hasBuffer_ )
         {
-            _buffer = new R[2*Pow<q,d>::val];    
-            _hasBuffer = true;
-            _ownsBuffer = true;
+            buffer_ = new R[2*Pow<q,d>::val];    
+            hasBuffer_ = true;
+            ownsBuffer_ = true;
         }
-        std::memcpy
-        ( _buffer, weightGrid.Buffer(), 2*Pow<q,d>::val*sizeof(R) );
+        std::memcpy( buffer_, weightGrid.Buffer(), 2*Pow<q,d>::val*sizeof(R) );
     }
     else
     {
-        if( _ownsBuffer )
+        if( ownsBuffer_ )
         {
-            delete[] _buffer;
-            _ownsBuffer = false;
+            delete[] buffer_;
+            ownsBuffer_ = false;
         }
-        _hasBuffer = false;
-        _buffer = 0;
-        _realBuffer = 0;
-        _imagBuffer = 0;
+        hasBuffer_ = false;
+        buffer_ = 0;
+        realBuffer_ = 0;
+        imagBuffer_ = 0;
     }
     return *this;
 }

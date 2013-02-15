@@ -27,7 +27,7 @@ class PointGrid
 {
     // We know the size should be q^d at compile time, but we do not want the
     // data stored on the stack
-    vector<array<R,d>> _points;
+    vector<array<R,d>> points_;
 
 public:
     PointGrid();
@@ -44,7 +44,7 @@ public:
 template<typename R,size_t d,size_t q>
 inline
 PointGrid<R,d,q>::PointGrid() 
-: _points(Pow<q,d>::val) 
+: points_(Pow<q,d>::val) 
 { }
 
 template<typename R,size_t d,size_t q>
@@ -55,19 +55,19 @@ PointGrid<R,d,q>::~PointGrid()
 template<typename R,size_t d,size_t q>
 inline const array<R,d>&
 PointGrid<R,d,q>::operator[] ( size_t i ) const
-{ return _points[i]; }
+{ return points_[i]; }
 
 template<typename R,size_t d,size_t q>
 inline array<R,d>&
 PointGrid<R,d,q>::operator[] ( size_t i )
-{ return _points[i]; }
+{ return points_[i]; }
 
 template<typename R,size_t d,size_t q>
 inline const PointGrid<R,d,q>&
 PointGrid<R,d,q>::operator= ( const PointGrid<R,d,q>& pointGrid )
 {
     const size_t q_to_d = Pow<q,d>::val;
-    memcpy( &(_points[0][0]), &(pointGrid[0][0]), q_to_d*sizeof(R) );
+    memcpy( &(points_[0][0]), &(pointGrid[0][0]), q_to_d*sizeof(R) );
     return *this;
 }
 

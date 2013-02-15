@@ -17,7 +17,7 @@ Usage()
     cout << "Random3DWaves <N> <M> <bootstrap> <T> <nT>\n" 
          << "  N: power of 2, the source spread in each dimension\n" 
          << "  M: number of random sources to instantiate\n" 
-         << "  bootstrapSkip: level to bootstrap to\n"
+         << "  bootstrap: level to bootstrap to\n"
          << "  T: time to simulate to\n" 
          << "  nT: number of timesteps\n" 
          << endl;
@@ -262,7 +262,7 @@ main( int argc, char* argv[] )
     }
     const size_t N = atoi(argv[1]);
     const size_t M = atoi(argv[2]);
-    const size_t bootstrapSkip = atoi(argv[3]);
+    const size_t bootstrap = atoi(argv[3]);
     const double T = atof(argv[4]);
     const size_t nT = atoi(argv[5]);
 
@@ -279,7 +279,7 @@ main( int argc, char* argv[] )
         }
 
         // Set up the general strategy for the forward transform
-        Plan<d> plan( comm, FORWARD, N, bootstrapSkip );
+        Plan<d> plan( comm, FORWARD, N, bootstrap );
         Box<double,d> mySBox = plan.GetMyInitialSourceBox( sBox );
 
         if( rank == 0 )

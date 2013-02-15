@@ -69,7 +69,7 @@ SwitchToTargetInterp
     ConstrainedHTreeWalker<d> AWalker( log2LocalTBoxesPerDim );
     for( size_t i=0; i<(1u<<log2LocalTBoxes); ++i, AWalker.Walk() )
     {
-        const array<size_t,d> A = AWalker.State();
+        const array<size_t,d>& A = AWalker.State();
 
         // Compute the coordinates and center of this target box
         array<R,d> x0A;
@@ -93,7 +93,7 @@ SwitchToTargetInterp
         ConstrainedHTreeWalker<d> BWalker( log2LocalSBoxesPerDim );
         for( size_t k=0; k<(1u<<log2LocalSBoxes); ++k, BWalker.Walk() )
         {
-            const array<size_t,d> B = BWalker.State();
+            const array<size_t,d>& B = BWalker.State();
 
             // Compute the coordinates and center of this source box
             array<R,d> p0B;

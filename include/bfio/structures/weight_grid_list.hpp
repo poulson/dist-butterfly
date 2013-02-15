@@ -19,9 +19,9 @@ namespace bfio {
 template<typename R,std::size_t d,std::size_t q>
 class WeightGridList
 {
-    const std::size_t _length;
-    std::vector<R> _buffer;
-    std::vector< WeightGrid<R,d,q> > _weightGrids;
+    const std::size_t length_;
+    std::vector<R> buffer_;
+    std::vector<WeightGrid<R,d,q>> weightGrids_;
 
 public:
     WeightGridList( std::size_t length );
@@ -46,39 +46,38 @@ public:
 
 template<typename R,std::size_t d,std::size_t q>
 WeightGridList<R,d,q>::WeightGridList( std::size_t length ) 
-: _length(length)
+: length_(length)
 { 
     // Create space for the data
     const std::size_t weightGridSize = 2*Pow<q,d>::val;
-    _buffer.resize( weightGridSize*length );
+    buffer_.resize( weightGridSize*length );
 
     // Create the views of the data
-    _weightGrids.reserve( length );
+    weightGrids_.reserve( length );
     for( std::size_t j=0; j<length; ++j )
     {
-        _weightGrids.push_back( WeightGrid<R,d,q>( false ) );
-        _weightGrids[j].AttachBuffer( &_buffer[j*weightGridSize], false );
+        weightGrids_.push_back( WeightGrid<R,d,q>( false ) );
+        weightGrids_[j].AttachBuffer( &buffer_[j*weightGridSize], false );
     }
 }
 
 template<typename R,std::size_t d,std::size_t q>
 WeightGridList<R,d,q>::WeightGridList
 ( const WeightGridList<R,d,q>& weightGridList )
-: _length(weightGridList.Length())
+: length_(weightGridList.Length())
 {
     // Copy the data
     const std::size_t weightGridSize = 2*Pow<q,d>::val;
-    _buffer.resize( weightGridSize*_length );
+    buffer_.resize( weightGridSize*length_ );
     std::memcpy
-    ( &_buffer[0], weightGridList.Buffer(), 
-      _length*weightGridSize*sizeof(R) );
+    ( &buffer_[0], weightGridList.Buffer(), length_*weightGridSize*sizeof(R) );
 
     // Create the views of the copied data
-    _weightGrids.reserve( _length );
-    for( std::size_t j=0; j<_length; ++j )
+    weightGrids_.reserve( length_ );
+    for( std::size_t j=0; j<length_; ++j )
     {
-        _weightGrids.push_back( WeightGrid<R,d,q>( false ) );
-        _weightGrids[j].AttachBuffer( &_buffer[j*weightGridSize], false );
+        weightGrids_.push_back( WeightGrid<R,d,q>( false ) );
+        weightGrids_[j].AttachBuffer( &buffer_[j*weightGridSize], false );
     }
 }
 
@@ -90,29 +89,29 @@ WeightGridList<R,d,q>::~WeightGridList()
 template<typename R,std::size_t d,std::size_t q>
 inline const R*
 WeightGridList<R,d,q>::Buffer() const
-{ return &_buffer[0]; }
+{ return &buffer_[0]; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline R*
 WeightGridList<R,d,q>::Buffer()
-{ return &_buffer[0]; }
+{ return &buffer_[0]; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline std::size_t
 WeightGridList<R,d,q>::Length() const
-{ return _length; }
+{ return length_; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline const WeightGrid<R,d,q>& 
 WeightGridList<R,d,q>::operator[]
 ( std::size_t i ) const
-{ return _weightGrids[i]; }
+{ return weightGrids_[i]; }
 
 template<typename R,std::size_t d,std::size_t q>
 inline WeightGrid<R,d,q>& 
 WeightGridList<R,d,q>::operator[]
 ( std::size_t i )
-{ return _weightGrids[i]; }
+{ return weightGrids_[i]; }
 
 template<typename R,std::size_t d,std::size_t q>
 const WeightGridList<R,d,q>&
@@ -121,20 +120,19 @@ WeightGridList<R,d,q>::operator=
 { 
     // Ensure that we have a large enough buffer
     const std::size_t weightGridSize = 2*Pow<q,d>::val;
-    _length = weightGridList.Length();
-    _buffer.resize( weightGridSize*_length );
+    length_ = weightGridList.Length();
+    buffer_.resize( weightGridSize*length_ );
 
     // Copy the data over
     std::memcpy
-    ( &_buffer[0], weightGridList.Buffer(), 
-      _length*weightGridSize*sizeof(R) );
+    ( &buffer_[0], weightGridList.Buffer(), length_*weightGridSize*sizeof(R) );
 
     // Create the views of the data
-    _weightGrids.reserve( _length );
-    for( std::size_t j=0; j<_length; ++j )
+    weightGrids_.reserve( length_ );
+    for( std::size_t j=0; j<length_; ++j )
     {
-        _weightGrids.push_back( WeightGrid<R,d,q>( false ) );
-        _weightGrids[j].AttachBuffer( &_buffer[j*weightGridSize], false );
+        weightGrids_.push_back( WeightGrid<R,d,q>( false ) );
+        weightGrids_[j].AttachBuffer( &buffer_[j*weightGridSize], false );
     }
 
     return *this;

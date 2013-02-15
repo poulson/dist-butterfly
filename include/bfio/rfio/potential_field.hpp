@@ -41,18 +41,18 @@ namespace rfio {
 template<typename R,size_t d,size_t q>
 class PotentialField
 {
-    const Context<R,d,q>& _context;
-    const Amplitude<R,d>* _amplitude;
-    const Phase<R,d>* _phase;
-    const Box<R,d> _sBox;
-    const Box<R,d> _myTBox;
-    const array<size_t,d> _myTBoxCoords;
-    const array<size_t,d> _log2TSubboxesPerDim;
+    const Context<R,d,q>& context_;
+    const Amplitude<R,d>* amplitude_;
+    const Phase<R,d>* phase_;
+    const Box<R,d> sBox_;
+    const Box<R,d> myTBox_;
+    const array<size_t,d> myTBoxCoords_;
+    const array<size_t,d> log2TSubboxesPerDim_;
 
-    array<R,d> _wA;
-    array<R,d> _p0;
-    array<size_t,d> _log2TSubboxesUpToDim;
-    vector<LRP<R,d,q>> _LRPs;
+    array<R,d> wA_;
+    array<R,d> p0_;
+    array<size_t,d> log2TSubboxesUpToDim_;
+    vector<LRP<R,d,q>> LRPs_;
 
 public:
     PotentialField
@@ -116,47 +116,47 @@ PotentialField<R,d,q>::PotentialField
   const array<size_t,d>& myTBoxCoords,
   const array<size_t,d>& log2TSubboxesPerDim,
   const WeightGridList<R,d,q>& weightGridList )
-: _context(context), _amplitude(amplitude.Clone()), _phase(phase.Clone()), 
-  _sBox(sBox), _myTBox(myTBox), _myTBoxCoords(myTBoxCoords),
-  _log2TSubboxesPerDim(log2TSubboxesPerDim)
+: context_(context), amplitude_(amplitude.Clone()), phase_(phase.Clone()), 
+  sBox_(sBox), myTBox_(myTBox), myTBoxCoords_(myTBoxCoords),
+  log2TSubboxesPerDim_(log2TSubboxesPerDim)
 { 
     // Compute the widths of the target subboxes and the source center
     for( size_t j=0; j<d; ++j )
-        _wA[j] = myTBox.widths[j] / (1<<log2TSubboxesPerDim[j]);
+        wA_[j] = myTBox.widths[j] / (1<<log2TSubboxesPerDim[j]);
     for( size_t j=0; j<d; ++j )
-        _p0[j] = sBox.offsets[j] + sBox.widths[j]/2;
+        p0_[j] = sBox.offsets[j] + sBox.widths[j]/2;
 
     // Compute the array of the partial sums
-    _log2TSubboxesUpToDim[0] = 0;
+    log2TSubboxesUpToDim_[0] = 0;
     for( size_t j=1; j<d; ++j )
     {
-        _log2TSubboxesUpToDim[j] = 
-            _log2TSubboxesUpToDim[j-1] + log2TSubboxesPerDim[j-1];
+        log2TSubboxesUpToDim_[j] = 
+            log2TSubboxesUpToDim_[j-1] + log2TSubboxesPerDim[j-1];
     }
 
     // Figure out the size of our LRP vector by summing log2TargetSubboxesPerDim
     size_t log2TSubboxes = 0;
     for( size_t j=0; j<d; ++j )
         log2TSubboxes += log2TSubboxesPerDim[j];
-    _LRPs.resize( 1<<log2TSubboxes );
+    LRPs_.resize( 1<<log2TSubboxes );
 
     // The weightGridList is assumed to be ordered by the constrained 
     // HTree described by log2TSubboxesPerDim. We will unroll it 
     // lexographically into the LRP vector.
     ConstrainedHTreeWalker<d> AWalker( log2TSubboxesPerDim );
-    for( size_t tIndex=0; tIndex<_LRPs.size(); ++tIndex, AWalker.Walk() )
+    for( size_t tIndex=0; tIndex<LRPs_.size(); ++tIndex, AWalker.Walk() )
     {
-        const array<size_t,d> A = AWalker.State();
+        const array<size_t,d>& A = AWalker.State();
 
         // Unroll the indices of A into its lexographic position
         size_t k=0; 
         for( size_t j=0; j<d; ++j )
-            k += A[j] << _log2TSubboxesUpToDim[j];
+            k += A[j] << log2TSubboxesUpToDim_[j];
 
         // Now fill the k'th LRP index
         for( size_t j=0; j<d; ++j )
-            _LRPs[k].x0[j] = myTBox.offsets[j] + (A[j]+0.5)*_wA[j];
-        _LRPs[k].weightGrid = weightGridList[tIndex];
+            LRPs_[k].x0[j] = myTBox.offsets[j] + (A[j]+0.5)*wA_[j];
+        LRPs_[k].weightGrid = weightGridList[tIndex];
     }
 }
 
@@ -164,8 +164,8 @@ template<typename R,size_t d,size_t q>
 inline
 PotentialField<R,d,q>::~PotentialField()
 {
-    delete _amplitude;
-    delete _phase;
+    delete amplitude_;
+    delete phase_;
 }
 
 template<typename R,size_t d,size_t q>
@@ -177,8 +177,8 @@ PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
 #ifndef RELEASE
     for( size_t j=0; j<d; ++j )
     {
-        if( x[j] < _myTBox.offsets[j] || 
-            x[j] > _myTBox.offsets[j]+_myTBox.widths[j] )
+        if( x[j] < myTBox_.offsets[j] || 
+            x[j] > myTBox_.offsets[j]+myTBox_.widths[j] )
             throw std::runtime_error
             ("Tried to evaluate outside of potential range");
     }
@@ -188,81 +188,77 @@ PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
     size_t k = 0;
     for( size_t j=0; j<d; ++j )
     {
-        size_t owningIndex = size_t((x[j]-_myTBox.offsets[j])/_wA[j]);
-        k += owningIndex << _log2TSubboxesUpToDim[j];
+        size_t owningIndex = size_t((x[j]-myTBox_.offsets[j])/wA_[j]);
+        k += owningIndex << log2TSubboxesUpToDim_[j];
     }
 
     // Convert x to the reference domain of [-1/2,+1/2]^d for box k
-    const LRP<R,d,q>& lrp = _LRPs[k];
+    const LRP<R,d,q>& lrp = LRPs_[k];
     array<R,d> xRef;
     for( size_t j=0; j<d; ++j )
-        xRef[j] = (x[j]-lrp.x0[j])/_wA[j];
+        xRef[j] = (x[j]-lrp.x0[j])/wA_[j];
 
-    const vector<array<R,d>>& chebyshevGrid = 
-        _context.GetChebyshevGrid();
-    R realValue = 0;
-    R imagValue = 0;
+    const vector<array<R,d>>& chebyshevGrid = context_.GetChebyshevGrid();
+    R realValue(0), imagValue(0);
     for( size_t t=0; t<Pow<q,d>::val; ++t )
     {
         // Construct the t'th translated Chebyshev gridpoint
         array<R,d> xt;
         for( size_t j=0; j<d; ++j )
-            xt[j] = lrp.x0[j] + _wA[j]*chebyshevGrid[t][j];
+            xt[j] = lrp.x0[j] + wA_[j]*chebyshevGrid[t][j];
 
-        const C beta = ImagExp<R>( -_phase->operator()(xt,_p0) );
-        const R lambda = _context.Lagrange(t,xRef);
+        const C beta = ImagExp<R>( -phase_->operator()(xt,p0_) );
+        const R lambda = context_.Lagrange(t,xRef);
         const R realWeight = lrp.weightGrid.RealWeight(t);
         const R imagWeight = lrp.weightGrid.ImagWeight(t);
-        realValue += lambda*
-            (realWeight*std::real(beta)-imagWeight*std::imag(beta));
-        imagValue += lambda*
-            (imagWeight*std::real(beta)+realWeight*std::imag(beta));
+        realValue += lambda*(realWeight*beta.real()-imagWeight*beta.imag());
+        imagValue += lambda*(imagWeight*beta.real()+realWeight*beta.imag());
     }
-    const C beta = ImagExp<R>( _phase->operator()(x,_p0) );
-    const R realPotential = realValue*std::real(beta)-imagValue*std::imag(beta);
-    const R imagPotential = imagValue*std::real(beta)+realValue*std::imag(beta);
+    const C beta = ImagExp<R>( phase_->operator()(x,p0_) );
+    const R realPotential = realValue*beta.real()-imagValue*beta.imag();
+    const R imagPotential = imagValue*beta.real()+realValue*beta.imag();
     return C( realPotential, imagPotential );
 }
 
 template<typename R,size_t d,size_t q>
 inline const Amplitude<R,d>&
 PotentialField<R,d,q>::GetAmplitude() const
-{ return *_amplitude; }
+{ return *amplitude_; }
 
 template<typename R,size_t d,size_t q>
 inline const Phase<R,d>&
 PotentialField<R,d,q>::GetPhase() const
-{ return *_phase; }
+{ return *phase_; }
 
 template<typename R,size_t d,size_t q>
 inline const Box<R,d>&
 PotentialField<R,d,q>::GetMyTargetBox() const
-{ return _myTBox; }
+{ return myTBox_; }
 
 template<typename R,size_t d,size_t q>
 inline size_t
 PotentialField<R,d,q>::GetNumSubboxes() const
-{ return _LRPs.size(); }
+{ return LRPs_.size(); }
 
 template<typename R,size_t d,size_t q>
 inline const array<R,d>&
 PotentialField<R,d,q>::GetSubboxWidths() const
-{ return _wA; }
+{ return wA_; }
 
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
 PotentialField<R,d,q>::GetMyTargetBoxCoords() const
-{ return _myTBoxCoords; }
+{ return myTBoxCoords_; }
 
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
 PotentialField<R,d,q>::GetLog2SubboxesPerDim() const
-{ return _log2TSubboxesPerDim; }
+{ return log2TSubboxesPerDim_; }
 
 template<typename R,size_t d,size_t q>
 inline const array<size_t,d>&
 PotentialField<R,d,q>::GetLog2SubboxesUpToDim() const
-{ return _log2TSubboxesUpToDim; }
+{ return log2TSubboxesUpToDim_; }
 
 template<typename R,size_t d,size_t q>
 void PrintErrorEstimates
@@ -270,6 +266,12 @@ void PrintErrorEstimates
   const PotentialField<R,d,q>& u,
   const vector<Source<R,d>>& sources )
 {
+#ifdef TIMING
+    MPI_Barrier( comm );
+    Timer accTimer;
+    accTimer.Reset();
+    accTimer.Start();
+#endif // ifdef TIMING
     const size_t numAccuracyTestsPerBox = 10;
 
     int rank;
@@ -316,23 +318,21 @@ void PrintErrorEstimates
                 amplitude( x, sources[m].p ) * ImagExp( phase(x,sources[m].p) );
             truth += beta * sources[m].magnitude;
         }
-        double absError = std::abs(approx-truth);
-        double absTruth = std::abs(truth);
+        const double absError = std::abs(approx-truth);
+        const double absTruth = std::abs(truth);
         myL2ErrorSquared += absError*absError;
         myL2TruthSquared += absTruth*absTruth;
         myLinfError = std::max( myLinfError, absError );
     }
-    double L2ErrorSquared;
-    double L2TruthSquared;
-    double LinfError;
+    double L2ErrorSquared, L2TruthSquared, LinfError;
     MPI_Reduce
-    ( &myL2ErrorSquared, &L2ErrorSquared, 1, MPI_DOUBLE, MPI_SUM, 0,
-      comm );
+    ( &myL2ErrorSquared, &L2ErrorSquared, 1, MPI_DOUBLE, MPI_SUM, 0, comm );
     MPI_Reduce
-    ( &myL2TruthSquared, &L2TruthSquared, 1, MPI_DOUBLE, MPI_SUM, 0,
-      comm );
-    MPI_Reduce
-    ( &myLinfError, &LinfError, 1, MPI_DOUBLE, MPI_MAX, 0, comm );
+    ( &myL2TruthSquared, &L2TruthSquared, 1, MPI_DOUBLE, MPI_SUM, 0, comm );
+    MPI_Reduce( &myLinfError, &LinfError, 1, MPI_DOUBLE, MPI_MAX, 0, comm );
+#ifdef TIMING
+    accTimer.Stop();
+#endif // ifdef TIMING
     if( rank == 0 )
     {
         std::cout << "---------------------------------------------\n"
@@ -344,8 +344,12 @@ void PrintErrorEstimates
                   << L1Sources << "\n"
                   << "Estimate of ||e||_inf / ||f||_1: "
                   << LinfError/L1Sources << "\n" 
-                  << "---------------------------------------------\n"
-                  << std::endl;
+                  << "---------------------------------------------\n";
+#ifdef TIMING
+        std::cout << "Time for accuracy test: " << accTimer.TotalTime() 
+                  << " seconds\n";
+#endif // ifdef TIMING
+        std::cout << std::endl;
     }
 }
 
@@ -378,15 +382,14 @@ WriteImage
 
         // Gather the target box coordinates to the root to write the 
         // Piece Extent data.
-        array<size_t,d> myCoordsarray = u.GetMyTargetBoxCoords();
+        const array<size_t,d>& myCoordsArray = u.GetMyTargetBoxCoords();
         vector<int> myCoords(d);
         for( size_t j=0; j<d; ++j )
-            myCoords[j] = myCoordsarray[j]; // convert size_t -> int
+            myCoords[j] = myCoordsArray[j]; // convert size_t -> int
         vector<int> coords(1);
         if( rank == 0 )
             coords.resize(d*numProcesses);
-        MPI_Gather
-        ( &myCoords[0], d, MPI_INT, &coords[0], d, MPI_INT, 0, comm );
+        MPI_Gather( &myCoords[0], d, MPI_INT, &coords[0], d, MPI_INT, 0, comm );
 
         // Have the root create the parallel file
         if( rank == 0 )
@@ -623,15 +626,14 @@ WriteImage
 
         // Gather the target box coordinates to the root to write the 
         // Piece Extent data.
-        array<size_t,d> myCoordsarray = u.GetMyTargetBoxCoords();
+        const array<size_t,d>& myCoordsArray = u.GetMyTargetBoxCoords();
         vector<int> myCoords(d);
         for( size_t j=0; j<d; ++j )
-            myCoords[j] = myCoordsarray[j]; // convert size_t -> int
+            myCoords[j] = myCoordsArray[j]; // convert size_t -> int
         vector<int> coords(1);
         if( rank == 0 )
             coords.resize(d*numProcesses);
-        MPI_Gather
-        ( &myCoords[0], d, MPI_INT, &coords[0], d, MPI_INT, 0, comm );
+        MPI_Gather( &myCoords[0], d, MPI_INT, &coords[0], d, MPI_INT, 0, comm );
 
         // Have the root create the parallel file
         if( rank == 0 )

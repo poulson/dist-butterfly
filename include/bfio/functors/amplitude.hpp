@@ -27,7 +27,7 @@ class Amplitude
 {
     // If a derived class sets this variable to 'true', then evaluation of the
     // amplitude function is circumvented.
-    bool _isUnity; 
+    bool isUnity_;
                    
 public:
     Amplitude();
@@ -73,13 +73,13 @@ public:
 
 template<typename R,size_t d>
 Amplitude<R,d>::Amplitude() 
-: _isUnity(false) 
+: isUnity_(false) 
 { }
 
 template<typename R,size_t d>
 inline
 Amplitude<R,d>::Amplitude( bool isUnity ) 
-: _isUnity(isUnity) 
+: isUnity_(isUnity) 
 { }
 
 template<typename R,size_t d>
@@ -90,7 +90,7 @@ Amplitude<R,d>::~Amplitude()
 template<typename R,size_t d>
 inline bool 
 Amplitude<R,d>::IsUnity() const 
-{ return _isUnity; }
+{ return isUnity_; }
 
 template<typename R,size_t d>
 inline void 

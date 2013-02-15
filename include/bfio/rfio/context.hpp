@@ -26,10 +26,10 @@ namespace rfio {
 template<typename R,size_t d,size_t q>
 class Context
 {
-    vector<R> _chebyshevNodes;
-    vector<R> _leftChebyshevMap, _rightChebyshevMap;
-    vector<array<size_t,d>> _chebyshevIndices;
-    vector<array<R,d>> _chebyshevGrid, _sourceChildGrids;
+    vector<R> chebyshevNodes_;
+    vector<R> leftChebyshevMap_, rightChebyshevMap_;
+    vector<array<size_t,d>> chebyshevIndices_;
+    vector<array<R,d>> chebyshevGrid_, sourceChildGrids_;
 
     void GenerateChebyshevNodes();
     void GenerateChebyshevIndices();
@@ -68,14 +68,14 @@ inline void
 Context<R,d,q>::GenerateChebyshevNodes()
 {
     for( size_t t=0; t<q; ++t )
-        _chebyshevNodes[t] = 0.5*cos(R(t*Pi/(q-1)));
+        chebyshevNodes_[t] = 0.5*cos(R(t*Pi/(q-1)));
 }
 
 template<typename R,size_t d,size_t q>
 inline void 
 Context<R,d,q>::GenerateChebyshevIndices()
 {
-    const size_t q_to_d = _chebyshevIndices.size();
+    const size_t q_to_d = chebyshevIndices_.size();
 
     for( size_t t=0; t<q_to_d; ++t )
     {
@@ -83,7 +83,7 @@ Context<R,d,q>::GenerateChebyshevIndices()
         for( size_t j=0; j<d; ++j )
         {
             size_t i = (t/qToThej) % q;
-            _chebyshevIndices[t][j] = i;
+            chebyshevIndices_[t][j] = i;
             qToThej *= q;
         }
     }
@@ -93,7 +93,7 @@ template<typename R,size_t d,size_t q>
 inline void 
 Context<R,d,q>::GenerateChebyshevGrid()
 {
-    const size_t q_to_d = _chebyshevGrid.size();
+    const size_t q_to_d = chebyshevGrid_.size();
 
     for( size_t t=0; t<q_to_d; ++t )
     {
@@ -101,7 +101,7 @@ Context<R,d,q>::GenerateChebyshevGrid()
         for( size_t j=0; j<d; ++j )
         {
             size_t i = (t/q_to_j) % q;
-            _chebyshevGrid[t][j] = 0.5*cos(static_cast<R>(i*Pi/(q-1)));
+            chebyshevGrid_[t][j] = 0.5*cos(R(i*Pi/(q-1)));
             q_to_j *= q;
         }
     }
@@ -114,19 +114,19 @@ Context<R,d,q>::GenerateChebyshevMaps()
     // Create 1d Lagrangian evaluation maps being left and right of the center
     for( size_t i=0; i<q; ++i )
         for( size_t k=0; k<q; ++k )
-            _leftChebyshevMap[k*q+i] = 
-                Lagrange1d( i, (2*_chebyshevNodes[k]-1)/4 );
+            leftChebyshevMap_[k*q+i] = 
+                Lagrange1d( i, (2*chebyshevNodes_[k]-1)/4 );
     for( size_t i=0; i<q; ++i )
         for( size_t k=0; k<q; ++k )
-            _rightChebyshevMap[k*q+i] = 
-                Lagrange1d( i, (2*_chebyshevNodes[k]+1)/4 );
+            rightChebyshevMap_[k*q+i] = 
+                Lagrange1d( i, (2*chebyshevNodes_[k]+1)/4 );
 }
 
 template<typename R,size_t d,size_t q>
 inline void 
 Context<R,d,q>::GenerateChildGrids()
 {
-    const size_t q_to_d = _chebyshevGrid.size();
+    const size_t q_to_d = chebyshevGrid_.size();
 
     for( size_t c=0; c<(1u<<d); ++c )
     {
@@ -136,9 +136,9 @@ Context<R,d,q>::GenerateChildGrids()
             // Map p_t'(Bc) to the reference domain ([-1/2,+1/2]^d) of B
             for( size_t j=0; j<d; ++j )
             {
-                _sourceChildGrids[c*q_to_d+tPrime][j] = 
-                    ( (c>>j)&1 ? (2*_chebyshevGrid[tPrime][j]+1)/4 
-                               : (2*_chebyshevGrid[tPrime][j]-1)/4 );
+                sourceChildGrids_[c*q_to_d+tPrime][j] = 
+                    ( (c>>j)&1 ? (2*chebyshevGrid_[tPrime][j]+1)/4 
+                               : (2*chebyshevGrid_[tPrime][j]-1)/4 );
             }
         }
     }
@@ -146,12 +146,12 @@ Context<R,d,q>::GenerateChildGrids()
 
 template<typename R,size_t d,size_t q>
 inline Context<R,d,q>::Context() 
-: _chebyshevNodes( q ),
-  _leftChebyshevMap( q*q ),
-  _rightChebyshevMap( q*q ),
-  _chebyshevIndices( Pow<q,d>::val ), 
-  _chebyshevGrid( Pow<q,d>::val ),
-  _sourceChildGrids( Pow<q,d>::val<<d )
+: chebyshevNodes_( q ),
+  leftChebyshevMap_( q*q ),
+  rightChebyshevMap_( q*q ),
+  chebyshevIndices_( Pow<q,d>::val ), 
+  chebyshevGrid_( Pow<q,d>::val ),
+  sourceChildGrids_( Pow<q,d>::val<<d )
 {
     GenerateChebyshevNodes();
     GenerateChebyshevIndices();
@@ -165,7 +165,7 @@ inline R
 Context<R,d,q>::Lagrange1d( size_t i, R p ) const
 {
     R product = R(1);
-    const R* chebyshevNodeBuffer = &_chebyshevNodes[0];
+    const R* chebyshevNodeBuffer = &chebyshevNodes_[0];
     for( size_t k=0; k<q; ++k )
     {
         if( i != k )
@@ -182,11 +182,10 @@ template<typename R,size_t d,size_t q>
 inline R
 Context<R,d,q>::Lagrange( size_t t, const array<R,d>& p ) const
 {
-    R product = static_cast<R>(1);
+    R product = R(1);
     const R* RESTRICT pBuffer = &p[0];
-    const R* RESTRICT chebyshevNodeBuffer = &_chebyshevNodes[0];
-    const size_t* RESTRICT chebyshevIndicesBuffer = 
-        &_chebyshevIndices[t][0];
+    const R* RESTRICT chebyshevNodeBuffer = &chebyshevNodes_[0];
+    const size_t* RESTRICT chebyshevIndicesBuffer = &chebyshevIndices_[t][0];
     for( size_t j=0; j<d; ++j )
     {
         size_t i = chebyshevIndicesBuffer[j];
@@ -217,8 +216,8 @@ Context<R,d,q>::LagrangeBatch
         resultsBuffer[i] = 1;
 
     const R* RESTRICT pBuffer = &p[0][0];
-    const R* RESTRICT chebyshevNodeBuffer = &_chebyshevNodes[0];
-    const size_t* RESTRICT chebyshevIndicesBuffer = &_chebyshevIndices[t][0];
+    const R* RESTRICT chebyshevNodeBuffer = &chebyshevNodes_[0];
+    const size_t* RESTRICT chebyshevIndicesBuffer = &chebyshevIndices_[t][0];
     for( size_t j=0; j<d; ++j )
     {
         size_t i = chebyshevIndicesBuffer[j];
@@ -239,32 +238,32 @@ Context<R,d,q>::LagrangeBatch
 template<typename R,size_t d,size_t q>
 inline const vector<R>&
 Context<R,d,q>::GetChebyshevNodes() const
-{ return _chebyshevNodes; }
+{ return chebyshevNodes_; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<array<size_t,d>>&
 Context<R,d,q>::GetChebyshevIndices() const
-{ return _chebyshevIndices; }
+{ return chebyshevIndices_; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<array<R,d>>&
 Context<R,d,q>::GetChebyshevGrid() const
-{ return _chebyshevGrid; }
+{ return chebyshevGrid_; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<R>& 
 Context<R,d,q>::GetLeftChebyshevMap() const
-{ return _leftChebyshevMap; }
+{ return leftChebyshevMap_; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<R>& 
 Context<R,d,q>::GetRightChebyshevMap() const
-{ return _rightChebyshevMap; }
+{ return rightChebyshevMap_; }
 
 template<typename R,size_t d,size_t q>
 inline const vector<array<R,d>>&
 Context<R,d,q>::GetSourceChildGrids() const
-{ return _sourceChildGrids; }
+{ return sourceChildGrids_; }
 
 } // rfio
 } // bfio

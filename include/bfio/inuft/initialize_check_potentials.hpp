@@ -141,8 +141,8 @@ InitializeCheckPotentials
 
         R* realBuffer = weightGridList[sIndex].RealBuffer();
         R* imagBuffer = weightGridList[sIndex].ImagBuffer();
-        const R realMagnitude = std::real( mySources[s].magnitude );
-        const R imagMagnitude = std::imag( mySources[s].magnitude );
+        const R realMagnitude = mySources[s].magnitude.real();
+        const R imagMagnitude = mySources[s].magnitude.imag();
         const R* thisCosBuffer = &cosResults[q*s];
         const R* thisSinBuffer = &sinResults[q*s];
         for( size_t t=0; t<q; ++t )
@@ -265,8 +265,8 @@ InitializeCheckPotentials
 
         R* realBuffer = weightGridList[sIndex].RealBuffer();
         R* imagBuffer = weightGridList[sIndex].ImagBuffer();
-        const R realMagnitude = std::real( mySources[s].magnitude );
-        const R imagMagnitude = std::imag( mySources[s].magnitude );
+        const R realMagnitude = mySources[s].magnitude.real();
+        const R imagMagnitude = mySources[s].magnitude.imag();
         const R* thisCosBuffer = &cosResults[q_to_d*s];
         const R* thisSinBuffer = &sinResults[q_to_d*s];
         for( size_t t=0; t<q_to_d; ++t )
@@ -388,8 +388,8 @@ InitializeCheckPotentials
 
         R* realBuffer = weightGridList[sIndex].RealBuffer();
         R* imagBuffer = weightGridList[sIndex].ImagBuffer();
-        const R realMagnitude = std::real( mySources[s].magnitude );
-        const R imagMagnitude = std::imag( mySources[s].magnitude );
+        const R realMagnitude = mySources[s].magnitude.real();
+        const R imagMagnitude = mySources[s].magnitude.imag();
         const R* thisCosBuffer = &cosResults[q_to_d*s];
         const R* thisSinBuffer = &sinResults[q_to_d*s];
         for( size_t t=0; t<q_to_d; ++t )

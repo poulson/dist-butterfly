@@ -102,7 +102,7 @@ main( int argc, char* argv[] )
     }
     const size_t N = atoi(argv[1]);
     const size_t M = atoi(argv[2]);
-    const size_t bootstrapSkip = atoi(argv[3]);
+    const size_t bootstrap = atoi(argv[3]);
     const bool testAccuracy = atoi(argv[4]);
     const bool store = atoi(argv[5]);
 
@@ -119,7 +119,7 @@ main( int argc, char* argv[] )
         }
 
         // Set up the general strategy for the forward transform
-        Plan<d> plan( comm, FORWARD, N, bootstrapSkip );
+        Plan<d> plan( comm, FORWARD, N, bootstrap );
         Box<double,d> mySBox = plan.GetMyInitialSourceBox( sBox );
 
         if( rank == 0 )

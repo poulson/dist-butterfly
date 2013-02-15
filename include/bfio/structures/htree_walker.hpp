@@ -23,9 +23,9 @@ using std::size_t;
 template<size_t d>
 class HTreeWalker
 {
-    size_t _nextZeroDim;
-    size_t _nextZeroLevel;
-    array<size_t,d> _state;
+    size_t nextZeroDim_;
+    size_t nextZeroLevel_;
+    array<size_t,d> state_;
 public:
     HTreeWalker();
     ~HTreeWalker();
@@ -40,9 +40,9 @@ public:
 template<size_t d>
 inline
 HTreeWalker<d>::HTreeWalker() 
-: _nextZeroDim(0), _nextZeroLevel(0)
+: nextZeroDim_(0), nextZeroLevel_(0)
 { 
-    _state.fill(0);
+    state_.fill(0);
 }
 
 template<size_t d>
@@ -53,22 +53,22 @@ HTreeWalker<d>::~HTreeWalker()
 template<size_t d>
 inline array<size_t,d> 
 HTreeWalker<d>::State() const
-{ return _state; }
+{ return state_; }
 
 template<size_t d>
 void 
 HTreeWalker<d>::Walk()
 {
-    const size_t zeroDim = _nextZeroDim;
-    const size_t zeroLevel = _nextZeroLevel;
+    const size_t zeroDim = nextZeroDim_;
+    const size_t zeroLevel = nextZeroLevel_;
 
     if( zeroDim == 0 )
     {
         // Zero the first (zeroLevel-1) bits of all coordinates
         // and then increment at level zeroLevel
         for( size_t j=0; j<d; ++j )
-            _state[j] &= ~((1u<<zeroLevel)-1);
-        _state[zeroDim] |= 1u<<zeroLevel;
+            state_[j] &= ~((1u<<zeroLevel)-1);
+        state_[zeroDim] |= 1u<<zeroLevel;
 
         // Set up for the next walk
         // We need to find the dimension with the first zero bit.
@@ -77,27 +77,27 @@ HTreeWalker<d>::Walk()
         array<size_t,d> numberOfTrailingOnes;
         for( size_t j=0; j<d; ++j )
         {
-            numberOfTrailingOnes[j] = NumberOfTrailingOnes( _state[j] );
+            numberOfTrailingOnes[j] = NumberOfTrailingOnes( state_[j] );
             if( numberOfTrailingOnes[j] < minTrailingOnes )
             {
                 minDim = j;
                 minTrailingOnes = numberOfTrailingOnes[j];
             }
         }
-        _nextZeroDim = minDim;
-        _nextZeroLevel = minTrailingOnes;
+        nextZeroDim_ = minDim;
+        nextZeroLevel_ = minTrailingOnes;
     }
     else
     {
         for( size_t j=0; j<=zeroDim; ++j )
-            _state[j] &= ~((1u<<(zeroLevel+1))-1);
+            state_[j] &= ~((1u<<(zeroLevel+1))-1);
         for( size_t j=zeroDim+1; j<d; ++j )
-            _state[j] &= ~((1u<<zeroLevel)-1);
-        _state[zeroDim] |= 1u<<zeroLevel;
+            state_[j] &= ~((1u<<zeroLevel)-1);
+        state_[zeroDim] |= 1u<<zeroLevel;
 
         // Set up for the next walk
-        _nextZeroDim = 0;
-        _nextZeroLevel = 0;
+        nextZeroDim_ = 0;
+        nextZeroLevel_ = 0;
     }
 }
 
