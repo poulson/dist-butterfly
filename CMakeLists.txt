@@ -187,7 +187,8 @@ if(BUILD_TESTS)
   set(HTREE_TESTS ConstrainedHTreeWalker HTreeWalker)
 
   set(TRANSFORM_TEST_DIR ${PROJECT_SOURCE_DIR}/test/transform)
-  set(TRANSFORM_TESTS GenRadon-2d GenRadon-3d NonUniformFT-2d NonUniformFT-3d 
+  set(TRANSFORM_TESTS GenRadon-2d GenRadon-3d HypRadon-2d 
+                      NonUniformFT-2d NonUniformFT-3d 
                       Random3DWaves UpWave-3d VariableUpWave-2d)
 endif()
 
