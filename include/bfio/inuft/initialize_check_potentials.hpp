@@ -54,7 +54,7 @@ InitializeCheckPotentials
     const size_t d = 1;
 
     const Direction direction = context.GetDirection();
-    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi<R>() : TwoPi<R>() );
 
     // Store the widths of the source and target boxes
     array<R,d> wA;
@@ -174,7 +174,7 @@ InitializeCheckPotentials
     const size_t q_to_d = Pow<q,d>::val;
 
     const Direction direction = context.GetDirection();
-    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi<R>() : TwoPi<R>() );
 
     // Store the widths of the source and target boxes
     array<R,d> wA;
@@ -297,7 +297,7 @@ InitializeCheckPotentials
     const size_t q_to_d = Pow<q,d>::val;
 
     const Direction direction = context.GetDirection();
-    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi<R>() : TwoPi<R>() );
 
     // Store the widths of the source and target boxes
     array<R,d> wA;

@@ -50,7 +50,7 @@ Fourier<R>::Clone() const
 template<typename R>
 inline R
 Fourier<R>::operator()( const array<R,d>& x, const array<R,d>& p ) const
-{ return -TwoPi*(x[0]*p[0]+x[1]*p[1]); }
+{ return -TwoPi<R>()*(x[0]*p[0]+x[1]*p[1]); }
 
 // We can optionally override the batched application for better efficiency
 template<typename R>
@@ -60,22 +60,16 @@ Fourier<R>::BatchEvaluate
   const vector<array<R,d>>& pPoints,
         vector<R         >& results ) const
 {
+    const R twoPi = TwoPi<R>();
     const size_t xSize = xPoints.size();
     const size_t pSize = pPoints.size();
     results.resize( xSize*pSize );
-
-    R* RESTRICT resultsBuffer = &results[0];
-    const R* RESTRICT xPointsBuffer = &(xPoints[0][0]);
-    const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
     for( size_t i=0; i<xSize; ++i )
     {
+        const R x0 = xPoints[i][0];
+        const R x1 = xPoints[i][1];
         for( size_t j=0; j<pSize; ++j )
-        {
-            resultsBuffer[i*pSize+j] = 
-                xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
-                xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1];
-            resultsBuffer[i*pSize+j] *= -TwoPi;
-        }
+            results[i*pSize+j] = -twoPi*(x0*pPoints[j][0]+x1*pPoints[j][1]);
     }
 }
 

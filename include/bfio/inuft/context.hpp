@@ -66,14 +66,16 @@ template<typename R,size_t d,size_t q>
 inline void 
 Context<R,d,q>::GenerateChebyshevNodes()
 {
+    const R pi = Pi<R>();
     for( size_t t=0; t<q; ++t )
-        chebyshevNodes_[t] = 0.5*cos(R(t*Pi/(q-1)));
+        chebyshevNodes_[t] = 0.5*cos(R(t*pi/(q-1)));
 }
 
 template<typename R,size_t d,size_t q>
 inline void
 Context<R,d,q>::GenerateChebyshevGrid()
 {
+    const R pi = Pi<R>();
     const size_t q_to_d = chebyshevGrid_.size();
 
     for( size_t t=0; t<q_to_d; ++t )
@@ -82,7 +84,7 @@ Context<R,d,q>::GenerateChebyshevGrid()
         for( size_t j=0; j<d; ++j )
         {
             size_t i = (t/q_to_j) % q;
-            chebyshevGrid_[t][j] = 0.5*cos(R(i*Pi/(q-1)));
+            chebyshevGrid_[t][j] = 0.5*cos(R(i*pi/(q-1)));
             q_to_j *= q;
         }
     }
@@ -92,6 +94,7 @@ template<typename R,size_t d,size_t q>
 inline void
 Context<R,d,q>::GenerateOffsetMaps()
 {
+    const R twoPi = TwoPi<R>();
     for( size_t j=0; j<d; ++j )
     {
         realInverseMaps_[j].resize( q*q );
@@ -118,7 +121,7 @@ Context<R,d,q>::GenerateOffsetMaps()
                 {
                     A[t*q+tPrime] = 
                         ImagExp<R>
-                        ( -TwoPi*chebyshevNodes_[t]*chebyshevNodes_[tPrime]*
+                        ( -twoPi*chebyshevNodes_[t]*chebyshevNodes_[tPrime]*
                           productWidths[j] );
                 }
             }
@@ -131,7 +134,7 @@ Context<R,d,q>::GenerateOffsetMaps()
                 {
                     A[t*q+tPrime] = 
                         ImagExp<R>
-                        ( TwoPi*chebyshevNodes_[t]*chebyshevNodes_[tPrime]*
+                        ( twoPi*chebyshevNodes_[t]*chebyshevNodes_[tPrime]*
                           productWidths[j] );
                 }
             }
@@ -161,7 +164,7 @@ Context<R,d,q>::GenerateOffsetMaps()
                 {
                     complex<R> alpha = 
                         ImagExp<R>
-                        ( -TwoPi*chebyshevNodes_[t]*chebyshevNodes_[tPrime]*
+                        ( -twoPi*chebyshevNodes_[t]*chebyshevNodes_[tPrime]*
                           productWidths[j]/2 );
                     realForwardMaps_[j][t*q+tPrime] = alpha.real();
                     imagForwardMaps_[j][t*q+tPrime] = alpha.imag();
@@ -179,7 +182,7 @@ Context<R,d,q>::GenerateOffsetMaps()
                 {
                     complex<R> alpha = 
                         ImagExp<R>
-                        ( TwoPi*chebyshevNodes_[t]*chebyshevNodes_[tPrime]*
+                        ( twoPi*chebyshevNodes_[t]*chebyshevNodes_[tPrime]*
                           productWidths[j]/2 );
                     realForwardMaps_[j][t*q+tPrime] = alpha.real();
                     imagForwardMaps_[j][t*q+tPrime] = alpha.imag();

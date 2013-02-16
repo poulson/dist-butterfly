@@ -52,7 +52,7 @@ SwitchToTargetInterp
     const rfio::Context<R,1,q>& rfioContext = nuftContext.GetRFIOContext();
 
     const Direction direction = nuftContext.GetDirection();
-    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi<R>() : TwoPi<R>() );
 
     // Compute the width of the nodes at level log2N/2
     const size_t N = plan.GetN();
@@ -217,7 +217,7 @@ SwitchToTargetInterp
     const rfio::Context<R,2,q>& rfioContext = nuftContext.GetRFIOContext();
 
     const Direction direction = nuftContext.GetDirection();
-    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi<R>() : TwoPi<R>() );
 
     // Compute the width of the nodes at level log2N/2
     const size_t N = plan.GetN();
@@ -463,7 +463,7 @@ SwitchToTargetInterp
     const rfio::Context<R,d,q>& rfioContext = nuftContext.GetRFIOContext();
 
     const Direction direction = nuftContext.GetDirection();
-    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi<R>() : TwoPi<R>() );
 
     // Compute the width of the nodes at level log2N/2
     const size_t N = plan.GetN();
@@ -506,11 +506,11 @@ SwitchToTargetInterp
         for( size_t j=0; j<d; ++j )
             x0A[j] = myTBox.offsets[j] + (A[j]+0.5)*wA[j];
 
-        // Evaluate exp( +-TwoPi i (x0,dp) ) for each coordinate
+        // Evaluate exp( -TwoPi i (x0,dp) ) for each coordinate
         for( size_t j=0; j<d; ++j )
         {
             for( size_t t=0; t<q; ++t )
-                phaseEvals[t] = +-TwoPi*wB[j]*x0A[j]*chebyshevNodes[t];
+                phaseEvals[t] = -TwoPi<R>()*wB[j]*x0A[j]*chebyshevNodes[t];
             SinCosBatch( phaseEvals, imagTEvals[j], realTEvals[j] );
         }
 

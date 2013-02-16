@@ -24,7 +24,7 @@ Usage()
 
 // Define the dimension of the problem and the order of interpolation
 static const size_t d = 3;
-static const size_t q = 6;
+static const size_t q = 5;
 
 template<typename R>    
 class GenRadon : public Phase<R,d>
@@ -51,89 +51,94 @@ template<typename R>
 inline R GenRadon<R>::operator()
 ( const array<R,d>& x, const array<R,d>& p ) const
 {
-    R a = p[0]*(2+sin(TwoPi*x[0])*sin(TwoPi*x[1]))/3;
-    R b = p[1]*(2+cos(TwoPi*x[0])*cos(TwoPi*x[1]))/3;
-    return Pi*(x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + sqrt(a*a+b*b));
+    const R pi = Pi<R>();
+    const R twoPi = TwoPi<R>();
+    const R a = p[0]*(2+sin(twoPi*x[0])*sin(twoPi*x[1]))/3;
+    const R b = p[1]*(2+cos(twoPi*x[0])*cos(twoPi*x[1]))/3;
+    return pi*(x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + sqrt(a*a+b*b));
 }
 
+#ifdef TIMING
+Timer batchTimer, batchSqrtTimer, batchSinCosTimer;
+#endif 
 template<typename R>
 void GenRadon<R>::BatchEvaluate
 ( const vector<array<R,d>>& xPoints,
   const vector<array<R,d>>& pPoints,
         vector<R         >& results ) const
 {
+#ifdef TIMING
+    ::batchTimer.Start();
+#endif 
+    const R pi = Pi<R>();
+    const R twoPi = TwoPi<R>();
     const size_t xSize = xPoints.size();
     const size_t pSize = pPoints.size();
 
     // Compute all of the sin's and cos's of the x indices times TwoPi 
-    vector<R> sinCosArguments( d*xSize );
+    static vector<R> sinCosArguments;
+    sinCosArguments.resize( 2*xSize );
+    for( size_t i=0; i<xSize; ++i )
     {
-        R* RESTRICT sinCosArgBuffer = &sinCosArguments[0];
-        const R* RESTRICT xPointsBuffer = 
-            static_cast<const R*>(&(xPoints[0][0]));
-        for( size_t i=0; i<d*xSize; ++i )
-            sinCosArgBuffer[i] = TwoPi*xPointsBuffer[i];
+        sinCosArguments[2*i+0] = twoPi*xPoints[i][0];
+        sinCosArguments[2*i+1] = twoPi*xPoints[i][1];
     }
-    vector<R> sinResults, cosResults;
+#ifdef TIMING
+    ::batchSinCosTimer.Start();
+#endif
+    static vector<R> sinResults, cosResults;
     SinCosBatch( sinCosArguments, sinResults, cosResults );
+#ifdef TIMING
+    ::batchSinCosTimer.Stop();
+#endif
 
     // Compute the the c1(x) and c2(x) results for every x vector
-    vector<R> c1( xSize ), c2( xSize );
-    {
-        R* RESTRICT c1Buffer = &c1[0];
-        const R* RESTRICT sinBuffer = &sinResults[0];
-        for( size_t i=0; i<xSize; ++i )
-            c1Buffer[i] = (2+sinBuffer[i*d]*sinBuffer[i*d+1])/3;
-    }
-    {
-        R* RESTRICT c2Buffer = &c2[0];
-        const R* RESTRICT cosBuffer = &cosResults[0];
-        for( size_t i=0; i<xSize; ++i )
-            c2Buffer[i] = (2+cosBuffer[i*d]*cosBuffer[i*d+1])/3;
-    }
+    static vector<R> c1, c2;
+    c1.resize( xSize );
+    c2.resize( xSize );
+    for( size_t i=0; i<xSize; ++i )
+        c1[i] = (2+sinResults[2*i]*sinResults[2*i+1])/3;
+    for( size_t i=0; i<xSize; ++i )
+        c2[i] = (2+cosResults[2*i]*cosResults[2*i+1])/3;
 
     // Form the set of sqrt arguments
-    vector<R> sqrtArguments( xSize*pSize );
+    static vector<R> sqrtArguments;
+    sqrtArguments.resize( xSize*pSize );
+    for( size_t i=0; i<xSize; ++i )
     {
-        R* RESTRICT sqrtArgBuffer = &sqrtArguments[0];
-        const R* RESTRICT c1Buffer = &c1[0];
-        const R* RESTRICT c2Buffer = &c2[0];
-        const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
-        for( size_t i=0; i<xSize; ++i )
+        for( size_t j=0; j<pSize; ++j )
         {
-            for( size_t j=0; j<pSize; ++j )
-            {
-                const R a = c1Buffer[i]*pPointsBuffer[j*d+0];
-                const R b = c2Buffer[i]*pPointsBuffer[j*d+1];
-                sqrtArgBuffer[i*pSize+j] = a*a+b*b;
-            }
+            const R a = c1[i]*pPoints[j][0];
+            const R b = c2[i]*pPoints[j][1];
+            sqrtArguments[i*pSize+j] = a*a+b*b;
         }
     }
 
     // Perform the batched square roots
-    vector<R> sqrtResults;
-    SqrtBatch( sqrtArguments, sqrtResults );
+#ifdef TIMING
+    ::batchSqrtTimer.Start();
+#endif
+    SqrtBatch( sqrtArguments, results );
+#ifdef TIMING
+    ::batchSqrtTimer.Stop();
+#endif
 
     // Form the answer
-    results.resize( xSize*pSize );
+    for( size_t i=0; i<xSize; ++i )
     {
-        R* RESTRICT resultsBuffer = &results[0];
-        const R* RESTRICT sqrtBuffer = &sqrtResults[0];
-        const R* RESTRICT xPointsBuffer = &(xPoints[0][0]);
-        const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
-        for( size_t i=0; i<xSize; ++i )
+        const R x0 = xPoints[i][0];
+        const R x1 = xPoints[i][1];
+        const R x2 = xPoints[i][2];
+        for( size_t j=0; j<pSize; ++j )
         {
-            for( size_t j=0; j<pSize; ++j )
-            {
-                resultsBuffer[i*pSize+j] = 
-                    xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
-                    xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] + 
-                    xPointsBuffer[i*d+2]*pPointsBuffer[j*d+2] +
-                    sqrtBuffer[i*pSize+j];
-                resultsBuffer[i*pSize+j] *= Pi;
-            }
+            results[i*pSize+j] +=
+                x0*pPoints[j][0] + x1*pPoints[j][1] + x2*pPoints[j][2];
+            results[i*pSize+j] *= pi;
         }
     }
+#ifdef TIMING
+    ::batchTimer.Stop();
+#endif
 }
 
 int
@@ -264,7 +269,14 @@ main( int argc, char* argv[] )
             cout << "Runtime: " << stopTime-startTime << " seconds.\n" << endl;
 #ifdef TIMING
         if( rank == 0 )
+        {
             rfio::PrintTimings();
+            cout << "Breakdowns of BatchEvaluations:\n"
+                 << "  sqrt:    " << ::batchSqrtTimer.Total() << " seconds\n"
+                 << "  sin/cos: " << ::batchSinCosTimer.Total() << " seconds\n"
+                 << "  total:   " << ::batchTimer.Total() << " seconds\n"
+                 << endl;
+        }
 #endif
 
         if( testAccuracy )

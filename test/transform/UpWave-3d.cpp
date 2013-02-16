@@ -51,9 +51,9 @@ template<typename R>
 inline R
 UpWave<R>::operator()( const array<R,d>& x, const array<R,d>& p ) const
 {
-    return TwoPi*( 
+    return TwoPi<R>()*( 
              x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + 
-             0.5*sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2])
+             sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2])/R(2)
            ); 
 }
 
@@ -64,50 +64,36 @@ UpWave<R>::BatchEvaluate
   const vector<array<R,d>>& pPoints,
         vector<R         >& results ) const
 {
-    const size_t xSize = xPoints.size();
-    const size_t pSize = pPoints.size();
+    const R twoPi = TwoPi<R>();
+    const int xSize = xPoints.size();
+    const int pSize = pPoints.size();
 
     // Set up the square root arguments 
     vector<R> sqrtArguments( pSize );
-    {
-        R* RESTRICT sqrtArgBuffer = &sqrtArguments[0];
-        const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
-        for( size_t j=0; j<pSize; ++j )
-            sqrtArgBuffer[j] = pPointsBuffer[j*d+0]*pPointsBuffer[j*d+0] +
-                               pPointsBuffer[j*d+1]*pPointsBuffer[j*d+1] +
-                               pPointsBuffer[j*d+2]*pPointsBuffer[j*d+2];
-    }
+    for( int j=0; j<pSize; ++j )
+        sqrtArguments[j] = pPoints[j][0]*pPoints[j][0] +
+                           pPoints[j][1]*pPoints[j][1] +
+                           pPoints[j][2]*pPoints[j][2];
 
     // Perform the batched square roots
     vector<R> sqrtResults;
     SqrtBatch( sqrtArguments, sqrtResults );
 
     // Scale the square roots by 1/2
-    {
-        R* sqrtBuffer = &sqrtResults[0];
-        for( size_t j=0; j<pSize; ++j )
-            sqrtBuffer[j] *= 0.5;
-    }
+    for( int j=0; j<pSize; ++j )
+        sqrtResults[j] /= R(2);
 
     // Form the final results
     results.resize( xSize*pSize );
+    for( int i=0; i<xSize; ++i )
     {
-        R* RESTRICT resultsBuffer = &results[0];
-        const R* RESTRICT sqrtBuffer = &sqrtResults[0];
-        const R* RESTRICT xPointsBuffer = &(xPoints[0][0]);
-        const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
-        for( size_t i=0; i<xSize; ++i )
-        {
-            for( size_t j=0; j<pSize; ++j )
-            {
-                resultsBuffer[i*pSize+j] = 
-                    xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] + 
-                    xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] +
-                    xPointsBuffer[i*d+2]*pPointsBuffer[j*d+2] + 
-                    sqrtBuffer[j];
-                resultsBuffer[i*pSize+j] *= TwoPi;
-            }
-        }
+        const R x0 = xPoints[i][0];
+        const R x1 = xPoints[i][1];
+        const R x2 = xPoints[i][2];
+        for( int j=0; j<pSize; ++j )
+            results[i*pSize+j] =
+                twoPi*(x0*pPoints[j][0]+x1*pPoints[j][1]+x2*pPoints[j][2] + 
+                       sqrtResults[j]);
     }
 }
 

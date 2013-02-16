@@ -53,7 +53,7 @@ FormCheckPotentials
     memset( weightGrid.Buffer(), 0, 2*q*sizeof(R) );
 
     const Direction direction = context.GetDirection();
-    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi<R>() : TwoPi<R>() );
 
     const size_t log2NumMergingProcesses = 
         plan.GetLog2NumMergingProcesses( level );
@@ -174,7 +174,7 @@ FormCheckPotentials
     memset( weightGrid.Buffer(), 0, 2*q_to_d*sizeof(R) );
 
     const Direction direction = context.GetDirection();
-    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi<R>() : TwoPi<R>() );
 
     const size_t log2NumMergingProcesses = 
         plan.GetLog2NumMergingProcesses( level );
@@ -383,7 +383,7 @@ FormCheckPotentials
     memset( weightGrid.Buffer(), 0, 2*q_to_d*sizeof(R) );
 
     const Direction direction = context.GetDirection();
-    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi<R>() : TwoPi<R>() );
 
     const size_t log2NumMergingProcesses = 
         plan.GetLog2NumMergingProcesses( level );

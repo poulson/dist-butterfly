@@ -163,7 +163,7 @@ PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
     const LRP<R,d,q>& lrp = LRPs_[k];
 
     const Direction direction = context_.GetDirection();
-    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi<R>() : TwoPi<R>() );
 
     C potential = 0;
     for( size_t t=0; t<Pow<q,d>::val; ++t )

@@ -64,7 +64,7 @@ Context<R,d,q>::GenerateOffsetEvaluations()
     }
 
     // Form the offset grid evaluations
-    const R SignedTwoPi = ( direction_==FORWARD ? -TwoPi : TwoPi ); 
+    const R SignedTwoPi = ( direction_==FORWARD ? -TwoPi<R>() : TwoPi<R>() ); 
     vector<R> phaseEvaluations(q*q);
     const vector<R>& chebyshevNodes = rfioContext_.GetChebyshevNodes();
     const R* chebyshevBuffer = &chebyshevNodes[0];

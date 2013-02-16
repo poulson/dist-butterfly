@@ -68,8 +68,9 @@ template<typename R>
 inline complex<R>
 Oscillatory<R>::operator()( const array<R,d>& x, const array<R,d>& p ) const
 {
-    return 1. + 0.5*sin(1*Pi*x[0])*sin(4*Pi*x[1])*
-                    cos(3*Pi*p[0])*cos(4*Pi*p[1]);
+    const R pi = Pi<R>();
+    return R(1) + sin(1*pi*x[0])*sin(4*pi*x[1])*
+                  cos(3*pi*p[0])*cos(4*pi*p[1])/R(2);
 }
 
 template<typename R>
@@ -79,29 +80,22 @@ Oscillatory<R>::BatchEvaluate
   const vector<array<R,d>>& pPoints,
         vector<complex<R>>& results ) const
 {
-    const size_t xSize = xPoints.size();
-    const size_t pSize = pPoints.size();
+    const R pi = Pi<R>();
+    const int xSize = xPoints.size();
+    const int pSize = pPoints.size();
 
     // Set up the sin and cos arguments
     vector<R> sinArguments( d*xSize );
+    for( int i=0; i<xSize; ++i )
     {
-        R* RESTRICT sinArgBuffer = &sinArguments[0];
-        const R* RESTRICT xPointsBuffer = &(xPoints[0][0]);
-        for( size_t i=0; i<xSize; ++i )
-        {
-            sinArgBuffer[i*d+0] =   Pi*xPointsBuffer[i*d+0];
-            sinArgBuffer[i*d+1] = 4*Pi*xPointsBuffer[i*d+1];
-        }
+        sinArguments[i*d+0] =   pi*xPoints[i][0];
+        sinArguments[i*d+1] = 4*pi*xPoints[i][1];
     }
-    vector<R> cosArguments( d*pPoints.size() );
+    vector<R> cosArguments( d*pSize );
+    for( int j=0; j<pSize; ++j )
     {
-        R* RESTRICT cosArgBuffer = &cosArguments[0];
-        const R* RESTRICT pPointsBuffer = &(pPoints[0][0]);
-        for( size_t j=0; j<pSize; ++j )
-        {
-            cosArgBuffer[j*d+0] = 3*Pi*pPointsBuffer[j*d+0];
-            cosArgBuffer[j*d+1] = 4*Pi*pPointsBuffer[j*d+1];
-        }
+        cosArguments[j*d+0] = 3*pi*pPoints[j][0];
+        cosArguments[j*d+1] = 4*pi*pPoints[j][1];
     }
 
     // Call the vector sin and cos
@@ -110,32 +104,17 @@ Oscillatory<R>::BatchEvaluate
     CosBatch( cosArguments, cosResults );
 
     // Form the x and p coefficients
-    vector<R> xCoefficients( xSize ); 
-    vector<R> pCoefficients( pSize );
-    {
-        R* RESTRICT xCoefficientsBuffer = &xCoefficients[0];
-        const R* RESTRICT sinBuffer = &sinResults[0];
-        for( size_t i=0; i<xSize; ++i )
-            xCoefficientsBuffer[i] = 0.5*sinBuffer[i*d]*sinBuffer[i*d+1];
-    }
-    {
-        R* RESTRICT pCoefficientsBuffer = &pCoefficients[0];
-        const R* RESTRICT cosBuffer = &cosResults[0];
-        for( size_t j=0; j<pSize; ++j )
-            pCoefficientsBuffer[j] = cosBuffer[j*d]*cosBuffer[j*d+1];
-    }
+    vector<R> xCoefficients( xSize ), pCoefficients( pSize );
+    for( int i=0; i<xSize; ++i )
+        xCoefficients[i] = sinResults[i*d]*sinResults[i*d+1]/R(2);
+    for( int j=0; j<pSize; ++j )
+        pCoefficients[j] = cosResults[j*d]*cosResults[j*d+1];
 
     // Form the answer
     results.resize( xSize*pSize );
-    {
-        complex<R>* RESTRICT resultsBuffer = &results[0];
-        const R* RESTRICT xCoefficientsBuffer = &xCoefficients[0];
-        const R* RESTRICT pCoefficientsBuffer = &pCoefficients[0];
-        for( size_t i=0; i<xSize; ++i )
-            for( size_t j=0; j<pSize; ++j )
-                resultsBuffer[i*pSize+j] = 
-                    1. + xCoefficientsBuffer[i]*pCoefficientsBuffer[j];
-    }
+    for( int i=0; i<xSize; ++i )
+        for( int j=0; j<pSize; ++j )
+            results[i*pSize+j] = R(1) + xCoefficients[i]*pCoefficients[j];
 }
 
 template<typename R>
@@ -147,7 +126,7 @@ template<typename R>
 inline R
 UpWave<R>::operator()( const array<R,d>& x, const array<R,d>& p ) const
 {
-    return TwoPi*(x[0]*p[0]+x[1]*p[1] + 0.5*sqrt(p[0]*p[0]+p[1]*p[1])); 
+    return TwoPi<R>()*(x[0]*p[0]+x[1]*p[1] + sqrt(p[0]*p[0]+p[1]*p[1])/R(2)); 
 }
 
 template<typename R>
@@ -157,48 +136,33 @@ UpWave<R>::BatchEvaluate
   const vector<array<R,d>>& pPoints,
         vector<R         >& results ) const
 {
-    const size_t xSize = xPoints.size();
-    const size_t pSize = pPoints.size();
+    const R twoPi = TwoPi<R>();
+    const int xSize = xPoints.size();
+    const int pSize = pPoints.size();
 
     // Set up the square root arguments 
     vector<R> sqrtArguments( pSize );
-    {
-        R* sqrtArgBuffer = &sqrtArguments[0];
-        const R* pPointsBuffer = &(pPoints[0][0]);
-        for( size_t j=0; j<pSize; ++j )
-            sqrtArgBuffer[j] = pPointsBuffer[j*d+0]*pPointsBuffer[j*d+0] +
-                               pPointsBuffer[j*d+1]*pPointsBuffer[j*d+1];
-    }
+    for( int j=0; j<pSize; ++j )
+        sqrtArguments[j] = pPoints[j][0]*pPoints[j][0] +
+                           pPoints[j][1]*pPoints[j][1];
 
     // Perform the batched square roots
     vector<R> sqrtResults;
     SqrtBatch( sqrtArguments, sqrtResults );
 
     // Scale the square roots by 1/2
-    {
-        R* sqrtBuffer = &sqrtResults[0];
-        for( size_t j=0; j<pSize; ++j )
-            sqrtBuffer[j] *= 0.5;
-    }
+    for( int j=0; j<pSize; ++j )
+        sqrtResults[j] /= R(2);
 
     // Form the final results
     results.resize( xSize*pSize );
+    for( int i=0; i<xSize; ++i )
     {
-        R* resultsBuffer = &results[0];
-        const R* sqrtBuffer = &sqrtResults[0];
-        const R* xPointsBuffer = &(xPoints[0][0]);
-        const R* pPointsBuffer = &(pPoints[0][0]);
-        for( size_t i=0; i<xSize; ++i )
-        {
-            for( size_t j=0; j<pSize; ++j )
-            {
-                resultsBuffer[i*pSize+j] =
-                    xPointsBuffer[i*d+0]*pPointsBuffer[j*d+0] +
-                    xPointsBuffer[i*d+1]*pPointsBuffer[j*d+1] +
-                    sqrtBuffer[j];
-                resultsBuffer[i*pSize+j] *= TwoPi;
-            }
-        }
+        const R x0 = xPoints[i][0];
+        const R x1 = xPoints[i][1];
+        for( int j=0; j<pSize; ++j )
+            results[i*pSize+j] = 
+                twoPi*(x0*pPoints[j][0]+x1*pPoints[j][1] + sqrtResults[j]);
     }
 }
 

@@ -54,7 +54,7 @@ FormEquivalentSources
     const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
 
     const Direction direction = context.GetDirection();
-    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi<R>() : TwoPi<R>() );
 
     // Store the widths of the source and target boxes
     array<R,d> wA;
@@ -198,7 +198,7 @@ FormEquivalentSources
     const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
 
     const Direction direction = context.GetDirection();
-    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi<R>() : TwoPi<R>() );
 
     // Store the widths of the source and target boxes
     array<R,d> wA;
@@ -438,7 +438,7 @@ FormEquivalentSources
     const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
 
     const Direction direction = context.GetDirection();
-    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi<R>() : TwoPi<R>() );
 
     // Store the widths of the source and target boxes
     array<R,d> wA;

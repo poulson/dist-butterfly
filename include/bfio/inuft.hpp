@@ -96,7 +96,7 @@ INUFT
     const size_t q_to_d = Pow<q,d>::val;
 
     const Direction direction = context.GetDirection();
-    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi : TwoPi );
+    const R SignedTwoPi = ( direction==FORWARD ? -TwoPi<R>() : TwoPi<R>() );
 
     // Extract our communicator and its size
     MPI_Comm comm = plan.GetComm();

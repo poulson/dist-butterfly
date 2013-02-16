@@ -101,7 +101,7 @@ ForwardFTPhase<R,d>::operator()
     const R* RESTRICT pBuffer = &p[0];
     for( size_t j=0; j<d; ++j )
         sum += xBuffer[j]*pBuffer[j];
-    return -TwoPi*sum;
+    return -TwoPi<R>()*sum;
 }
 
 template<typename R,size_t d>
@@ -114,7 +114,7 @@ AdjointFTPhase<R,d>::operator()
     const R* RESTRICT pBuffer = &p[0];
     for( size_t j=0; j<d; ++j )
         sum += xBuffer[j]*pBuffer[j];
-    return TwoPi*sum;
+    return TwoPi<R>()*sum;
 }
 
 template<typename R,size_t d>
@@ -128,6 +128,7 @@ ForwardFTPhase<R,d>::BatchEvaluate
     const size_t npPoints = pPoints.size();
     results.resize( nxPoints*npPoints );
 
+    const R twoPi = TwoPi<R>();
     R* RESTRICT resultsBuffer = &results[0];
     memset( resultsBuffer, 0, nxPoints*npPoints*sizeof(R) );
     const R* RESTRICT xPointsBuffer = &xPoints[0][0];
@@ -141,7 +142,7 @@ ForwardFTPhase<R,d>::BatchEvaluate
                 resultsBuffer[i*npPoints+j] += 
                     xPointsBuffer[i*d+k]*pPointsBuffer[j*d+k];
             }
-            resultsBuffer[i*npPoints+j] *= -TwoPi;
+            resultsBuffer[i*npPoints+j] *= -twoPi;
         }
     }
 }
@@ -157,6 +158,7 @@ AdjointFTPhase<R,d>::BatchEvaluate
     const size_t npPoints = pPoints.size();
     results.resize( nxPoints*npPoints );
 
+    const R twoPi = TwoPi<R>();
     R* RESTRICT resultsBuffer = &results[0];
     memset( resultsBuffer, 0, nxPoints*npPoints*sizeof(R) );
     const R* RESTRICT xPointsBuffer = &xPoints[0][0];
@@ -170,7 +172,7 @@ AdjointFTPhase<R,d>::BatchEvaluate
                 resultsBuffer[i*npPoints+j] += 
                     xPointsBuffer[i*d+k]*pPointsBuffer[j*d+k];
             }
-            resultsBuffer[i*npPoints+j] *= TwoPi;
+            resultsBuffer[i*npPoints+j] *= twoPi;
         }
     }
 }

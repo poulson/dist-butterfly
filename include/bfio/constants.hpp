@@ -13,8 +13,27 @@
 
 namespace bfio {
 
-static const double Pi    = 3.141592653589793;
-static const double TwoPi = 6.283185307179586;
+template<typename R>
+R Pi();
+
+template<>
+inline float Pi<float>()
+{ return 3.14159265358979f; }
+
+template<>
+inline double Pi<double>()
+{ return 3.141592653589793238462; }
+
+template<typename R>
+R TwoPi();
+
+template<>
+inline float TwoPi<float>()
+{ return 6.28318530717958f; }
+
+template<>
+inline double TwoPi<double>()
+{ return 6.283185307179586476924; }
 
 // Pow<x,y>::val returns x to the y'th power at compile-time
 template<std::size_t x,std::size_t y>

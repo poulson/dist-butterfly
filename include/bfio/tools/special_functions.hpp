@@ -57,19 +57,15 @@ SinBatch
 ( const std::vector<float>& a, 
         std::vector<float>& sinResults )
 {
-    sinResults.resize( a.size() );
+    const int n = a.size();
+    sinResults.resize( n );
 #if defined(MASS)
-    int n = a.size(); 
     vssin( const_cast<float*>(&a[0]), &sinResults[0], &n );
 #elif defined(MKL)
-    vsSin( a.size(), &a[0], &sinResults[0] );
+    vsSin( n, &a[0], &sinResults[0] );
 #else
-    {
-        float* sinBuffer = &sinResults[0];
-        const float* aBuffer = &a[0];
-        for( std::size_t j=0; j<a.size(); ++j )
-            sinBuffer[j] = sin(aBuffer[j]);
-    }
+    for( int j=0; j<n; ++j )
+        sinResults[j] = sin(a[j]);
 #endif
 }
 
@@ -79,19 +75,15 @@ SinBatch
 ( const std::vector<double>& a, 
         std::vector<double>& sinResults )
 {
-    sinResults.resize( a.size() );
+    const int n = a.size();
+    sinResults.resize( n );
 #if defined(MASS)
-    int n = a.size();
     vsin( const_cast<double*>(&a[0]), &sinResults[0], &n );
 #elif defined(MKL)
-    vdSin( a.size(), &a[0], &sinResults[0] );
+    vdSin( n, &a[0], &sinResults[0] );
 #else
-    {
-        double* sinBuffer = &sinResults[0];
-        const double* aBuffer = &a[0];
-        for( std::size_t j=0; j<a.size(); ++j )
-            sinBuffer[j] = sin(aBuffer[j]);
-    }
+    for( int j=0; j<n; ++j )
+        sinResults[j] = sin(a[j]);
 #endif
 }
 
@@ -108,19 +100,15 @@ CosBatch
 ( const std::vector<float>& a, 
         std::vector<float>& cosResults )
 {
-    cosResults.resize( a.size() );
+    const int n = a.size();
+    cosResults.resize( n );
 #if defined(MASS)
-    int n = a.size(); 
     vscos( const_cast<float*>(&a[0]), &cosResults[0], &n );
 #elif defined(MKL)
-    vsCos( a.size(), &a[0], &cosResults[0] );
+    vsCos( n, &a[0], &cosResults[0] );
 #else
-    {
-        float* cosBuffer = &cosResults[0];
-        const float* aBuffer = &a[0];
-        for( std::size_t j=0; j<a.size(); ++j )
-            cosBuffer[j] = cos(aBuffer[j]);
-    }
+    for( int j=0; j<n; ++j )
+        cosResults[j] = cos(a[j]);
 #endif
 }
 
@@ -130,19 +118,15 @@ CosBatch
 ( const std::vector<double>& a, 
         std::vector<double>& cosResults )
 {
-    cosResults.resize( a.size() );
+    const int n = a.size();
+    cosResults.resize( n );
 #if defined(MASS)
-    int n = a.size();
     vcos( const_cast<double*>(&a[0]), &cosResults[0], &n );
 #elif defined(MKL)
-    vdCos( a.size(), &a[0], &cosResults[0] );
+    vdCos( n, &a[0], &cosResults[0] );
 #else
-    {
-        double* cosBuffer = &cosResults[0];
-        const double* aBuffer = &a[0];
-        for( std::size_t j=0; j<a.size(); ++j )
-            cosBuffer[j] = cos(aBuffer[j]);
-    }
+    for( int j=0; j<n; ++j )
+        cosResults[j] = cos(a[j]);
 #endif
 }
 
@@ -161,23 +145,18 @@ SinCosBatch
         std::vector<float>& sinResults,
         std::vector<float>& cosResults ) 
 {
-    sinResults.resize( a.size() );
-    cosResults.resize( a.size() );
+    const int n = a.size();
+    sinResults.resize( n );
+    cosResults.resize( n );
 #if defined(MASS)
-    int n = a.size(); 
     vssincos( const_cast<float*>(&a[0]), &sinResults[0], &cosResults[0], &n );
 #elif defined(MKL)
-    vsSinCos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
+    vsSinCos( n, &a[0], &sinResults[0], &cosResults[0] );
 #else
+    for( int j=0; j<n; ++j )
     {
-        float* sinBuffer = &sinResults[0];
-        float* cosBuffer = &cosResults[0];
-        const float* aBuffer = &a[0];
-        for( std::size_t j=0; j<a.size(); ++j )
-        {
-            sinBuffer[j] = sin(aBuffer[j]);
-            cosBuffer[j] = cos(aBuffer[j]);
-        }
+        sinResults[j] = sin(a[j]);
+        cosResults[j] = cos(a[j]);
     }
 #endif
 }
@@ -189,23 +168,18 @@ SinCosBatch
         std::vector<double>& sinResults,
         std::vector<double>& cosResults )
 {
-    sinResults.resize( a.size() );
-    cosResults.resize( a.size() );
+    const int n = a.size();
+    sinResults.resize( n );
+    cosResults.resize( n );
 #if defined(MASS)
-    int n = a.size();
     vsincos( const_cast<double*>(&a[0]), &sinResults[0], &cosResults[0], &n );
 #elif defined(MKL)
-    vdSinCos( a.size(), &a[0], &sinResults[0], &cosResults[0] );
+    vdSinCos( n, &a[0], &sinResults[0], &cosResults[0] );
 #else
+    for( int j=0; j<n; ++j )
     {
-        double* sinBuffer = &sinResults[0];
-        double* cosBuffer = &cosResults[0];
-        const double* aBuffer = &a[0];
-        for( std::size_t j=0; j<a.size(); ++j )
-        {
-            sinBuffer[j] = sin(aBuffer[j]);
-            cosBuffer[j] = cos(aBuffer[j]);
-        }
+        sinResults[j] = sin(a[j]);
+        cosResults[j] = cos(a[j]);
     }
 #endif
 }
@@ -223,19 +197,15 @@ SqrtBatch
 ( const std::vector<float>& a, 
         std::vector<float>& sqrtResults )
 {
-    sqrtResults.resize( a.size() );
+    const int n = a.size();
+    sqrtResults.resize( n );
 #if defined(MASS)
-    int n = a.size(); 
     vssqrt( const_cast<float*>(&a[0]), &sqrtResults[0], &n );
 #elif defined(MKL)
-    vsSqrt( a.size(), &a[0], &sqrtResults[0] );
+    vsSqrt( n, &a[0], &sqrtResults[0] );
 #else
-    {
-        float* sqrtBuffer = &sqrtResults[0];
-        const float* aBuffer = &a[0];
-        for( std::size_t j=0; j<a.size(); ++j )
-            sqrtBuffer[j] = sqrt(aBuffer[j]);
-    }
+    for( int j=0; j<n; ++j )
+        sqrtResults[j] = sqrt(a[j]);
 #endif
 }
 
@@ -245,19 +215,15 @@ SqrtBatch
 ( const std::vector<double>& a, 
         std::vector<double>& sqrtResults )
 {
-    sqrtResults.resize( a.size() );
+    const int n = a.size();
+    sqrtResults.resize( n );
 #if defined(MASS)
-    int n = a.size();
     vsqrt( const_cast<double*>(&a[0]), &sqrtResults[0], &n );
 #elif defined(MKL)
-    vdSqrt( a.size(), &a[0], &sqrtResults[0] );
+    vdSqrt( n, &a[0], &sqrtResults[0] );
 #else
-    {
-        double* sqrtBuffer = &sqrtResults[0];
-        const double* aBuffer = &a[0];
-        for( std::size_t j=0; j<a.size(); ++j )
-            sqrtBuffer[j] = sqrt(aBuffer[j]);
-    }
+    for( int j=0; j<n; ++j )
+        sqrtResults[j] = sqrt(a[j]);
 #endif
 }
 

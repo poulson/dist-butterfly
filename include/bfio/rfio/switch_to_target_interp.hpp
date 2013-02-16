@@ -123,10 +123,10 @@ SwitchToTargetInterp
             ( &oldImagWeights[0], weightGridList[key].ImagBuffer(),
               q_to_d*sizeof(R) );
             memset( weightGridList[key].Buffer(), 0, 2*q_to_d*sizeof(R) );
-            R* RESTRICT realBuffer = weightGridList[key].RealBuffer();
-            R* RESTRICT imagBuffer = weightGridList[key].ImagBuffer();
-            const R* RESTRICT oldRealBuffer = &oldRealWeights[0];
-            const R* RESTRICT oldImagBuffer = &oldImagWeights[0];
+            R* RESTRICT reals = weightGridList[key].RealBuffer();
+            R* RESTRICT imags = weightGridList[key].ImagBuffer();
+            const R* RESTRICT oldReals = &oldRealWeights[0];
+            const R* RESTRICT oldImags = &oldImagWeights[0];
             const R* RESTRICT cosBuffer = &cosResults[0];
             const R* RESTRICT sinBuffer = &sinResults[0];
             if( unitAmplitude )
@@ -135,16 +135,12 @@ SwitchToTargetInterp
                 {
                     for( size_t tPrime=0; tPrime<q_to_d; ++tPrime )
                     {
-                        const R realWeight = oldRealBuffer[tPrime];
-                        const R imagWeight = oldImagBuffer[tPrime];
+                        const R realWeight = oldReals[tPrime];
+                        const R imagWeight = oldImags[tPrime];
                         const R realPhase = cosBuffer[t*q_to_d+tPrime];
                         const R imagPhase = sinBuffer[t*q_to_d+tPrime];
-                        const R realBeta = 
-                            realPhase*realWeight - imagPhase*imagWeight;
-                        const R imagBeta = 
-                            imagPhase*realWeight + realPhase*imagWeight;
-                        realBuffer[t] += realBeta;
-                        imagBuffer[t] += imagBeta;
+                        reals[t] += realPhase*realWeight - imagPhase*imagWeight;
+                        imags[t] += imagPhase*realWeight + realPhase*imagWeight;
                     }
                 }
             }
@@ -156,18 +152,18 @@ SwitchToTargetInterp
                 {
                     for( size_t tPrime=0; tPrime<q_to_d; ++tPrime )
                     {
-                        const R realWeight = oldRealBuffer[tPrime];
-                        const R imagWeight = oldImagBuffer[tPrime];
+                        const R realWeight = oldReals[tPrime];
+                        const R imagWeight = oldImags[tPrime];
                         const R realPhase = cosBuffer[t*q_to_d+tPrime];
                         const R imagPhase = sinBuffer[t*q_to_d+tPrime];
                         const R realBeta = 
                             realPhase*realWeight - imagPhase*imagWeight;
                         const R imagBeta = 
                             imagPhase*realWeight + realPhase*imagWeight;
-                        const R realAmp = real(ampBuffer[t*q_to_d+tPrime]);
-                        const R imagAmp = imag(ampBuffer[t*q_to_d+tPrime]);
-                        realBuffer[t] += realAmp*realBeta - imagAmp*imagBeta;
-                        imagBuffer[t] += imagAmp*realBeta + realAmp*imagBeta;
+                        const R realAmp = ampBuffer[t*q_to_d+tPrime].real();
+                        const R imagAmp = ampBuffer[t*q_to_d+tPrime].imag();
+                        reals[t] += realAmp*realBeta - imagAmp*imagBeta;
+                        imags[t] += imagAmp*realBeta + realAmp*imagBeta;
                     }
                 }
             }
