@@ -1,13 +1,13 @@
 /*
    Copyright (C) 2010-2013 Jack Poulson and Lexing Ying
  
-   This file is part of ButterflyFIO and is under the GNU General Public 
+   This file is part of DistButterfly and is under the GNU General Public 
    License, which can be found in the LICENSE file in the root directory, or at
    <http://www.gnu.org/licenses/>.
 */
-#include "bfio.hpp"
+#include "dist-butterfly.hpp"
 using namespace std;
-using namespace bfio;
+using namespace dbf;
 
 void 
 Usage()
@@ -295,7 +295,7 @@ main( int argc, char* argv[] )
         // Create the context 
         if( rank == 0 )
             cout << "Creating context..." << endl;
-        rfio::Context<double,d,q> context;
+        bfly::Context<double,d,q> context;
 
         // Loop over each timestep, computing in parallel, gathering the 
         // results, and then dumping to file
@@ -312,12 +312,12 @@ main( int argc, char* argv[] )
                           << "  Starting upWave transform...";
                 cout.flush();
             }
-            auto u = RFIO( context, plan, upWave, sBox, tBox, mySources );
+            auto u = Butterfly( context, plan, upWave, sBox, tBox, mySources );
             if( rank == 0 )
                 cout << "done" << endl;
 #ifdef TIMING
             if( rank == 0 )
-                rfio::PrintTimings();
+                bfly::PrintTimings();
 #endif
 
             if( rank == 0 )
@@ -325,18 +325,19 @@ main( int argc, char* argv[] )
                 cout << "  Starting downWave transform...";
                 cout.flush();
             }
-            auto v = RFIO( context, plan, downWave, sBox, tBox, mySources );
+            auto v = 
+                Butterfly( context, plan, downWave, sBox, tBox, mySources );
             if( rank == 0 )
                 cout << "done" << endl;
 #ifdef TIMING
             if( rank == 0 )
-                rfio::PrintTimings();
+                bfly::PrintTimings();
 #endif
 
             // Store this timeslice
             ostringstream fileStream;
             fileStream << "randomWaves-" << i;
-            rfio::WriteImage( comm, N, tBox, *u, fileStream.str() );
+            bfly::WriteImage( comm, N, tBox, *u, fileStream.str() );
         }
     }
     catch( const exception& e )

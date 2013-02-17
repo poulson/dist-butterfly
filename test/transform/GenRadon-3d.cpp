@@ -1,13 +1,13 @@
 /*
    Copyright (C) 2010-2013 Jack Poulson and Lexing Ying
  
-   This file is part of ButterflyFIO and is under the GNU General Public 
+   This file is part of DistButterfly and is under the GNU General Public 
    License, which can be found in the LICENSE file in the root directory, or at
    <http://www.gnu.org/licenses/>.
 */
-#include "bfio.hpp"
+#include "dist-butterfly.hpp"
 using namespace std;
-using namespace bfio;
+using namespace dbf;
 
 void 
 Usage()
@@ -253,7 +253,7 @@ main( int argc, char* argv[] )
             cout.flush();
         }
         GenRadon<double> genRadon;
-        rfio::Context<double,d,q> context;
+        bfly::Context<double,d,q> context;
         if( rank == 0 )
             cout << "done." << endl;
 
@@ -262,7 +262,7 @@ main( int argc, char* argv[] )
             cout << "Launching transform..." << endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        auto u = RFIO( context, plan, genRadon, sBox, tBox, mySources );
+        auto u = Butterfly( context, plan, genRadon, sBox, tBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
         if( rank == 0 )
@@ -270,7 +270,7 @@ main( int argc, char* argv[] )
 #ifdef TIMING
         if( rank == 0 )
         {
-            rfio::PrintTimings();
+            bfly::PrintTimings();
             cout << "Breakdowns of BatchEvaluations:\n"
                  << "  sqrt:    " << ::batchSqrtTimer.Total() << " seconds\n"
                  << "  sin/cos: " << ::batchSinCosTimer.Total() << " seconds\n"
@@ -280,13 +280,13 @@ main( int argc, char* argv[] )
 #endif
 
         if( testAccuracy )
-            rfio::PrintErrorEstimates( comm, *u, sources );
+            bfly::PrintErrorEstimates( comm, *u, sources );
         if( store )
         {
             if( testAccuracy )
-                rfio::WriteImage( comm, N, tBox, *u, "genRadon3d", sources );
+                bfly::WriteImage( comm, N, tBox, *u, "genRadon3d", sources );
             else
-                rfio::WriteImage( comm, N, tBox, *u, "genRadon3d" );
+                bfly::WriteImage( comm, N, tBox, *u, "genRadon3d" );
         }
     }
     catch( const exception& e )

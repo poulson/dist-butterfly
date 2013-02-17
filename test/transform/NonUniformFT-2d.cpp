@@ -1,13 +1,13 @@
 /*
    Copyright (C) 2010-2013 Jack Poulson and Lexing Ying
  
-   This file is part of ButterflyFIO and is under the GNU General Public 
+   This file is part of DistButterfly and is under the GNU General Public 
    License, which can be found in the LICENSE file in the root directory, or at
    <http://www.gnu.org/licenses/>.
 */
-#include "bfio.hpp"
+#include "dist-butterfly.hpp"
 using namespace std;
-using namespace bfio;
+using namespace dbf;
 
 void 
 Usage()
@@ -217,23 +217,23 @@ main( int argc, char* argv[] )
 
         // Create a general context 
         if( rank == 0 )
-            cout << "Creating RFIO context..." << endl;
+            cout << "Creating Butterfly context..." << endl;
         Fourier<double> fourier;
-        rfio::Context<double,d,q> rfioContext;
+        bfly::Context<double,d,q> bflyContext;
 
         // Run with the general algorithm
         if( rank == 0 )
-            cout << "Starting RFIO transform..." << endl;
+            cout << "Starting Butterfly transform..." << endl;
         MPI_Barrier( comm );
         startTime = MPI_Wtime();
-        auto w = RFIO( rfioContext, plan, fourier, sBox, tBox, mySources );
+        auto w = Butterfly( bflyContext, plan, fourier, sBox, tBox, mySources );
         MPI_Barrier( comm );
         stopTime = MPI_Wtime();
         if( rank == 0 )
             cout << "Runtime: " << stopTime-startTime << " seconds.\n" << endl;
 #ifdef TIMING
         if( rank == 0 )
-            rfio::PrintTimings();
+            bfly::PrintTimings();
 #endif
 
         if( testAccuracy )

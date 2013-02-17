@@ -1,18 +1,18 @@
 #
 # Copyright (C) 2010-2013 Jack Poulson and Lexing Ying
 #
-# This file is part of ButterflyFIO and is under the GNU General Public 
+# This file is part of DistButterfly and is under the GNU General Public 
 # License, which can be found in the LICENSE file in the root directory, or at
 # <http://www.gnu.org/licenses/>.
 #
 cmake_minimum_required(VERSION 2.8.5) # for the new FindMPI module
-project(Butterfly-FIO)
+project(DistButterfly)
 
-set(BFIO_VERSION_MAJOR 0)
-set(BFIO_VERSION_MINOR 5)
+set(DBF_VERSION_MAJOR 0)
+set(DBF_VERSION_MINOR 5)
 
 option(RELEASE "Avoid unnecessary assertions for faster runs." ON)
-option(TIMING "Measure and print basic timing info." ON)
+option(TIMING "Measure and print basic timing info." OFF)
 option(BUILD_TESTS "Build the test drivers" ON)
 option(AVOID_COMPLEX_MPI "Avoid complex MPI routines for robustness" ON)
 mark_as_advanced(AVOID_COMPLEX_MPI)
@@ -156,19 +156,19 @@ else()
   endif()
 endif()
 
-configure_file(${CMAKE_SOURCE_DIR}/include/bfio/config.h.cmake
-               ${CMAKE_BINARY_DIR}/include/bfio/config.h)
-install(FILES ${CMAKE_BINARY_DIR}/include/bfio/config.h
-        DESTINATION include/bfio)
+configure_file(${CMAKE_SOURCE_DIR}/include/dist-butterfly/config.h.cmake
+               ${CMAKE_BINARY_DIR}/include/dist-butterfly/config.h)
+install(FILES ${CMAKE_BINARY_DIR}/include/dist-butterfly/config.h
+        DESTINATION include/dist-butterfly)
 
 # We only have header files
-file(GLOB_RECURSE BFIO_HEADERS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} 
+file(GLOB_RECURSE DBF_HEADERS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} 
      "include/*.h" "include/*.hpp")
-set(BFIO_SRC "${BFIO_HEADERS}")
+set(DBF_SRC "${DBF_HEADERS}")
 
 # Copy the headers into the build directory
 set(COPIED_HEADERS "")
-foreach(HEADER ${BFIO_HEADERS})
+foreach(HEADER ${DBF_HEADERS})
   add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${HEADER}
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${HEADER}
@@ -179,7 +179,7 @@ foreach(HEADER ${BFIO_HEADERS})
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${HEADER} DESTINATION ${HEADER_PATH})
 endforeach()
 
-# Make sure the BFIO headers can be found
+# Make sure the DBF headers can be found
 include_directories("${PROJECT_BINARY_DIR}/include")
 
 if(BUILD_TESTS)

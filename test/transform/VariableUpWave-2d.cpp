@@ -1,13 +1,13 @@
 /*
    Copyright (C) 2010-2013 Jack Poulson and Lexing Ying
  
-   This file is part of ButterflyFIO and is under the GNU General Public 
+   This file is part of DistButterfly and is under the GNU General Public 
    License, which can be found in the LICENSE file in the root directory, or at
    <http://www.gnu.org/licenses/>.
 */
-#include "bfio.hpp"
+#include "dist-butterfly.hpp"
 using namespace std;
-using namespace bfio;
+using namespace dbf;
 
 void 
 Usage()
@@ -275,14 +275,14 @@ main( int argc, char* argv[] )
         // Create our context
         if( rank == 0 )
             cout << "Creating context..." << endl;
-        rfio::Context<double,d,q> context;
+        bfly::Context<double,d,q> context;
 
         // Run the algorithm
         if( rank == 0 )
             cout << "Starting transform..." << endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        auto u = RFIO
+        auto u = Butterfly
         ( context, plan, oscillatory, upWave, sBox, tBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
@@ -290,17 +290,17 @@ main( int argc, char* argv[] )
             cout << "Runtime: " << stopTime-startTime << " seconds.\n" << endl;
 #ifdef TIMING
         if( rank == 0 )
-            rfio::PrintTimings();
+            bfly::PrintTimings();
 #endif
 
         if( testAccuracy )
-            rfio::PrintErrorEstimates( comm, *u, sources );
+            bfly::PrintErrorEstimates( comm, *u, sources );
         if( store )
         {
             if( testAccuracy )
-                rfio::WriteImage( comm, N, tBox, *u, "varUpWave2d", sources );
+                bfly::WriteImage( comm, N, tBox, *u, "varUpWave2d", sources );
             else
-                rfio::WriteImage( comm, N, tBox, *u, "varUpWave2d" );
+                bfly::WriteImage( comm, N, tBox, *u, "varUpWave2d" );
         }
     }
     catch( const exception& e )

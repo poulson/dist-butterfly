@@ -1,11 +1,11 @@
 /*
    Copyright (C) 2010-2013 Jack Poulson and Lexing Ying
  
-   This file is part of ButterflyFIO and is under the GNU General Public 
+   This file is part of DistButterfly and is under the GNU General Public 
    License, which can be found in the LICENSE file in the root directory, or at
    <http://www.gnu.org/licenses/>.
 */
-#include "bfio.hpp"
+#include "dist-butterfly.hpp"
 using namespace std;
 
 namespace {
@@ -40,11 +40,11 @@ main( int argc, char* argv[] )
     {
         if( rank == 0 )
         {
-            bfio::HTreeWalker<d> walker;
+            dbf::HTreeWalker<d> walker;
             for( size_t i=0; i<N; ++i, walker.Walk() )
             {
-                const array<size_t,d> A = walker.State();
-                const size_t k = bfio::FlattenHTreeIndex( A );
+                const array<size_t,d>& A = walker.State();
+                const size_t k = dbf::FlattenHTreeIndex( A );
                 cout << i << ": ";
                 for( size_t j=0; j<d; ++j )
                     cout << A[j] << " ";
