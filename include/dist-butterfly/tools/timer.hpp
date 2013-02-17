@@ -20,10 +20,10 @@ using std::chrono::steady_clock;
 
 class Timer
 {
-    bool running_;
-    double totalTime_;
+    bool running_ = false;
+    double totalTime_ = 0;
+    const std::string name_ = "[blank]";
     steady_clock::time_point lastTime_;    
-    const std::string name_;
 public:        
     Timer();
     Timer( const std::string& name );
@@ -38,11 +38,10 @@ public:
 
 // Implementations
 inline Timer::Timer()
-: running_(false), totalTime_(0), name_("[blank]")
 { }
 
 inline Timer::Timer( const std::string& name )
-: running_(false), totalTime_(0), name_(name)
+: name_(name)
 { }
 
 inline void 
