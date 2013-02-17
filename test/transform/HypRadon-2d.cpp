@@ -24,7 +24,7 @@ Usage()
 
 // Define the dimension of the problem and the order of interpolation
 static const size_t d = 2;
-static const size_t q = 5;
+static const size_t q = 4;
 
 template<typename R>    
 class HypRadon : public Phase<R,d>
@@ -117,7 +117,7 @@ main( int argc, char* argv[] )
         for( size_t j=0; j<d; ++j )
         {
             sBox.offsets[j] = -0.5*(sqrt(N)/F);
-            sBox.widths[j] = (sqrt(N)/F);
+            sBox.widths[j] = sqrt(N)/F;
             tBox.offsets[j] = 0;
             tBox.widths[j] = 1;
         }

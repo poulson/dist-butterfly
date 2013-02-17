@@ -150,7 +150,7 @@ main( int argc, char* argv[] )
         for( size_t j=0; j<d; ++j )
         {
             sBox.offsets[j] = -0.5*(N/F);
-            sBox.widths[j] = (N/F);
+            sBox.widths[j] = N/F;
             tBox.offsets[j] = 0;
             tBox.widths[j] = 1;
         }

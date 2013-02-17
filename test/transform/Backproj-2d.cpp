@@ -12,7 +12,7 @@ using namespace bfio;
 void 
 Usage()
 {
-    cout << "GenRadon-3d <N> <F> <M> <bootstrap> <testAccuracy?> <store?>\n" 
+    cout << "Backproj-2d <N> <F> <M> <bootstrap> <testAccuracy?> <store?>\n" 
          << "  N: power of 2, the number of boxes in each dimension\n" 
          << "  F: power of 2, boxes per unit length in each source dim\n"
          << "  M: number of random sources to instantiate\n" 
@@ -23,17 +23,17 @@ Usage()
 }
 
 // Define the dimension of the problem and the order of interpolation
-static const size_t d = 3;
-static const size_t q = 5;
+static const size_t d = 2;
+static const size_t q = 8;
 
 template<typename R>    
-class GenRadon : public Phase<R,d>
+class Backproj : public Phase<R,d>
 {
 public:
-    virtual GenRadon<R>* Clone() const override;
+    virtual Backproj<R>* Clone() const override;
 
-    virtual R operator()( const array<R,d>& x, const array<R,d>& p ) const 
-    override;
+    virtual R operator()
+    ( const array<R,d>& x, const array<R,d>& p ) const override;
 
     // We can optionally override the batched application for better efficiency.
     virtual void BatchEvaluate
@@ -43,102 +43,47 @@ public:
 };
 
 template<typename R>
-inline GenRadon<R>*
-GenRadon<R>::Clone() const
-{ return new GenRadon<R>(*this); }
+inline Backproj<R>* 
+Backproj<R>::Clone() const
+{ return new Backproj<R>(*this); }
 
 template<typename R>
-inline R GenRadon<R>::operator()
+inline R Backproj<R>::operator()
 ( const array<R,d>& x, const array<R,d>& p ) const
 {
-    const R pi = Pi<R>();
-    const R twoPi = TwoPi<R>();
-    const R a = p[0]*(2+sin(twoPi*x[0])*sin(twoPi*x[1]))/3;
-    const R b = p[1]*(2+cos(twoPi*x[0])*cos(twoPi*x[1]))/3;
-    return pi*(x[0]*p[0]+x[1]*p[1]+x[2]*p[2] + sqrt(a*a+b*b));
+    return TwoPi<R>()*p[1]*(cos(p[0])*x[0]+sin(p[0])*x[1]);
 }
 
-#ifdef TIMING
-Timer batchTimer, batchSqrtTimer, batchSinCosTimer;
-#endif 
 template<typename R>
-void GenRadon<R>::BatchEvaluate
+void Backproj<R>::BatchEvaluate
 ( const vector<array<R,d>>& xPoints,
   const vector<array<R,d>>& pPoints,
         vector<R         >& results ) const
 {
-#ifdef TIMING
-    ::batchTimer.Start();
-#endif 
-    const R pi = Pi<R>();
     const R twoPi = TwoPi<R>();
     const size_t xSize = xPoints.size();
     const size_t pSize = pPoints.size();
 
     // Compute all of the sin's and cos's of the x indices times TwoPi 
     static vector<R> sinCosArguments;
-    sinCosArguments.resize( 2*xSize );
-    for( size_t i=0; i<xSize; ++i )
-    {
-        sinCosArguments[2*i+0] = twoPi*xPoints[i][0];
-        sinCosArguments[2*i+1] = twoPi*xPoints[i][1];
-    }
-#ifdef TIMING
-    ::batchSinCosTimer.Start();
-#endif
+    sinCosArguments.resize( pSize );
+    for( size_t j=0; j<pSize; ++j )
+        sinCosArguments[j] = pPoints[j][0];
     static vector<R> sinResults, cosResults;
     SinCosBatch( sinCosArguments, sinResults, cosResults );
-#ifdef TIMING
-    ::batchSinCosTimer.Stop();
-#endif
-
-    // Compute the the c1(x) and c2(x) results for every x vector
-    static vector<R> c1, c2;
-    c1.resize( xSize );
-    c2.resize( xSize );
-    for( size_t i=0; i<xSize; ++i )
-        c1[i] = (2+sinResults[2*i]*sinResults[2*i+1])/3;
-    for( size_t i=0; i<xSize; ++i )
-        c2[i] = (2+cosResults[2*i]*cosResults[2*i+1])/3;
-
-    // Form the set of sqrt arguments
-    static vector<R> sqrtArguments;
-    sqrtArguments.resize( xSize*pSize );
-    for( size_t i=0; i<xSize; ++i )
-    {
-        for( size_t j=0; j<pSize; ++j )
-        {
-            const R a = c1[i]*pPoints[j][0];
-            const R b = c2[i]*pPoints[j][1];
-            sqrtArguments[i*pSize+j] = a*a+b*b;
-        }
-    }
-
-    // Perform the batched square roots
-#ifdef TIMING
-    ::batchSqrtTimer.Start();
-#endif
-    SqrtBatch( sqrtArguments, results );
-#ifdef TIMING
-    ::batchSqrtTimer.Stop();
-#endif
 
     // Form the answer
+    results.resize( xSize*pSize );
     for( size_t i=0; i<xSize; ++i )
     {
         const R x0 = xPoints[i][0];
         const R x1 = xPoints[i][1];
-        const R x2 = xPoints[i][2];
         for( size_t j=0; j<pSize; ++j )
         {
-            results[i*pSize+j] +=
-                x0*pPoints[j][0] + x1*pPoints[j][1] + x2*pPoints[j][2];
-            results[i*pSize+j] *= pi;
+            results[i*pSize+j] = cosResults[j]*x0+sinResults[j]*x1;
+            results[i*pSize+j] *= twoPi*pPoints[j][1];
         }
     }
-#ifdef TIMING
-    ::batchTimer.Stop();
-#endif
 }
 
 int
@@ -169,18 +114,20 @@ main( int argc, char* argv[] )
     try 
     {
         // Set our source and target boxes
-        Box<double,d> sBox, tBox;
+        Box<float,d> sBox, tBox;
+        sBox.offsets[0] = 0;
+        sBox.widths[0] = TwoPi<float>();
+        sBox.offsets[1] = -0.5*(N/F);
+        sBox.widths[1] = N/F;
         for( size_t j=0; j<d; ++j )
         {
-            sBox.offsets[j] = -0.5*(N/F);
-            sBox.widths[j] = N/F;
             tBox.offsets[j] = 0;
             tBox.widths[j] = 1;
         }
 
         // Set up the general strategy for the forward transform
         Plan<d> plan( comm, FORWARD, N, bootstrap );
-        Box<double,d> mySBox = plan.GetMyInitialSourceBox( sBox );
+        Box<float,d> mySBox = plan.GetMyInitialSourceBox( sBox );;
 
         if( rank == 0 )
         {
@@ -201,12 +148,12 @@ main( int argc, char* argv[] )
         }
         MPI_Bcast( &seed, 1, MPI_UNSIGNED, 0, comm );
         default_random_engine engine( seed );
-        uniform_real_distribution<double> uniform_dist(0.,1.);
+        uniform_real_distribution<float> uniform_dist(0.f,1.f);
         auto uniform = bind( uniform_dist, ref(engine) );
 
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
-        vector<Source<double,d>> mySources, sources;
+        vector<Source<float,d>> mySources, sources;
         if( testAccuracy || store )
         {
             sources.resize( M );
@@ -220,9 +167,9 @@ main( int argc, char* argv[] )
                 bool isMine = true;
                 for( size_t j=0; j<d; ++j )
                 {
-                    double u = sources[i].p[j];
-                    double start = mySBox.offsets[j];
-                    double stop = mySBox.offsets[j] + mySBox.widths[j];
+                    float u = sources[i].p[j];
+                    float start = mySBox.offsets[j];
+                    float stop = mySBox.offsets[j] + mySBox.widths[j];
                     if( u < start || u >= stop )
                         isMine = false;
                 }
@@ -252,8 +199,8 @@ main( int argc, char* argv[] )
             cout << "Creating context...";
             cout.flush();
         }
-        GenRadon<double> genRadon;
-        rfio::Context<double,d,q> context;
+        Backproj<float> backproj;
+        rfio::Context<float,d,q> context;
         if( rank == 0 )
             cout << "done." << endl;
 
@@ -262,31 +209,25 @@ main( int argc, char* argv[] )
             cout << "Launching transform..." << endl;
         MPI_Barrier( comm );
         double startTime = MPI_Wtime();
-        auto u = RFIO( context, plan, genRadon, sBox, tBox, mySources );
+        auto u = RFIO( context, plan, backproj, sBox, tBox, mySources );
         MPI_Barrier( comm );
         double stopTime = MPI_Wtime();
         if( rank == 0 )
             cout << "Runtime: " << stopTime-startTime << " seconds.\n" << endl;
 #ifdef TIMING
         if( rank == 0 )
-        {
             rfio::PrintTimings();
-            cout << "Breakdowns of BatchEvaluations:\n"
-                 << "  sqrt:    " << ::batchSqrtTimer.Total() << " seconds\n"
-                 << "  sin/cos: " << ::batchSinCosTimer.Total() << " seconds\n"
-                 << "  total:   " << ::batchTimer.Total() << " seconds\n"
-                 << endl;
-        }
 #endif
 
         if( testAccuracy )
             rfio::PrintErrorEstimates( comm, *u, sources );
+        
         if( store )
         {
             if( testAccuracy )
-                rfio::WriteImage( comm, N, tBox, *u, "genRadon3d", sources );
+                rfio::WriteImage( comm, N, tBox, *u, "backproj2d", sources );
             else
-                rfio::WriteImage( comm, N, tBox, *u, "genRadon3d" );
+                rfio::WriteImage( comm, N, tBox, *u, "backproj2d" );
         }
     }
     catch( const exception& e )
