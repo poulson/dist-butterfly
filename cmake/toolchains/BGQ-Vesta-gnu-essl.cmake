@@ -62,3 +62,9 @@ set(XLMASS_FLAGS "-L${XLMASS_ROOT} -lmassv -lmass")
 #set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 #set(CMAKE_EXE_LINKER_FLAGS "-static")
 set(MATH_LIBS "${LAPACK_FLAGS} ${ESSL_FLAGS} ${XLF_FLAGS} ${XL_FLAGS} ${XLMASS_FLAGS} -lxlopt -lxlfmath -lxl -lgfortran -lm -lpthread -ldl -Wl,--allow-multiple-definition")
+
+# Make sure we can find the ESSL headers
+set(ESSL_INC "/soft/libraries/essl/current/essl/5.1/include")
+set(XLMASS_INC "${IBMCMP_ROOT}/xlmass/bg/7.3/include")
+include_directories(${ESSL_INC})
+include_directories(${XLMASS_INC})
