@@ -57,7 +57,7 @@ SinBatch
 ( const std::vector<float>& a, 
         std::vector<float>& sinResults )
 {
-    const int n = a.size();
+    int n = a.size();
     sinResults.resize( n );
 #if defined(MASS)
     vssin( const_cast<float*>(&a[0]), &sinResults[0], &n );
@@ -75,7 +75,7 @@ SinBatch
 ( const std::vector<double>& a, 
         std::vector<double>& sinResults )
 {
-    const int n = a.size();
+    int n = a.size();
     sinResults.resize( n );
 #if defined(MASS)
     vsin( const_cast<double*>(&a[0]), &sinResults[0], &n );
@@ -100,7 +100,7 @@ CosBatch
 ( const std::vector<float>& a, 
         std::vector<float>& cosResults )
 {
-    const int n = a.size();
+    int n = a.size();
     cosResults.resize( n );
 #if defined(MASS)
     vscos( const_cast<float*>(&a[0]), &cosResults[0], &n );
@@ -118,7 +118,7 @@ CosBatch
 ( const std::vector<double>& a, 
         std::vector<double>& cosResults )
 {
-    const int n = a.size();
+    int n = a.size();
     cosResults.resize( n );
 #if defined(MASS)
     vcos( const_cast<double*>(&a[0]), &cosResults[0], &n );
@@ -145,7 +145,7 @@ SinCosBatch
         std::vector<float>& sinResults,
         std::vector<float>& cosResults ) 
 {
-    const int n = a.size();
+    int n = a.size();
     sinResults.resize( n );
     cosResults.resize( n );
 #if defined(MASS)
@@ -168,7 +168,7 @@ SinCosBatch
         std::vector<double>& sinResults,
         std::vector<double>& cosResults )
 {
-    const int n = a.size();
+    int n = a.size();
     sinResults.resize( n );
     cosResults.resize( n );
 #if defined(MASS)
@@ -197,7 +197,7 @@ SqrtBatch
 ( const std::vector<float>& a, 
         std::vector<float>& sqrtResults )
 {
-    const int n = a.size();
+    int n = a.size();
     sqrtResults.resize( n );
 #if defined(MASS)
     vssqrt( const_cast<float*>(&a[0]), &sqrtResults[0], &n );
@@ -215,7 +215,7 @@ SqrtBatch
 ( const std::vector<double>& a, 
         std::vector<double>& sqrtResults )
 {
-    const int n = a.size();
+    int n = a.size();
     sqrtResults.resize( n );
 #if defined(MASS)
     vsqrt( const_cast<double*>(&a[0]), &sqrtResults[0], &n );
