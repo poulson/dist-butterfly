@@ -156,7 +156,7 @@ else()
   endif()
 endif()
 
-configure_file(${CMAKE_SOURCE_DIR}/include/dist-butterfly/config.h.cmake
+configure_file(${CMAKE_SOURCE_DIR}/cmake/config.h.cmake
                ${CMAKE_BINARY_DIR}/include/dist-butterfly/config.h)
 install(FILES ${CMAKE_BINARY_DIR}/include/dist-butterfly/config.h
         DESTINATION include/dist-butterfly)

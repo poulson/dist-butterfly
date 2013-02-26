@@ -18,7 +18,7 @@
 #cmakedefine LAPACK_POST
 #cmakedefine AVOID_COMPLEX_MPI
 #cmakedefine MKL
-#cmakedefine ESSL
+#cmakedefine MASS
 #cmakedefine BGP
 #cmakedefine BGP_MPIDO_USE_REDUCESCATTER
 
