@@ -21,8 +21,6 @@ set(MPI_CXX_LINK_FLAGS ${MPI_C_LINK_FLAGS})
 set(MPI_C_LIBRARIES "-lmpich -lopa -lmpl -ldl -lpami -lSPI -lSPI_cnk -lpthread -lrt -lstdc++")
 set(MPI_CXX_LIBRARIES "-lcxxmpich ${MPI_C_LIBRARIES}")
 
-set(CXX_FLAGS "-O3")
-
 set(CMAKE_THREAD_LIBS_INIT "-fopenmp")
 set(OpenMP_CXX_FLAGS "-fopenmp")
 
