@@ -45,7 +45,7 @@ public:
 template<typename R>
 inline GenRadon<R>*
 GenRadon<R>::Clone() const
-{ return new GenRadon<R>(*this); }
+{ return new GenRadon<R>; }
 
 template<typename R>
 inline R GenRadon<R>::operator()

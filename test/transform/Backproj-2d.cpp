@@ -45,7 +45,7 @@ public:
 template<typename R>
 inline Backproj<R>* 
 Backproj<R>::Clone() const
-{ return new Backproj<R>(*this); }
+{ return new Backproj<R>; }
 
 template<typename R>
 inline R Backproj<R>::operator()

@@ -45,7 +45,7 @@ public:
 template<typename R>
 inline UpWave<R>*
 UpWave<R>::Clone() const
-{ return new UpWave<R>(*this); }
+{ return new UpWave<R>; }
 
 template<typename R>
 inline R

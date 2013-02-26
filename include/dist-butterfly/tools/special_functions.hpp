@@ -60,7 +60,7 @@ SinBatch
     int n = a.size();
     sinResults.resize( n );
 #if defined(MASS)
-    vssin( const_cast<float*>(&a[0]), &sinResults[0], &n );
+    vssin( &sinResults[0], const_cast<float*>(&a[0]), &n );
 #elif defined(MKL)
     vsSin( n, &a[0], &sinResults[0] );
 #else
@@ -78,7 +78,7 @@ SinBatch
     int n = a.size();
     sinResults.resize( n );
 #if defined(MASS)
-    vsin( const_cast<double*>(&a[0]), &sinResults[0], &n );
+    vsin( &sinResults[0], const_cast<double*>(&a[0]), &n );
 #elif defined(MKL)
     vdSin( n, &a[0], &sinResults[0] );
 #else
@@ -103,7 +103,7 @@ CosBatch
     int n = a.size();
     cosResults.resize( n );
 #if defined(MASS)
-    vscos( const_cast<float*>(&a[0]), &cosResults[0], &n );
+    vscos( &cosResults[0], const_cast<float*>(&a[0]), &n );
 #elif defined(MKL)
     vsCos( n, &a[0], &cosResults[0] );
 #else
@@ -121,7 +121,7 @@ CosBatch
     int n = a.size();
     cosResults.resize( n );
 #if defined(MASS)
-    vcos( const_cast<double*>(&a[0]), &cosResults[0], &n );
+    vcos( &cosResults[0], const_cast<double*>(&a[0]), &n );
 #elif defined(MKL)
     vdCos( n, &a[0], &cosResults[0] );
 #else
@@ -149,7 +149,7 @@ SinCosBatch
     sinResults.resize( n );
     cosResults.resize( n );
 #if defined(MASS)
-    vssincos( const_cast<float*>(&a[0]), &sinResults[0], &cosResults[0], &n );
+    vssincos( &sinResults[0], &cosResults[0], const_cast<float*>(&a[0]), &n );
 #elif defined(MKL)
     vsSinCos( n, &a[0], &sinResults[0], &cosResults[0] );
 #else
@@ -172,7 +172,7 @@ SinCosBatch
     sinResults.resize( n );
     cosResults.resize( n );
 #if defined(MASS)
-    vsincos( const_cast<double*>(&a[0]), &sinResults[0], &cosResults[0], &n );
+    vsincos( &sinResults[0], &cosResults[0], const_cast<double*>(&a[0]), &n );
 #elif defined(MKL)
     vdSinCos( n, &a[0], &sinResults[0], &cosResults[0] );
 #else
@@ -200,7 +200,7 @@ SqrtBatch
     int n = a.size();
     sqrtResults.resize( n );
 #if defined(MASS)
-    vssqrt( const_cast<float*>(&a[0]), &sqrtResults[0], &n );
+    vssqrt( &sqrtResults[0], const_cast<float*>(&a[0]), &n );
 #elif defined(MKL)
     vsSqrt( n, &a[0], &sqrtResults[0] );
 #else
@@ -218,7 +218,7 @@ SqrtBatch
     int n = a.size();
     sqrtResults.resize( n );
 #if defined(MASS)
-    vsqrt( const_cast<double*>(&a[0]), &sqrtResults[0], &n );
+    vsqrt( &sqrtResults[0], const_cast<double*>(&a[0]), &n );
 #elif defined(MKL)
     vdSqrt( n, &a[0], &sqrtResults[0] );
 #else

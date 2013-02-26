@@ -62,7 +62,7 @@ public:
 template<typename R>
 inline Oscillatory<R>*
 Oscillatory<R>::Clone() const
-{ return new Oscillatory<R>(*this); }
+{ return new Oscillatory<R>; }
 
 template<typename R>
 inline complex<R>
@@ -120,7 +120,7 @@ Oscillatory<R>::BatchEvaluate
 template<typename R>
 inline UpWave<R>*
 UpWave<R>::Clone() const
-{ return new UpWave<R>(*this); }
+{ return new UpWave<R>; }
 
 template<typename R>
 inline R

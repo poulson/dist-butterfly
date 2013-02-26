@@ -45,7 +45,7 @@ public:
 template<typename R>
 inline Fourier<R>*
 Fourier<R>::Clone() const
-{ return new Fourier<R>(*this); }
+{ return new Fourier<R>; }
 
 template<typename R>
 inline R

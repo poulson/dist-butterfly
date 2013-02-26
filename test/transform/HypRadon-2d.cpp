@@ -45,7 +45,7 @@ public:
 template<typename R>
 inline HypRadon<R>* 
 HypRadon<R>::Clone() const
-{ return new HypRadon<R>(*this); }
+{ return new HypRadon<R>; }
 
 template<typename R>
 inline R HypRadon<R>::operator()
