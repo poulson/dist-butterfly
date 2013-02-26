@@ -1,14 +1,15 @@
 #set(CMAKE_SYSTEM_NAME BlueGeneQ-static)
 
-# The serial compilers
-set(GCC_ROOT "/bgsys/drivers/ppcfloor/gnu-linux")
-set(GCC_NAME "powerpc64-bgq-linux")
-set(CLANG_ROOT "/home/projects/llvm")
-set(CMAKE_C_COMPILER       "${CLANG_ROOT}/bin/bgclang")
-set(CMAKE_CXX_COMPILER     "${CLANG_ROOT}/bin/bgclang++")
+# The serial compilers are typically set here, but, at least at some point,
+# it was easier to set them to the MPI compilers.
+set(MPI_ROOT  "/bgsys/drivers/ppcfloor/comm/gcc")
+set(CMAKE_C_COMPILER       ${MPI_ROOT}/bin/mpicc)
+set(CMAKE_CXX_COMPILER     ${MPI_ROOT}/bin/mpicxx)
 
 # The MPI wrappers for the C and C++ compilers
-set(MPI_ROOT  "/bgsys/drivers/ppcfloor/comm/gcc")
+set(MPI_C_COMPILER   ${MPI_ROOT}/bin/mpicc)
+set(MPI_CXX_COMPILER ${MPI_ROOT}/bin/mpicxx)
+
 set(PAMI_ROOT "/bgsys/drivers/ppcfloor/comm/sys")
 set(SPI_ROOT  "/bgsys/drivers/ppcfloor/spi")
 set(MPI_C_COMPILE_FLAGS   "")
@@ -22,8 +23,8 @@ set(MPI_CXX_LIBRARIES "-lcxxmpich ${MPI_C_LIBRARIES}")
 
 set(CXX_FLAGS "-O3")
 
-#set(CMAKE_THREAD_LIBS_INIT "-fopenmp")
-#set(OpenMP_CXX_FLAGS "-fopenmp")
+set(CMAKE_THREAD_LIBS_INIT "-fopenmp")
+set(OpenMP_CXX_FLAGS "-fopenmp")
 
 ##############################################################
 
@@ -61,9 +62,3 @@ set(XLMASS_FLAGS "-L${XLMASS_ROOT} -lmassv -lmass")
 #set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 #set(CMAKE_EXE_LINKER_FLAGS "-static")
 set(MATH_LIBS "${LAPACK_FLAGS} ${ESSL_FLAGS} ${XLF_FLAGS} ${XL_FLAGS} ${XLMASS_FLAGS} -lxlopt -lxlfmath -lxl -lgfortran -lm -lpthread -ldl -Wl,--allow-multiple-definition")
-
-# Make sure we can find the ESSL headers
-set(ESSL_INC "/soft/libraries/essl/current/essl/5.1/include")
-set(XLMASS_INC "${IBMCMP_ROOT}/xlmass/bg/7.3/include")
-include_directories(${ESSL_INC})
-include_directories(${XLMASS_INC})
