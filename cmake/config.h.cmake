@@ -19,6 +19,7 @@
 #cmakedefine AVOID_COMPLEX_MPI
 #cmakedefine MKL
 #cmakedefine MASS
+#cmakedefine HAVE_MPI_REDUCE_SCATTER_BLOCK
 #cmakedefine BGP
 #cmakedefine BGP_MPIDO_USE_REDUCESCATTER
 

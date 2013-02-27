@@ -119,6 +119,16 @@ else()
   endif()
 endif()
 
+# Look for MPI_Reduce_scatter_block (and MPI_Reduce_scatter as sanity check)
+set(CMAKE_REQUIRED_FLAGS "${MPI_C_COMPILE_FLAGS} ${MPI_C_LINK_FLAGS}")
+set(CMAKE_REQUIRED_INCLUDES ${MPI_C_INCLUDE_PATH})
+set(CMAKE_REQUIRED_LIBRARIES ${MPI_C_LIBRARIES})
+check_function_exists(MPI_Reduce_scatter HAVE_MPI_REDUCE_SCATTER)
+check_function_exists(MPI_Reduce_scatter_block HAVE_MPI_REDUCE_SCATTER_BLOCK)
+if(NOT HAVE_MPI_REDUCE_SCATTER)
+  message(FATAL_ERROR "Could not find MPI_Reduce_scatter")
+endif()
+
 # Look for MKL and MASS vectorization routines
 check_function_exists(vdSin MKL)
 check_function_exists(vsin MASS)
@@ -162,7 +172,7 @@ install(FILES ${CMAKE_BINARY_DIR}/include/dist-butterfly/config.h
         DESTINATION include/dist-butterfly)
 
 # We only have header files
-file(GLOB_RECURSE DBF_HEADERS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} 
+file(GLOB_RECURSE DBF_HEADERS RELATIVE ${PROJECT_SOURCE_DIR} 
      "include/*.h" "include/*.hpp")
 set(DBF_SRC "${DBF_HEADERS}")
 
@@ -170,14 +180,15 @@ set(DBF_SRC "${DBF_HEADERS}")
 set(COPIED_HEADERS "")
 foreach(HEADER ${DBF_HEADERS})
   add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${HEADER}
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${HEADER}
-            ${CMAKE_CURRENT_BINARY_DIR}/${HEADER}
-  )
-  list(APPEND COPIED_HEADERS "${CMAKE_CURRENT_BINARY_DIR}/${HEADER}")
+    OUTPUT ${PROJECT_BINARY_DIR}/${HEADER}
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/${HEADER}
+            ${PROJECT_BINARY_DIR}/${HEADER}
+    DEPENDS "${PROJECT_SOURCE_DIR}/${HEADER}")
+  list(APPEND COPIED_HEADERS "${PROJECT_BINARY_DIR}/${HEADER}")
   get_filename_component(HEADER_PATH ${HEADER} PATH)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${HEADER} DESTINATION ${HEADER_PATH})
+  install(FILES ${PROJECT_BINARY_DIR}/${HEADER} DESTINATION ${HEADER_PATH})
 endforeach()
+add_custom_target(copy_dbf_headers DEPENDS ${COPIED_HEADERS})
 
 # Make sure the DBF headers can be found
 include_directories("${PROJECT_BINARY_DIR}/include")
@@ -196,6 +207,7 @@ endif()
 # to be linked last
 add_library(cmake-dummy-lib STATIC cmake/CMakeDummyFunction.cpp)
 target_link_libraries(cmake-dummy-lib ${MATH_LIBS} ${MPI_CXX_LIBRARIES})
+add_dependencies(cmake-dummy-lib copy_dbf_headers)
 
 # Build the test drivers if necessary
 set(MPI_LINK_FLAGS "${MPI_CXX_LINK_FLAGS}")

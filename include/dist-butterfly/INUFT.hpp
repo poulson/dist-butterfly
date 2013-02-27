@@ -341,9 +341,7 @@ INUFT
 #ifdef TIMING
             inuft::sumScatterTimer.Start();
 #endif
-            vector<int> recvCounts( numMergingProcesses );
-            for( size_t j=0; j<numMergingProcesses; ++j )
-                recvCounts[j] = 2*weightGridList.Length()*q_to_d;
+            const size_t recvSize = 2*weightGridList.Length()*q_to_d;
             // Currently two types of planned communication are supported, as 
             // they are the only required types for transforming and inverting 
             // the transform:
@@ -358,7 +356,7 @@ INUFT
                 MPI_Comm clusterComm = plan.GetClusterComm( level );
                 SumScatter    
                 ( partialWeightGridList.Buffer(), weightGridList.Buffer(),
-                  &recvCounts[0], clusterComm );
+                  recvSize, clusterComm );
             }
             else
             {
@@ -367,7 +365,6 @@ INUFT
                 const size_t numSubclusters = 1u<<log2NumSubclusters;
                 const size_t subclusterSize = 1u<<log2SubclusterSize;
 
-                const size_t recvSize = recvCounts[0];
                 const size_t sendSize = recvSize*numMergingProcesses;
                 const size_t numChunksPerProcess = subclusterSize;
                 const size_t chunkSize = recvSize / numChunksPerProcess;
@@ -395,7 +392,7 @@ INUFT
                 MPI_Comm clusterComm = plan.GetClusterComm( level );
                 SumScatter
                 ( &sendBuffer[0], weightGridList.Buffer(), 
-                  &recvCounts[0], clusterComm );
+                  recvSize, clusterComm );
             }
 #ifdef TIMING
             inuft::sumScatterTimer.Stop();
