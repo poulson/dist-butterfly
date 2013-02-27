@@ -9,7 +9,6 @@
 #ifndef DBF_TOOLS_MPI_HPP
 #define DBF_TOOLS_MPI_HPP
 
-#include <iostream>
 #include <stdexcept>
 #include "mpi.h"
 
@@ -30,12 +29,10 @@ SumScatter<float>
 ( const float* sendBuf, float* recvBuf, int recvSize, MPI_Comm comm )
 {
 #ifdef HAVE_MPI_REDUCE_SCATTER_BLOCK
-    std::cout << "MPI_Reduce_scatter_block" << std::endl;
     const int ierror = MPI_Reduce_scatter_block
     ( const_cast<float*>(sendBuf), 
       recvBuf, recvSize, MPI_FLOAT, MPI_SUM, comm );
 #else
-    std::cout << "MPI_Reduce_scatter" << std::endl;
     int commSize; MPI_Comm_size( comm, &commSize );
     std::vector<int> recvCounts( commSize, recvSize );
     const int ierror = MPI_Reduce_scatter
@@ -56,12 +53,10 @@ SumScatter<double>
 ( const double* sendBuf, double* recvBuf, int recvSize, MPI_Comm comm )
 {
 #ifdef HAVE_MPI_REDUCE_SCATTER_BLOCK
-    std::cout << "MPI_Reduce_scatter_block" << std::endl;
     const int ierror = MPI_Reduce_scatter_block
     ( const_cast<double*>(sendBuf), 
       recvBuf, recvSize, MPI_DOUBLE, MPI_SUM, comm );
 #else
-    std::cout << "MPI_Reduce_scatter" << std::endl;
     int commSize; MPI_Comm_size( comm, &commSize );
     std::vector<int> recvCounts( commSize, recvSize );
     const int ierror = MPI_Reduce_scatter
