@@ -119,6 +119,10 @@ else()
   endif()
 endif()
 
+# Look for MKL and MASS vectorization routines
+check_function_exists(vdSin MKL)
+check_function_exists(vsin MASS)
+
 # Look for MPI_Reduce_scatter_block (and MPI_Reduce_scatter as sanity check)
 set(CMAKE_REQUIRED_FLAGS "${MPI_C_COMPILE_FLAGS} ${MPI_C_LINK_FLAGS}")
 set(CMAKE_REQUIRED_INCLUDES ${MPI_C_INCLUDE_PATH})
@@ -128,10 +132,6 @@ check_function_exists(MPI_Reduce_scatter_block HAVE_MPI_REDUCE_SCATTER_BLOCK)
 if(NOT HAVE_MPI_REDUCE_SCATTER)
   message(FATAL_ERROR "Could not find MPI_Reduce_scatter")
 endif()
-
-# Look for MKL and MASS vectorization routines
-check_function_exists(vdSin MKL)
-check_function_exists(vsin MASS)
 
 # Look for restrict support
 include(CheckCXXSourceCompiles)
