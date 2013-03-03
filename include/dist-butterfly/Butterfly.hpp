@@ -25,7 +25,9 @@ using std::vector;
 
 namespace bfly {
 
+#ifndef RELEASE
 static bool alreadyTimed = false;
+#endif
 
 static Timer timer;
 static Timer initializeWeightsTimer;
@@ -513,8 +515,10 @@ transform
 
 #ifdef TIMING
     bfly::timer.Stop();
+#ifndef RELEASE
     bfly::alreadyTimed = true;
-#endif
+#endif // ifndef RELEASE
+#endif // ifdef TIMING
     return potentialField;
 }
 
