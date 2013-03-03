@@ -154,6 +154,7 @@ PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
     for( size_t j=0; j<d; ++j ) 
     {
         size_t owningIndex = size_t((x[j]-myTBox_.offsets[j])/wA_[j]);
+        owningIndex = std::min(owningIndex,(1u<<log2TSubboxesPerDim_[j])-1);
         k += owningIndex << log2TSubboxesUpToDim_[j];
     }
     const LRP<R,d,q>& lrp = LRPs_[k];
