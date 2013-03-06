@@ -69,7 +69,7 @@ SwitchToTargetInterp
         // Compute the coordinates and center of this target box
         array<R,d> x0A;
         for( size_t j=0; j<d; ++j )
-            x0A[j] = myTBox.offsets[j] + (A[j]+0.5)*wA[j];
+            x0A[j] = myTBox.offsets[j] + (A[j]+R(1)/R(2))*wA[j];
 
         vector<array<R,d>> xPoints( q_to_d );
         {
@@ -93,7 +93,7 @@ SwitchToTargetInterp
             // Compute the coordinates and center of this source box
             array<R,d> p0B;
             for( size_t j=0; j<d; ++j )
-                p0B[j] = mySBox.offsets[j] + (B[j]+0.5)*wB[j];
+                p0B[j] = mySBox.offsets[j] + (B[j]+R(1)/R(2))*wB[j];
 
             vector<array<R,d>> pPoints( q_to_d );
             {

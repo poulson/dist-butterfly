@@ -130,7 +130,7 @@ InitializeWeights
             // Translate the local integer coordinates into the source center.
             array<R,d> p0;
             for( size_t j=0; j<d; ++j )
-                p0[j] = mySBox.offsets[j] + (B[j]+0.5)*wB[j];
+                p0[j] = mySBox.offsets[j] + (B[j]+R(1)/R(2))*wB[j];
 
             // In order to add this point's contribution to the unscaled weights
             // of B we will evaluate the Lagrangian polynomial on the reference 
@@ -177,7 +177,7 @@ InitializeWeights
                 // Compute the center of the target box
                 array<R,d> x0A;
                 for( size_t j=0; j<d; ++j )
-                    x0A[j] = tBox.offsets[j] + (A[j]+0.5)*wA[j];
+                    x0A[j] = tBox.offsets[j] + (A[j]+R(1)/R(2))*wA[j];
 
                 const vector<array<R,d>> xPoint( 1, x0A );
 
@@ -241,7 +241,7 @@ InitializeWeights
             // Compute the center of the target box
             array<R,d> x0A;
             for( size_t j=0; j<d; ++j )
-                x0A[j] = tBox.offsets[j] + (A[j]+0.5)*wA[j];
+                x0A[j] = tBox.offsets[j] + (A[j]+R(1)/R(2))*wA[j];
 
             const vector<array<R,d>> xPoint( 1, x0A );
 
@@ -259,7 +259,7 @@ InitializeWeights
                 // Translate the local coordinates into the source center 
                 array<R,d> p0;
                 for( size_t j=0; j<d; ++j )
-                    p0[j] = mySBox.offsets[j] + (B[j]+0.5)*wB[j];
+                    p0[j] = mySBox.offsets[j] + (B[j]+R(1)/R(2))*wB[j];
 
                 const size_t iIndex = sIndex + (tIndex<<log2LocalSBoxes);
                 WeightGrid<R,d,q>& weightGrid = weightGridList[iIndex];

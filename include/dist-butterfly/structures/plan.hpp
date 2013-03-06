@@ -21,9 +21,6 @@
 #include "dist-butterfly/constants.hpp"
 #include "dist-butterfly/tools/twiddle.hpp"
 #include "mpi.h"
-#ifdef BGP
-# include "mpix.h"
-#endif
 
 namespace dbf {
 
@@ -552,16 +549,6 @@ Plan<d>::GenerateForwardPlan()
             ( this->comm_, ranks[0], this->myClusterRanks_[level-1],
               &this->clusterComms_[level-1] );
 
-#ifdef BGP
-# ifdef BGP_MPIDO_USE_REDUCESCATTER
-            MPIX_Set_property
-            ( this->clusterComms_[level-1], MPIDO_USE_REDUCESCATTER, 1 );
-# else
-            MPIX_Set_property
-            ( this->clusterComms_[level-1], MPIDO_USE_REDUCESCATTER, 0 );
-# endif
-#endif
-
             this->log2SubclusterSizes_[level-1] = 0;
 
             this->sDimsToMerge_[level-1].resize( log2NumMergingProcs );
@@ -900,18 +887,8 @@ Plan<d>::GenerateAdjointPlan()
             MPI_Comm_split
             ( this->comm_, ranks[0], this->myMappedRanks_[level-1],
               &this->clusterComms_[level-1] );
-#ifdef BGP
-# ifdef BGP_MPIDO_USE_REDUCESCATTER
-            MPIX_Set_property
-            ( this->clusterComms_[level-1], MPIDO_USE_REDUCESCATTER, 1 );
-# else
-            MPIX_Set_property
-            ( this->clusterComms_[level-1], MPIDO_USE_REDUCESCATTER, 0 );
-# endif
-#endif
 
-            this->log2SubclusterSizes_[level-1] = 
-                this->log2NumProcs_ % d;
+            this->log2SubclusterSizes_[level-1] = this->log2NumProcs_ % d;
 
             this->sDimsToMerge_[level-1].resize( log2NumMergingProcs );
             this->tDimsToCut_[level-1].resize( log2NumMergingProcs );

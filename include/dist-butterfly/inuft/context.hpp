@@ -67,7 +67,7 @@ Context<R,d,q>::GenerateChebyshevNodes()
 {
     const R pi = Pi<R>();
     for( size_t t=0; t<q; ++t )
-        chebyshevNodes_[t] = 0.5*cos(R(t*pi/(q-1)));
+        chebyshevNodes_[t] = cos(R(t*pi/(q-1)))/2;
 }
 
 template<typename R,size_t d,size_t q>
@@ -83,7 +83,7 @@ Context<R,d,q>::GenerateChebyshevGrid()
         for( size_t j=0; j<d; ++j )
         {
             size_t i = (t/q_to_j) % q;
-            chebyshevGrid_[t][j] = 0.5*cos(R(i*pi/(q-1)));
+            chebyshevGrid_[t][j] = cos(R(i*pi/(q-1)))/2;
             q_to_j *= q;
         }
     }

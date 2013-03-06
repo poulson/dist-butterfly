@@ -84,7 +84,7 @@ SwitchToTargetInterp
 
         // Compute the coordinates and center of this target box
         array<R,d> x0A;
-        x0A[0] = myTBox.offsets[0] + (A[0]+0.5)*wA[0];
+        x0A[0] = myTBox.offsets[0] + (A[0]+R(1)/R(2))*wA[0];
 
         // Evaluate exp( +-TwoPi i (x0,dp) ) 
         for( size_t t=0; t<q; ++t )
@@ -98,7 +98,7 @@ SwitchToTargetInterp
 
             // Compute the coordinates and center of this source box
             array<R,d> p0B;
-            p0B[0] = mySBox.offsets[0] + (B[0]+0.5)*wB[0];
+            p0B[0] = mySBox.offsets[0] + (B[0]+R(1)/R(2))*wB[0];
 
             // Ensure that we've evaluated exp( +-TwoPi i (dx,p0) ) 
             if( i == 0 )
@@ -253,7 +253,7 @@ SwitchToTargetInterp
         // Compute the coordinates and center of this target box
         array<R,d> x0A;
         for( size_t j=0; j<d; ++j )
-            x0A[j] = myTBox.offsets[j] + (A[j]+0.5)*wA[j];
+            x0A[j] = myTBox.offsets[j] + (A[j]+R(1)/R(2))*wA[j];
 
         // Evaluate exp( +-TwoPi i (x0,dp) ) for each coordinate
         for( size_t j=0; j<d; ++j )
@@ -271,7 +271,7 @@ SwitchToTargetInterp
             // Compute the coordinates and center of this source box
             array<R,d> p0B;
             for( size_t j=0; j<d; ++j )
-                p0B[j] = mySBox.offsets[j] + (B[j]+0.5)*wB[j];
+                p0B[j] = mySBox.offsets[j] + (B[j]+R(1)/R(2))*wB[j];
 
             // Evaluate exp( +-TwoPi i (dx,p0) ) for each coord
             if( i == 0 )
@@ -499,7 +499,7 @@ SwitchToTargetInterp
         // Compute the coordinates and center of this target box
         array<R,d> x0A;
         for( size_t j=0; j<d; ++j )
-            x0A[j] = myTBox.offsets[j] + (A[j]+0.5)*wA[j];
+            x0A[j] = myTBox.offsets[j] + (A[j]+R(1)/R(2))*wA[j];
 
         // Evaluate exp( -TwoPi i (x0,dp) ) for each coordinate
         for( size_t j=0; j<d; ++j )
@@ -517,7 +517,7 @@ SwitchToTargetInterp
             // Compute the coordinates and center of this source box
             array<R,d> p0B;
             for( size_t j=0; j<d; ++j )
-                p0B[j] = mySBox.offsets[j] + (B[j]+0.5)*wB[j];
+                p0B[j] = mySBox.offsets[j] + (B[j]+R(1)/R(2))*wB[j];
 
             // Evaluate exp( +-TwoPi i (dx,p0) ) for each coord
             if( i == 0 )

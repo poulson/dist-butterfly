@@ -262,7 +262,7 @@ transform
                 // Compute coordinates and center of this target box
                 array<R,d> x0A;
                 for( size_t j=0; j<d; ++j )
-                    x0A[j] = myTBox.offsets[j] + (A[j]+0.5)*wA[j];
+                    x0A[j] = myTBox.offsets[j] + (A[j]+R(1)/R(2))*wA[j];
 
                 // Loop over the B boxes in source domain
                 ConstrainedHTreeWalker<d> BWalker( log2LocalSBoxesPerDim );
@@ -274,7 +274,7 @@ transform
                     // Compute coordinates and center of this source box
                     array<R,d> p0B;
                     for( size_t j=0; j<d; ++j )
-                        p0B[j] = mySBox.offsets[j] + (B[j]+0.5)*wB[j];
+                        p0B[j] = mySBox.offsets[j] + (B[j]+R(1)/R(2))*wB[j];
 
                     // We are storing the interaction pairs source-major
                     const size_t iIndex = sIndex + (tIndex<<log2LocalSBoxes);
@@ -354,7 +354,7 @@ transform
             // Compute the coordinates and center of this source box
             array<R,d> p0B;
             for( size_t j=0; j<d; ++j )
-                p0B[j] = mySBox.offsets[j] + 0.5*wB[j];
+                p0B[j] = mySBox.offsets[j] + wB[j]/R(2);
 
             // Form the partial weights by looping over the boxes in the  
             // target domain.
@@ -368,7 +368,7 @@ transform
                 // Compute coordinates and center of this target box
                 array<R,d> x0A;
                 for( size_t j=0; j<d; ++j )
-                    x0A[j] = myTBox.offsets[j] + (A[j]+0.5)*wA[j];
+                    x0A[j] = myTBox.offsets[j] + (A[j]+R(1)/R(2))*wA[j];
 
                 // Compute the interaction offset of A's parent interacting 
                 // with the remaining local source boxes
@@ -479,7 +479,7 @@ transform
             for( size_t i=0; i<log2NumMergingProcesses; ++i )
             {
                 const size_t j = tDimsToCut[i];
-                myTBox.widths[j] *= 0.5;
+                myTBox.widths[j] /= 2;
                 myTBoxCoords[j] *= 2;
                 if( rightSideOfCut[i] )
                 {

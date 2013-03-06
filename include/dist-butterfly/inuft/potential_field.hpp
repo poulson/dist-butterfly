@@ -114,7 +114,7 @@ PotentialField<R,d,q>::PotentialField
 
         // Now fill the k'th LRP index
         for( size_t j=0; j<d; ++j )
-            LRPs_[k].x0[j] = myTBox.offsets[j] + (A[j]+0.5)*wA_[j];
+            LRPs_[k].x0[j] = myTBox.offsets[j] + (A[j]+R(1)/R(2))*wA_[j];
         LRPs_[k].weightGrid = weightGridList[tIndex];
     }
 

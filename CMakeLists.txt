@@ -14,6 +14,7 @@ set(DBF_VERSION_MINOR 5)
 option(RELEASE "Avoid unnecessary assertions for faster runs." ON)
 option(TIMING "Measure and print basic timing info." OFF)
 option(BUILD_TESTS "Build the test drivers" ON)
+option(REDUCE_SCATTER_VIA_ALLREDUCE OFF)
 option(AVOID_COMPLEX_MPI "Avoid complex MPI routines for robustness" ON)
 mark_as_advanced(AVOID_COMPLEX_MPI)
 
@@ -133,8 +134,30 @@ if(NOT HAVE_MPI_REDUCE_SCATTER)
   message(FATAL_ERROR "Could not find MPI_Reduce_scatter")
 endif()
 
-# Look for restrict support
+# Check for MPI_IN_PLACE (essentially MPI2 support)
 include(CheckCXXSourceCompiles)
+set(MPI_IN_PLACE_CODE
+    "#include \"mpi.h\"
+     int main( int argc, char* argv[] )
+     {
+         MPI_Init( &argc, &argv );
+         float a;
+         MPI_Allreduce
+         ( MPI_IN_PLACE, &a, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD );
+         MPI_Finalize();
+         return 0;
+     }
+    ")
+set(CMAKE_REQUIRED_FLAGS ${CXX_FLAGS})
+set(CMAKE_REQUIRED_INCLUDES ${MPI_CXX_INCLUDE_PATH})
+set(CMAKE_REQUIRED_LIBRARIES ${MPI_CXX_LIBRARIES})
+check_cxx_source_compiles("${MPI_IN_PLACE_CODE}" HAVE_MPI_IN_PLACE)
+if(REDUCE_SCATTER_VIA_ALLREDUCE AND NOT HAVE_MPI_IN_PLACE)
+  message(FATAL_ERROR 
+    "Cannot perform ReduceScatter via AllReduce without MPI_IN_PLACE")
+endif()
+
+# Look for restrict support
 set(RESTRICT_CODE
     "int main(void)
      {

@@ -76,7 +76,7 @@ FormEquivalentSources
 
         // Translate the local integer coordinates into the target center
         array<R,d> x0;
-        x0[0] = myTBox.offsets[0] + (A[0]+0.5)*wB[0];
+        x0[0] = myTBox.offsets[0] + (A[0]+R(1)/R(2))*wB[0];
 
         // Store the chebyshev grid on A
         vector<array<R,d>> xPoints( q );
@@ -98,7 +98,7 @@ FormEquivalentSources
 
             // Translate the local integer coordinates into the source center
             array<R,d> p0;
-            p0[0] = mySBox.offsets[0] + (B[0]+0.5)*wB[0];
+            p0[0] = mySBox.offsets[0] + (B[0]+R(1)/R(2))*wB[0];
 
             //----------------------------------------------------------------//
             // Solve against the first dimension                              //
@@ -226,7 +226,7 @@ FormEquivalentSources
         // Translate the local integer coordinates into the target center
         array<R,d> x0;
         for( size_t j=0; j<d; ++j )
-            x0[j] = myTBox.offsets[j] + (A[j]+0.5)*wA[j];
+            x0[j] = myTBox.offsets[j] + (A[j]+R(1)/R(2))*wA[j];
 
         // Store the chebyshev grid on A
         vector<array<R,d>> xPoints( q_to_d );
@@ -254,7 +254,7 @@ FormEquivalentSources
             // Translate the local integer coordinates into the source center
             array<R,d> p0;
             for( size_t j=0; j<d; ++j )
-                p0[j] = mySBox.offsets[j] + (B[j]+0.5)*wB[j];
+                p0[j] = mySBox.offsets[j] + (B[j]+R(1)/R(2))*wB[j];
 
             //----------------------------------------------------------------//
             // Solve against the first dimension                              //
@@ -463,7 +463,7 @@ FormEquivalentSources
         // Translate the local integer coordinates into the target center
         array<R,d> x0;
         for( size_t j=0; j<d; ++j )
-            x0[j] = myTBox.offsets[j] + (A[j]+0.5)*wA[j];
+            x0[j] = myTBox.offsets[j] + (A[j]+R(1)/R(2))*wA[j];
 
         // Store the chebyshev grid on A
         vector<array<R,d>> xPoints( q_to_d );
@@ -491,7 +491,7 @@ FormEquivalentSources
             // Translate the local integer coordinates into the source center
             array<R,d> p0;
             for( size_t j=0; j<d; ++j )
-                p0[j] = mySBox.offsets[j] + (B[j]+0.5)*wB[j];
+                p0[j] = mySBox.offsets[j] + (B[j]+R(1)/R(2))*wB[j];
 
             //----------------------------------------------------------------//
             // Solve against the first dimension                              //

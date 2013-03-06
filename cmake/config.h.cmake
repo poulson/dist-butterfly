@@ -20,7 +20,6 @@
 #cmakedefine MKL
 #cmakedefine MASS
 #cmakedefine HAVE_MPI_REDUCE_SCATTER_BLOCK
-#cmakedefine BGP
-#cmakedefine BGP_MPIDO_USE_REDUCESCATTER
+#cmakedefine REDUCE_SCATTER_VIA_ALLREDUCE
 
 #endif /* ifndef DBF_CONFIG_HPP */

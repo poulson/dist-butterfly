@@ -113,7 +113,7 @@ main( int argc, char* argv[] )
     try 
     {
         // Set our source and target boxes
-        Box<float,d> sBox, tBox;
+        Box<double,d> sBox, tBox;
         for( size_t j=0; j<d; ++j )
         {
             sBox.offsets[j] = -0.5*(sqrt(N)/F);
@@ -124,7 +124,7 @@ main( int argc, char* argv[] )
 
         // Set up the general strategy for the forward transform
         Plan<d> plan( comm, FORWARD, N, bootstrap );
-        Box<float,d> mySBox = plan.GetMyInitialSourceBox( sBox );;
+        Box<double,d> mySBox = plan.GetMyInitialSourceBox( sBox );;
 
         if( rank == 0 )
         {
@@ -145,12 +145,12 @@ main( int argc, char* argv[] )
         }
         MPI_Bcast( &seed, 1, MPI_UNSIGNED, 0, comm );
         default_random_engine engine( seed );
-        uniform_real_distribution<float> uniform_dist(0.f,1.f);
+        uniform_real_distribution<double> uniform_dist(0.,1.);
         auto uniform = bind( uniform_dist, ref(engine) );
 
         // Now generate random sources across the domain and store them in 
         // our local list when appropriate
-        vector<Source<float,d>> mySources, sources;
+        vector<Source<double,d>> mySources, sources;
         if( testAccuracy || store )
         {
             sources.resize( M );
@@ -164,9 +164,9 @@ main( int argc, char* argv[] )
                 bool isMine = true;
                 for( size_t j=0; j<d; ++j )
                 {
-                    float u = sources[i].p[j];
-                    float start = mySBox.offsets[j];
-                    float stop = mySBox.offsets[j] + mySBox.widths[j];
+                    double u = sources[i].p[j];
+                    double start = mySBox.offsets[j];
+                    double stop = mySBox.offsets[j] + mySBox.widths[j];
                     if( u < start || u >= stop )
                         isMine = false;
                 }
@@ -196,8 +196,8 @@ main( int argc, char* argv[] )
             cout << "Creating context...";
             cout.flush();
         }
-        HypRadon<float> hypRadon;
-        bfly::Context<float,d,q> context;
+        HypRadon<double> hypRadon;
+        bfly::Context<double,d,q> context;
         if( rank == 0 )
             cout << "done." << endl;
 

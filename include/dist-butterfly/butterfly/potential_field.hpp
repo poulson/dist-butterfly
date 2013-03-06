@@ -152,7 +152,7 @@ PotentialField<R,d,q>::PotentialField
 
         // Now fill the k'th LRP index
         for( size_t j=0; j<d; ++j )
-            LRPs_[k].x0[j] = myTBox.offsets[j] + (A[j]+0.5)*wA_[j];
+            LRPs_[k].x0[j] = myTBox.offsets[j] + (A[j]+R(1)/R(2))*wA_[j];
         LRPs_[k].weightGrid = weightGridList[tIndex];
     }
 }
@@ -296,7 +296,7 @@ void PrintErrorEstimates
     // Build an RNG for uniformly sampling (0,1)
     std::random_device rd;
     std::default_random_engine engine( rd() );
-    std::uniform_real_distribution<R> uniform_dist(0.f,1.f);
+    std::uniform_real_distribution<R> uniform_dist(R(0),R(1));
     auto uniform = std::bind( uniform_dist, std::ref(engine) );
     // Compute the L1 norm of the sources
     double L1Sources = 0.;
@@ -315,7 +315,7 @@ void PrintErrorEstimates
 
         // Evaluate our potential field at x and compare against truth
         complex<R> approx = u.Evaluate( x );
-        complex<R> truth(0.,0.);
+        complex<R> truth(R(0),R(0));
         for( size_t m=0; m<numSources; ++m )
         {
             complex<R> beta =

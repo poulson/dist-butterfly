@@ -199,7 +199,7 @@ INUFT
                 // Compute coordinates and center of this target box
                 array<R,d> x0A;
                 for( size_t j=0; j<d; ++j )
-                    x0A[j] = myTBox.offsets[j] + (A[j]+0.5)*wA[j];
+                    x0A[j] = myTBox.offsets[j] + (A[j]+R(1)/R(2))*wA[j];
 
                 // Store the prescaling factors for forming the check potentials
                 for( size_t j=0; j<d; ++j )
@@ -222,7 +222,7 @@ INUFT
                     // Compute coordinates and center of this source box
                     array<R,d> p0B;
                     for( size_t j=0; j<d; ++j )
-                        p0B[j] = mySBox.offsets[j] + (B[j]+0.5)*wB[j];
+                        p0B[j] = mySBox.offsets[j] + (B[j]+R(1)/R(2))*wB[j];
 
                     // We are storing the interaction pairs source-major
                     const size_t iIndex = sIndex + (tIndex<<log2LocalSBoxes);
@@ -307,7 +307,7 @@ INUFT
                 // Compute coordinates and center of this target box
                 array<R,d> x0A;
                 for( size_t j=0; j<d; ++j )
-                    x0A[j] = myTBox.offsets[j] + (A[j]+0.5)*wA[j];
+                    x0A[j] = myTBox.offsets[j] + (A[j]+R(1)/R(2))*wA[j];
 
                 // Store the prescaling factors for forming the check potentials
                 for( size_t j=0; j<d; ++j )
@@ -405,7 +405,7 @@ INUFT
             for( size_t i=0; i<log2NumMergingProcesses; ++i )
             {
                 const size_t j = tDimsToCut[i];
-                myTBox.widths[j] *= 0.5;
+                myTBox.widths[j] /= 2;
                 myTBoxCoords[j] *= 2;
                 if( rightSideOfCut[i] )
                 {

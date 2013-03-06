@@ -16,7 +16,7 @@ namespace dbf {
 
 template<typename T>
 void
-SumScatter( const T* sendBuf, T* recvBuf, int recvSize, MPI_Comm comm );
+SumScatter( T* sendBuf, T* recvBuf, int recvSize, MPI_Comm comm );
 
 } // dbf
 
@@ -26,23 +26,29 @@ namespace dbf {
 template<>
 inline void
 SumScatter<float>
-( const float* sendBuf, float* recvBuf, int recvSize, MPI_Comm comm )
+( float* sendBuf, float* recvBuf, int recvSize, MPI_Comm comm )
 {
-#ifdef HAVE_MPI_REDUCE_SCATTER_BLOCK
-    const int ierror = MPI_Reduce_scatter_block
-    ( const_cast<float*>(sendBuf), 
-      recvBuf, recvSize, MPI_FLOAT, MPI_SUM, comm );
+#ifdef REDUCE_SCATTER_VIA_ALLREDUCE
+    int commSize; MPI_Comm_size( comm, &commSize );
+    int commRank; MPI_Comm_rank( comm, &commRank );
+    const int ierror = MPI_Allreduce
+    ( MPI_IN_PLACE, sendBuf, recvSize*commSize, MPI_FLOAT, MPI_SUM, comm );
+    std::memcpy( recvBuf, &sendBuf[commRank*recvSize], recvSize*sizeof(float) );
 #else
+# ifdef HAVE_MPI_REDUCE_SCATTER_BLOCK
+    const int ierror = MPI_Reduce_scatter_block
+    ( sendBuf, recvBuf, recvSize, MPI_FLOAT, MPI_SUM, comm );
+# else
     int commSize; MPI_Comm_size( comm, &commSize );
     std::vector<int> recvCounts( commSize, recvSize );
     const int ierror = MPI_Reduce_scatter
-    ( const_cast<float*>(sendBuf), 
-      recvBuf, &recvCounts[0], MPI_FLOAT, MPI_SUM, comm );
+    ( sendBuf, recvBuf, &recvCounts[0], MPI_FLOAT, MPI_SUM, comm );
+# endif
 #endif
     if( ierror != 0 )
     {
         std::ostringstream msg;
-        msg << "ierror from MPI_Reduce_scatter = " << ierror;
+        msg << "ierror in SumScatter = " << ierror;
         throw std::runtime_error( msg.str() );
     }
 }
@@ -50,23 +56,30 @@ SumScatter<float>
 template<>
 inline void
 SumScatter<double>
-( const double* sendBuf, double* recvBuf, int recvSize, MPI_Comm comm )
+( double* sendBuf, double* recvBuf, int recvSize, MPI_Comm comm )
 {
-#ifdef HAVE_MPI_REDUCE_SCATTER_BLOCK
-    const int ierror = MPI_Reduce_scatter_block
-    ( const_cast<double*>(sendBuf), 
-      recvBuf, recvSize, MPI_DOUBLE, MPI_SUM, comm );
+#ifdef REDUCE_SCATTER_VIA_ALLREDUCE
+    int commSize; MPI_Comm_size( comm, &commSize );
+    int commRank; MPI_Comm_rank( comm, &commRank );
+    const int ierror = MPI_Allreduce
+    ( MPI_IN_PLACE, sendBuf, recvSize*commSize, MPI_DOUBLE, MPI_SUM, comm );
+    std::memcpy
+    ( recvBuf, &sendBuf[commRank*recvSize], recvSize*sizeof(double) );
 #else
+# ifdef HAVE_MPI_REDUCE_SCATTER_BLOCK
+    const int ierror = MPI_Reduce_scatter_block
+    ( sendBuf, recvBuf, recvSize, MPI_DOUBLE, MPI_SUM, comm );
+# else
     int commSize; MPI_Comm_size( comm, &commSize );
     std::vector<int> recvCounts( commSize, recvSize );
     const int ierror = MPI_Reduce_scatter
-    ( const_cast<double*>(sendBuf), 
-      recvBuf, &recvCounts[0], MPI_DOUBLE, MPI_SUM, comm );
+    ( sendBuf, recvBuf, &recvCounts[0], MPI_DOUBLE, MPI_SUM, comm );
+# endif
 #endif
     if( ierror != 0 )
     {
         std::ostringstream msg;
-        msg << "ierror from MPI_Reduce_scatter = " << ierror;
+        msg << "ierror in SumScatter = " << ierror;
         throw std::runtime_error( msg.str() );
     }
 }
