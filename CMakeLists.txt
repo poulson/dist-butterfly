@@ -135,29 +135,27 @@ if(NOT HAVE_MPI_REDUCE_SCATTER)
 endif()
 
 # Check for MPI_IN_PLACE (essentially MPI2 support)
-include(CheckCXXSourceCompiles)
+include(CheckCSourceCompiles)
 set(MPI_IN_PLACE_CODE
     "#include \"mpi.h\"
      int main( int argc, char* argv[] )
      {
-         MPI_Init( &argc, &argv );
          float a;
+         MPI_Init( &argc, &argv );
          MPI_Allreduce
          ( MPI_IN_PLACE, &a, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD );
          MPI_Finalize();
          return 0;
      }
     ")
-set(CMAKE_REQUIRED_FLAGS ${CXX_FLAGS})
-set(CMAKE_REQUIRED_INCLUDES ${MPI_CXX_INCLUDE_PATH})
-set(CMAKE_REQUIRED_LIBRARIES ${MPI_CXX_LIBRARIES})
-check_cxx_source_compiles("${MPI_IN_PLACE_CODE}" HAVE_MPI_IN_PLACE)
+check_c_source_compiles("${MPI_IN_PLACE_CODE}" HAVE_MPI_IN_PLACE)
 if(REDUCE_SCATTER_VIA_ALLREDUCE AND NOT HAVE_MPI_IN_PLACE)
   message(FATAL_ERROR 
     "Cannot perform ReduceScatter via AllReduce without MPI_IN_PLACE")
 endif()
 
 # Look for restrict support
+include(CheckCXXSourceCompiles)
 set(RESTRICT_CODE
     "int main(void)
      {
