@@ -11,6 +11,8 @@
 
 #ifndef RELEASE
 # include <iostream>
+# include <fstream>
+# include <sstream>
 #endif
 
 #include <array>
@@ -325,6 +327,13 @@ template<size_t d>
 void
 Plan<d>::GenerateForwardPlan()
 {
+#ifndef RELEASE
+    // Open a file for logging this process's data
+    std::ostringstream logFileName;
+    logFileName << "forwardPlan-" << this->rank_ << ".txt";
+    std::ofstream logFile( logFileName.str().c_str() );
+#endif
+
     std::bitset<8*sizeof(int)> rankBits(this->rank_);
     myClusterRanks_.resize( this->log2N_ );
 
@@ -339,11 +348,7 @@ Plan<d>::GenerateForwardPlan()
     for( size_t m=this->log2NumProcs_; m>0; --m )
     {
 #ifndef RELEASE
-        if( this->rank_ == 0 )
-        {
-            std::cout << "Cutting source dimension " << nextSDimToCut
-                      << std::endl;
-        }
+        logFile << "Cutting source dimension " << nextSDimToCut << std::endl;
 #endif
         lastSDimCut = nextSDimToCut;
         this->myInitialSBoxCoords_[nextSDimToCut] <<= 1;
@@ -353,18 +358,10 @@ Plan<d>::GenerateForwardPlan()
         nextSDimToCut = (nextSDimToCut+1) % d;
     }
 #ifndef RELEASE
-    for( int p=0; p<this->numProcs_; ++p )
-    {
-        if( this->rank_ == p )
-        {
-            std::cout << "Rank " << p << "'s initial source box coords: ";
-            for( size_t j=0; j<d; ++j )
-                std::cout << this->myInitialSBoxCoords_[j] << " ";
-            std::cout << std::endl;
-        }
-        MPI_Barrier( this->comm_ );
-        usleep( 100000 );
-    }
+    logFile << "initial source box coords: ";
+    for( size_t j=0; j<d; ++j )
+        logFile << this->myInitialSBoxCoords_[j] << " ";
+    logFile << std::endl;
 #endif
 
     // Generate subcommunicator vector by walking through the forward process
@@ -387,8 +384,7 @@ Plan<d>::GenerateForwardPlan()
         ( this->comm_, this->rank_, 0, &this->bootstrapClusterComm_ );
 
 #ifndef RELEASE
-        if( this->rank_ == 0 )
-            std::cout << "No communication during bootstrapping." << std::endl;
+        logFile << "No communication during bootstrapping." << std::endl;
 #endif
     }
     else
@@ -397,13 +393,10 @@ Plan<d>::GenerateForwardPlan()
         const size_t numMergingProcs = 1u<<log2NumMergingProcs;
 
 #ifndef RELEASE
-        if( this->rank_ == 0 )
-        {
-            std::cout << "Merging " << log2NumMergingProcs
-                      << " dimension(s) during bootstrapping, starting with "
-                      << nextSDimToMerge << " (cutting starting with "
-                      << nextTDimToCut << ")" << std::endl;
-        }
+        logFile << "Merging " << log2NumMergingProcs
+                << " dimension(s) during bootstrapping, starting with "
+                << nextSDimToMerge << " (cutting starting with "
+                << nextTDimToCut << ")" << std::endl;
 #endif
 
         // Construct the communicator for the bootstrap cluster
@@ -422,19 +415,10 @@ Plan<d>::GenerateForwardPlan()
         }
 
 #ifndef RELEASE
-        for( int p=0; p<this->numProcs_; ++p )        
-        {
-            if( this->rank_ == p )
-            {
-                std::cout << "  process " << p 
-                          << "'s bootstrap cluster ranks: ";
-                for( size_t j=0; j<numMergingProcs; ++j )
-                    std::cout << ranks[j] << " ";
-                std::cout << std::endl;
-            }
-            MPI_Barrier( this->comm_ );
-            usleep( 100000 );
-        }
+        logFile << "bootstrap cluster ranks: ";
+        for( size_t j=0; j<numMergingProcs; ++j )
+            logFile << ranks[j] << " ";
+        logFile << std::endl;
 #endif
 
         MPI_Comm_split
@@ -456,24 +440,14 @@ Plan<d>::GenerateForwardPlan()
             nextBootstrapSDimToMerge = (nextBootstrapSDimToMerge+d-1) % d;
         }
 #ifndef RELEASE
-        for( int p=0; p<this->numProcs_; ++p )
-        {
-            if( this->rank_ == p )
-            {
-                std::cout << "  process " << p << "'s bootstrap cluster rank: "
-                          << this->myBootstrapClusterRank_ << std::endl;
-                std::cout << "  process " << p 
-                          << "'s bootstrap cluster children: ";
-                const size_t numLocalChildren =
-                    (1u<<(this->bootstrap_*d-log2NumMergingProcs));
-                for( size_t i=0; i<numLocalChildren; ++i )
-                    std::cout << this->LocalToBootstrapClusterSourceIndex( i )
-                              << " ";
-                std::cout << std::endl;
-            }
-            MPI_Barrier( this->comm_ );
-            usleep( 100000 );
-        }
+        logFile << "bootstrap cluster rank: "
+                << this->myBootstrapClusterRank_ << "\n";
+        logFile << "bootstrap cluster children: ";
+        const size_t numLocalChildren =
+            (1u<<(this->bootstrap_*d-log2NumMergingProcs));
+        for( size_t i=0; i<numLocalChildren; ++i )
+            logFile << this->LocalToBootstrapClusterSourceIndex(i) << " ";
+        logFile << std::endl;
 #endif
     }
     // Generate the single-level communicators
@@ -490,12 +464,9 @@ Plan<d>::GenerateForwardPlan()
             this->log2SubclusterSizes_[level-1] = 0;
 
 #ifndef RELEASE
-            if( this->rank_ == 0 )
-            {
-                std::cout << "No communication at level " << level
-                          << ", there are now 2^" << log2LocalSBoxes
-                          << " local source boxes." << std::endl;
-            }
+            logFile << "No communication at level " << level
+                    << ", there are now 2^" << log2LocalSBoxes
+                    << " local source boxes." << std::endl;
 #endif
         }
         else
@@ -505,13 +476,10 @@ Plan<d>::GenerateForwardPlan()
             log2LocalSBoxes = 0;
 
 #ifndef RELEASE
-            if( this->rank_ == 0 )
-            {
-                std::cout << "Merging " << log2NumMergingProcs
-                          << " dimension(s), starting with "
-                          << nextSDimToMerge << " (cutting starting with "
-                          << nextTDimToCut << ")" << std::endl;
-            }
+            logFile << "Merging " << log2NumMergingProcs
+                    << " dimension(s), starting with "
+                    << nextSDimToMerge << " (cutting starting with "
+                    << nextTDimToCut << ")" << std::endl;
 #endif
 
             // Construct the communicator for our current cluster
@@ -532,18 +500,10 @@ Plan<d>::GenerateForwardPlan()
                     this->myClusterRanks_[level-1] = j;
             }
 #ifndef RELEASE
-            for( int p=0; p<this->numProcs_; ++p )
-            {
-                if( this->rank_ == p )
-                {
-                    std::cout << "  process " << p << "'s cluster ranks: ";
-                    for( size_t j=0; j<numMergingProcs; ++j )
-                        std::cout << ranks[j] << " ";
-                    std::cout << std::endl;
-                }
-                MPI_Barrier( this->comm_ );
-                usleep( 100000 );
-            }
+            logFile << "cluster ranks: ";
+            for( size_t j=0; j<numMergingProcs; ++j )
+                logFile << ranks[j] << " ";
+            logFile << std::endl;
 #endif
             MPI_Comm_split
             ( this->comm_, ranks[0], this->myClusterRanks_[level-1],
@@ -572,23 +532,14 @@ Plan<d>::GenerateForwardPlan()
                 nextSDimToMerge = (nextSDimToMerge+d-1) % d;
             }
 #ifndef RELEASE
-            for( int p=0; p<this->numProcs_; ++p )
-            {
-                if( this->rank_ == p )
-                {
-                    std::cout << "  process " << p << "'s cluster rank: "
-                              << this->myClusterRanks_[level-1] << std::endl;
-                    std::cout << "  process " << p << "'s cluster children: ";
-                    const size_t numLocalChildren =
-                        (1u<<(d-log2NumMergingProcs));
-                    for( size_t i=0; i<numLocalChildren; ++i )
-                        std::cout << this->LocalToClusterSourceIndex( level, i )
-                                  << " ";
-                    std::cout << std::endl;
-                }
-                MPI_Barrier( this->comm_ );
-                usleep( 100000 );
-            }
+            logFile << "cluster rank: "
+                    << this->myClusterRanks_[level-1] << "\n";
+            logFile << "cluster children: ";
+            const size_t numLocalChildren =
+                (1u<<(d-log2NumMergingProcs));
+            for( size_t i=0; i<numLocalChildren; ++i )
+                logFile << this->LocalToClusterSourceIndex(level,i) << " ";
+            logFile << std::endl;
 #endif
         }
     }
@@ -615,6 +566,13 @@ template<size_t d>
 void
 Plan<d>::GenerateAdjointPlan()
 {
+#ifndef RELEASE
+    // Open a file for logging this process's data
+    std::ostringstream logFileName;
+    logFileName << "adjointPlan-" << this->rank_ << ".txt";
+    std::ofstream logFile( logFileName.str().c_str() );
+#endif
+
     std::bitset<8*sizeof(int)> rankBits(this->rank_);
     myMappedRanks_.resize( this->log2N_ );
 
@@ -626,15 +584,10 @@ Plan<d>::GenerateAdjointPlan()
         this->myInitialSBoxCoords_[j] = 0;
         this->log2InitialSBoxesPerDim_[j] = 0;
     }
-    // HERE
     for( size_t m=0; m<this->log2NumProcs_; ++m )
     {
 #ifndef RELEASE
-        if( this->rank_ == 0 )
-        {
-            std::cout << "Cutting source dimension " << nextSDimToCut
-                      << std::endl;
-        }
+        logFile << "Cutting source dimension " << nextSDimToCut << std::endl;
 #endif
         lastSDimCut = nextSDimToCut;
         this->myInitialSBoxCoords_[nextSDimToCut] <<= 1;
@@ -644,18 +597,10 @@ Plan<d>::GenerateAdjointPlan()
         nextSDimToCut = (nextSDimToCut+d-1) % d;
     }
 #ifndef RELEASE
-    for( int p=0; p<this->numProcs_; ++p )
-    {
-        if( this->rank_ == p )
-        {
-            std::cout << "Rank " << p << "'s initial source box coords: ";
-            for( size_t j=0; j<d; ++j )
-                std::cout << this->myInitialSBoxCoords_[j] << " ";
-            std::cout << std::endl;
-        }
-        MPI_Barrier( this->comm_ );
-        usleep( 100000 );
-    }
+    logFile << "initial source box coords: ";
+    for( size_t j=0; j<d; ++j )
+        logFile << this->myInitialSBoxCoords_[j] << " ";
+    logFile << std::endl;
 #endif
 
     // Generate subcommunicator vector by walking through the inverse process
@@ -681,8 +626,7 @@ Plan<d>::GenerateAdjointPlan()
         ( this->comm_, this->rank_, 0, &this->bootstrapClusterComm_ );
 
 #ifndef RELEASE
-        if( this->rank_ == 0 )
-            std::cout << "No communication during bootstrapping." << std::endl;
+        logFile << "No communication during bootstrapping." << std::endl;
 #endif
     }
     else
@@ -691,13 +635,10 @@ Plan<d>::GenerateAdjointPlan()
         const size_t numMergingProcs = 1u<<log2NumMergingProcs;
 
 #ifndef RELEASE
-        if( this->rank_ == 0 )
-        {
-            std::cout << "Merging " << log2NumMergingProcs
-                      << " dimension(s) during bootstrapping, starting with "
-                      << nextSDimToMerge << " (cutting starting with "
-                      << nextTDimToCut << ")" << std::endl;
-        }
+        logFile << "Merging " << log2NumMergingProcs
+                << " dimension(s) during bootstrapping, starting with "
+                << nextSDimToMerge << " (cutting starting with "
+                << nextTDimToCut << ")" << std::endl;
 #endif
 
         // Construct the communicator for the bootstrap cluster
@@ -718,19 +659,10 @@ Plan<d>::GenerateAdjointPlan()
         }
 
 #ifndef RELEASE
-        for( int p=0; p<this->numProcs_; ++p )
-        {
-            if( this->rank_ == p )
-            {
-                std::cout << "  process " << p
-                          << "'s bootstrap cluster ranks: ";
-                for( size_t j=0; j<numMergingProcs; ++j )
-                    std::cout << ranks[j] << " ";
-                std::cout << std::endl;
-            }
-            MPI_Barrier( this->comm_ );
-            usleep( 100000 );
-        }
+        logFile << "bootstrap cluster ranks: ";
+        for( size_t j=0; j<numMergingProcs; ++j )
+            logFile << ranks[j] << " ";
+        logFile << std::endl;
 #endif
 
         MPI_Comm_split
@@ -754,24 +686,14 @@ Plan<d>::GenerateAdjointPlan()
             nextBootstrapSDimToMerge = (nextBootstrapSDimToMerge+1) % d;
         }
 #ifndef RELEASE
-        for( int p=0; p<this->numProcs_; ++p )
-        {
-            if( this->rank_ == p )
-            {
-                std::cout << "  process " << p << "'s bootstrap cluster rank: "
-                          << this->myBootstrapClusterRank_ << std::endl;
-                std::cout << "  process " << p
-                          << "'s bootstrap cluster children: ";
-                const size_t numLocalChildren =
-                    (1u<<(this->bootstrap_*d-log2NumMergingProcs));
-                for( size_t i=0; i<numLocalChildren; ++i )
-                    std::cout << this->LocalToBootstrapClusterSourceIndex( i )
-                              << " ";
-                std::cout << std::endl;
-            }
-            MPI_Barrier( this->comm_ );
-            usleep( 100000 );
-        }
+        logFile << "bootstrap cluster rank: "
+                << this->myBootstrapClusterRank_ << "\n";
+        logFile << "bootstrap cluster children: ";
+        const size_t numLocalChildren =
+            (1u<<(this->bootstrap_*d-log2NumMergingProcs));
+        for( size_t i=0; i<numLocalChildren; ++i )
+            logFile << this->LocalToBootstrapClusterSourceIndex(i) << " ";
+        logFile << std::endl;
 #endif
     }
     // Generate the single-level communicators
@@ -790,12 +712,9 @@ Plan<d>::GenerateAdjointPlan()
             this->log2SubclusterSizes_[level-1] =  0;
 
 #ifndef RELEASE
-            if( this->rank_ == 0 )
-            {
-                std::cout << "No communication at level " << level 
-                          << ", there are now 2^" << log2LocalSBoxes
-                          << " local source boxes." << std::endl;
-            }
+            logFile << "No communication at level " << level 
+                    << ", there are now 2^" << log2LocalSBoxes
+                    << " local source boxes." << std::endl;
 #endif
         }
         else
@@ -805,13 +724,10 @@ Plan<d>::GenerateAdjointPlan()
             log2LocalSBoxes = 0;
 
 #ifndef RELEASE
-            if( this->rank_ == 0 )
-            {
-                std::cout << "Merging " << log2NumMergingProcs 
-                          << " dimension(s), starting with " 
-                          << nextSDimToMerge << " (cutting starting with "
-                          << nextTDimToCut << ")" << std::endl;
-            }
+            logFile << "Merging " << log2NumMergingProcs 
+                    << " dimension(s), starting with " 
+                    << nextSDimToMerge << " (cutting starting with "
+                    << nextTDimToCut << ")" << std::endl;
 #endif
 
             // Construct the communicator for our current cluster
@@ -847,18 +763,10 @@ Plan<d>::GenerateAdjointPlan()
                 }
             }
 #ifndef RELEASE
-            for( int p=0; p<this->numProcs_; ++p )
-            {
-                if( this->rank_ == p )
-                {
-                    std::cout << "  process " << p << "'s cluster ranks: ";
-                    for( size_t j=0; j<numMergingProcs; ++j )
-                        std::cout << ranks[j] << " ";
-                    std::cout << std::endl;
-                }
-                MPI_Barrier( this->comm_ );
-                usleep( 100000 );
-            }
+            logFile << "cluster ranks: ";
+            for( size_t j=0; j<numMergingProcs; ++j )
+                logFile << ranks[j] << " ";
+            logFile << std::endl;
 #endif
 
             {
@@ -912,23 +820,14 @@ Plan<d>::GenerateAdjointPlan()
             }
             
 #ifndef RELEASE
-            for( int p=0; p<this->numProcs_; ++p )
-            {
-                if( this->rank_ == p )
-                {
-                    std::cout << "  process " << p << "'s mapped rank: "
-                              << this->myMappedRanks_[level-1] << std::endl;
-                    std::cout << "  process " << p << "'s cluster children: ";
-                    const size_t numLocalChildren = 
-                        (1u<<(d-log2NumMergingProcs));
-                    for( size_t i=0; i<numLocalChildren; ++i ) 
-                        std::cout << this->LocalToClusterSourceIndex( level, i )
-                                  << " ";
-                    std::cout << std::endl;
-                }
-                MPI_Barrier( this->comm_ );
-                usleep( 100000 );
-            }
+            logFile << "mapped rank: "
+                    << this->myMappedRanks_[level-1] << "\n";
+            logFile << "cluster children: ";
+            const size_t numLocalChildren = 
+                (1u<<(d-log2NumMergingProcs));
+            for( size_t i=0; i<numLocalChildren; ++i ) 
+                logFile << this->LocalToClusterSourceIndex(level,i) << " ";
+            logFile << std::endl;
 #endif
         }
     }

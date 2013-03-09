@@ -425,8 +425,7 @@ transform
             //  2) partitions of dimensions c -> d-1
             // Both 1 and 2 include partitioning 0 -> d-1, but, in general, 
             // the second category never requires packing.
-            const size_t log2SubclusterSize = 
-                plan.GetLog2SubclusterSize( level );
+            const size_t log2SubclusterSize = plan.GetLog2SubclusterSize(level);
             if( log2SubclusterSize == 0 )
             {
                 MPI_Comm clusterComm = plan.GetClusterComm( level );

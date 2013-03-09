@@ -140,8 +140,8 @@ PotentialField<R,d,q>::Evaluate( const array<R,d>& x ) const
 #ifndef RELEASE
     for( size_t j=0; j<d; ++j )
     {
-        if( x[j] < myTBox.offsets_[j] ||
-            x[j] > myTBox.offsets_[j] + myTBox_.widths[j] )
+        if( x[j] < myTBox_.offsets[j] ||
+            x[j] > myTBox_.offsets[j] + myTBox_.widths[j] )
         {
             throw std::runtime_error
             ("Tried to evaluate outside of potential range");
