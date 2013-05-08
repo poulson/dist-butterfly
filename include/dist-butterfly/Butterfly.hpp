@@ -31,21 +31,21 @@ static bool alreadyTimed = false;
 
 static Timer timer;
 static Timer initializeWeightsTimer;
-static Timer sWeightRecursionTimer;
-static Timer sWeightRecursionTimer1;
-static Timer sWeightRecursionTimer1Phase;
-static Timer sWeightRecursionTimer1SinCos;
-static Timer sWeightRecursionTimer2;
-static Timer sWeightRecursionTimer3;
+static Timer M2MTimer;
+static Timer M2MTimer1;
+static Timer M2MTimer1Phase;
+static Timer M2MTimer1SinCos;
+static Timer M2MTimer2;
+static Timer M2MTimer3;
 
-static Timer tWeightRecursionTimer;
-static Timer tWeightRecursionTimer1;
-static Timer tWeightRecursionTimer1Phase;
-static Timer tWeightRecursionTimer1SinCos;
-static Timer tWeightRecursionTimer2;
-static Timer tWeightRecursionTimer3;
+static Timer L2LTimer;
+static Timer L2LTimer1;
+static Timer L2LTimer1Phase;
+static Timer L2LTimer1SinCos;
+static Timer L2LTimer2;
+static Timer L2LTimer3;
 
-static Timer switchToTargetInterpTimer;
+static Timer M2LTimer;
 static Timer sumScatterTimer;
 
 static inline void
@@ -53,19 +53,19 @@ ResetTimers()
 {
     timer.Reset();
     initializeWeightsTimer.Reset();
-    sWeightRecursionTimer.Reset();
-    sWeightRecursionTimer1.Reset();
-    sWeightRecursionTimer1Phase.Reset();
-    sWeightRecursionTimer1SinCos.Reset();
-    sWeightRecursionTimer2.Reset();
-    sWeightRecursionTimer3.Reset();
-    tWeightRecursionTimer.Reset();
-    tWeightRecursionTimer1.Reset();
-    tWeightRecursionTimer1Phase.Reset();
-    tWeightRecursionTimer1SinCos.Reset();
-    tWeightRecursionTimer2.Reset();
-    tWeightRecursionTimer3.Reset();
-    switchToTargetInterpTimer.Reset();
+    M2MTimer.Reset();
+    M2MTimer1.Reset();
+    M2MTimer1Phase.Reset();
+    M2MTimer1SinCos.Reset();
+    M2MTimer2.Reset();
+    M2MTimer3.Reset();
+    L2LTimer.Reset();
+    L2LTimer1.Reset();
+    L2LTimer1Phase.Reset();
+    L2LTimer1SinCos.Reset();
+    L2LTimer2.Reset();
+    L2LTimer3.Reset();
+    M2LTimer.Reset();
     sumScatterTimer.Reset();
 }
 
@@ -80,32 +80,32 @@ PrintTimings()
 	      << "--------------------------------------------\n"
               << "InitializeWeights:     "
               << initializeWeightsTimer.Total() << " seconds.\n"
-              << "SourceWeightRecursion: "
-              << sWeightRecursionTimer.Total() << " seconds.\n"
+              << "M2M: "
+              << M2MTimer.Total() << " seconds.\n"
               << "  Stage 1: "
-              << sWeightRecursionTimer1.Total() << " seconds.\n"
+              << M2MTimer1.Total() << " seconds.\n"
               << "    Phase: "
-              << sWeightRecursionTimer1Phase.Total() << " seconds.\n"
+              << M2MTimer1Phase.Total() << " seconds.\n"
               << "    SinCos: "
-              << sWeightRecursionTimer1SinCos.Total() << " seconds.\n"
+              << M2MTimer1SinCos.Total() << " seconds.\n"
               << "  Stage 2: "
-              << sWeightRecursionTimer2.Total() << " seconds.\n"
+              << M2MTimer2.Total() << " seconds.\n"
               << "  Stage 3: "
-              << sWeightRecursionTimer3.Total() << " seconds.\n"
-              << "SwitchToTargetInterp:  "
-              << switchToTargetInterpTimer.Total() << " seconds.\n"
-              << "TargetWeightRecursion: "
-              << tWeightRecursionTimer.Total() << " seconds.\n"
+              << M2MTimer3.Total() << " seconds.\n"
+              << "M2L:  "
+              << M2LTimer.Total() << " seconds.\n"
+              << "L2L: "
+              << L2LTimer.Total() << " seconds.\n"
               << "  Stage 1: "
-              << tWeightRecursionTimer1.Total() << " seconds.\n"
+              << L2LTimer1.Total() << " seconds.\n"
               << "    Phase: "
-              << tWeightRecursionTimer1Phase.Total() << " seconds.\n"
+              << L2LTimer1Phase.Total() << " seconds.\n"
               << "    SinCos: "
-              << tWeightRecursionTimer1SinCos.Total() << " seconds.\n"
+              << L2LTimer1SinCos.Total() << " seconds.\n"
               << "  Stage 2: "
-              << tWeightRecursionTimer2.Total() << " seconds.\n"
+              << L2LTimer2.Total() << " seconds.\n"
               << "  Stage 3: "
-              << tWeightRecursionTimer3.Total() << " seconds.\n"
+              << L2LTimer3.Total() << " seconds.\n"
               << "SumScatter:            "
               << sumScatterTimer.Total() << " seconds.\n"
               << "Total: " << timer.Total() << " seconds.\n" << std::endl;
@@ -119,9 +119,9 @@ PrintTimings()
 #include "dist-butterfly/butterfly/potential_field.hpp"
 
 #include "dist-butterfly/butterfly/initialize_weights.hpp"
-#include "dist-butterfly/butterfly/source_weight_recursion.hpp"
-#include "dist-butterfly/butterfly/switch_to_target_interp.hpp"
-#include "dist-butterfly/butterfly/target_weight_recursion.hpp"
+#include "dist-butterfly/butterfly/M2M.hpp"
+#include "dist-butterfly/butterfly/M2L.hpp"
+#include "dist-butterfly/butterfly/L2L.hpp"
 
 namespace dbf {
 namespace bfly {
@@ -219,14 +219,14 @@ transform
     if( bootstrap == log2N/2 )
     {
 #ifdef TIMING
-	bfly::switchToTargetInterpTimer.Start();
+	bfly::M2LTimer.Start();
 #endif
-        bfly::SwitchToTargetInterp
+        bfly::M2L
         ( context, plan, amplitude, phase, sBox, tBox, mySBox, myTBox, 
           log2LocalSBoxes, log2LocalTBoxes,
           log2LocalSBoxesPerDim, log2LocalTBoxesPerDim, weightGridList );
 #ifdef TIMING
-	bfly::switchToTargetInterpTimer.Stop();
+	bfly::M2LTimer.Stop();
 #endif
     }
     for( size_t level=bootstrap+1; level<=log2N; ++level )
@@ -287,14 +287,14 @@ transform
                     if( level <= log2N/2 )
                     {
 #ifdef TIMING
-			bfly::sWeightRecursionTimer.Start();
+			bfly::M2MTimer.Start();
 #endif
-                        bfly::SourceWeightRecursion
+                        bfly::M2M
                         ( context, plan, phase, level, x0A, p0B, wB, 
                           parentIOffset, oldWeightGridList,
                           weightGridList[iIndex] );
 #ifdef TIMING
-			bfly::sWeightRecursionTimer.Stop();
+			bfly::M2MTimer.Stop();
 #endif
                     }
                     else
@@ -310,15 +310,15 @@ transform
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
 #ifdef TIMING
-			bfly::tWeightRecursionTimer.Start();
+			bfly::L2LTimer.Start();
 #endif
-                        bfly::TargetWeightRecursion
+                        bfly::L2L
                         ( context, plan, phase, level,
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentIOffset, oldWeightGridList, 
                           weightGridList[iIndex] );
 #ifdef TIMING
-			bfly::tWeightRecursionTimer.Stop();
+			bfly::L2LTimer.Stop();
 #endif
                     }
                 }
@@ -377,14 +377,14 @@ transform
                 if( level <= log2N/2 )
                 {
 #ifdef TIMING
-		    bfly::sWeightRecursionTimer.Start();
+		    bfly::M2MTimer.Start();
 #endif
-                    bfly::SourceWeightRecursion
+                    bfly::M2M
                     ( context, plan, phase, level, x0A, p0B, wB,
                       parentIOffset, weightGridList,
                       partialWeightGridList[tIndex] );
 #ifdef TIMING
-		    bfly::sWeightRecursionTimer.Stop();
+		    bfly::M2MTimer.Stop();
 #endif
                 }
                 else
@@ -400,15 +400,15 @@ transform
                         ARelativeToAp |= (globalA[j]&1)<<j;
                     }
 #ifdef TIMING
-		    bfly::tWeightRecursionTimer.Start();
+		    bfly::L2LTimer.Start();
 #endif
-                    bfly::TargetWeightRecursion
+                    bfly::L2L
                     ( context, plan, phase, level,
                       ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                       parentIOffset, weightGridList, 
                       partialWeightGridList[tIndex] );
 #ifdef TIMING
-		    bfly::tWeightRecursionTimer.Stop();
+		    bfly::L2LTimer.Stop();
 #endif
                 }
             }
@@ -492,14 +492,14 @@ transform
         if( level==log2N/2 )
         {
 #ifdef TIMING
-	    bfly::switchToTargetInterpTimer.Start();
+	    bfly::M2LTimer.Start();
 #endif
-            bfly::SwitchToTargetInterp
+            bfly::M2L
             ( context, plan, amplitude, phase, sBox, tBox, mySBox, myTBox,
               log2LocalSBoxes, log2LocalTBoxes, 
               log2LocalSBoxesPerDim, log2LocalTBoxesPerDim, weightGridList );
 #ifdef TIMING
-	    bfly::switchToTargetInterpTimer.Stop();
+	    bfly::M2LTimer.Stop();
 #endif
         }
     }

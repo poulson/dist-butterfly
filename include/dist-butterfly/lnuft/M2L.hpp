@@ -6,8 +6,8 @@
    <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef DBF_LNUFT_SWITCH_TO_TARGET_INTERP_HPP
-#define DBF_LNUFT_SWITCH_TO_TARGET_INTERP_HPP
+#ifndef DBF_LNUFT_M2L_HPP
+#define DBF_LNUFT_M2L_HPP
 
 #include "dist-butterfly/structures/box.hpp"
 #include "dist-butterfly/structures/constrained_htree_walker.hpp"
@@ -29,7 +29,7 @@ namespace lnuft {
 // 1d specialization
 template<typename R,size_t q>
 inline void
-SwitchToTargetInterp
+M2L
 ( const Context<R,1,q>& nuftContext,
   const Plan<1>& plan,
   const Box<R,1>& sBox,
@@ -193,7 +193,7 @@ SwitchToTargetInterp
 // 2d specialization
 template<typename R,size_t q>
 inline void
-SwitchToTargetInterp
+M2L
 ( const Context<R,2,q>& nuftContext,
   const Plan<2>& plan,
   const Box<R,2>& sBox,
@@ -440,7 +440,7 @@ SwitchToTargetInterp
 // Fallback for 3d and above
 template<typename R,size_t d,size_t q>
 inline void
-SwitchToTargetInterp
+M2L
 ( const Context<R,d,q>& nuftContext,
   const Plan<d>& plan,
   const Box<R,d>& sBox,
@@ -766,4 +766,4 @@ SwitchToTargetInterp
 } // lnuft
 } // dbf
 
-#endif // ifndef DBF_LNUFT_SWITCH_TO_TARGET_INTERP_HPP
+#endif // ifndef DBF_LNUFT_M2L_HPP

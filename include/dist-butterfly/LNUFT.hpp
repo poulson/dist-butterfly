@@ -28,9 +28,9 @@ static bool alreadyTimed = false;
 
 static Timer timer;
 static Timer initializeWeightsTimer;
-static Timer sWeightRecursionTimer;
-static Timer tWeightRecursionTimer;
-static Timer switchToTargetInterpTimer;
+static Timer M2MTimer;
+static Timer L2LTimer;
+static Timer M2LTimer;
 static Timer sumScatterTimer;
 
 static inline void 
@@ -38,9 +38,9 @@ ResetTimers()
 {
     timer.Reset();
     initializeWeightsTimer.Reset();
-    sWeightRecursionTimer.Reset();
-    switchToTargetInterpTimer.Reset();
-    tWeightRecursionTimer.Reset();
+    M2MTimer.Reset();
+    M2LTimer.Reset();
+    L2LTimer.Reset();
     sumScatterTimer.Reset();
 }
 
@@ -55,12 +55,12 @@ PrintTimings()
               << "------------------------------------------\n" 
 	      << "InitializeWeights:     " 
 	      << initializeWeightsTimer.Total() << " seconds.\n"
-	      << "SourceWeightRecursion: " 
-	      << sWeightRecursionTimer.Total() << " seconds.\n"
-	      << "SwitchToTargetInterp:  "
-	      << switchToTargetInterpTimer.Total() << " seconds.\n"
-	      << "TargetWeightRecursion: "
-	      << tWeightRecursionTimer.Total() << " seconds.\n"
+	      << "M2M: " 
+	      << M2MTimer.Total() << " seconds.\n"
+	      << "M2L:  "
+	      << M2LTimer.Total() << " seconds.\n"
+	      << "L2L: "
+	      << L2LTimer.Total() << " seconds.\n"
 	      << "SumScatter:            "
 	      << sumScatterTimer.Total() << " seconds.\n"
 	      << "Total: " << timer.Total() << " seconds.\n" << std::endl;
@@ -75,10 +75,10 @@ PrintTimings()
 #include "dist-butterfly/lnuft/potential_field.hpp"
 
 #include "dist-butterfly/butterfly/initialize_weights.hpp"
-#include "dist-butterfly/butterfly/source_weight_recursion.hpp"
-#include "dist-butterfly/butterfly/target_weight_recursion.hpp"
+#include "dist-butterfly/butterfly/M2M.hpp"
+#include "dist-butterfly/butterfly/L2L.hpp"
 
-#include "dist-butterfly/lnuft/switch_to_target_interp.hpp"
+#include "dist-butterfly/lnuft/M2L.hpp"
 
 namespace dbf {
 
@@ -167,14 +167,14 @@ LNUFT
     if( log2N == 0 || log2N == 1 )
     {
 #ifdef TIMING
-	lnuft::switchToTargetInterpTimer.Start();
+	lnuft::M2LTimer.Start();
 #endif
-        lnuft::SwitchToTargetInterp
+        lnuft::M2L
         ( nuftContext, plan, sBox, tBox, mySBox, myTBox,
           log2LocalSBoxes, log2LocalTBoxes,
           log2LocalSBoxesPerDim, log2LocalTBoxesPerDim, weightGridList );
 #ifdef TIMING
-	lnuft::switchToTargetInterpTimer.Stop();
+	lnuft::M2LTimer.Stop();
 #endif
     }
     for( size_t level=1; level<=log2N; ++level )
@@ -234,14 +234,14 @@ LNUFT
                     if( level <= log2N/2 )
                     {
 #ifdef TIMING
-			lnuft::sWeightRecursionTimer.Start();
+			lnuft::M2MTimer.Start();
 #endif
-                        bfly::SourceWeightRecursion
+                        bfly::M2M
                         ( bflyContext, plan, phase, level, x0A, p0B, wB,
                           parentIOffset, oldWeightGridList,
                           weightGridList[iIndex] );
 #ifdef TIMING
-			lnuft::sWeightRecursionTimer.Stop();
+			lnuft::M2MTimer.Stop();
 #endif
                     }
                     else
@@ -257,15 +257,15 @@ LNUFT
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
 #ifdef TIMING
-			lnuft::tWeightRecursionTimer.Start();
+			lnuft::L2LTimer.Start();
 #endif
-                        bfly::TargetWeightRecursion
+                        bfly::L2L
                         ( bflyContext, plan, phase, level,
                           ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                           parentIOffset, oldWeightGridList, 
                           weightGridList[iIndex] );
 #ifdef TIMING
-			lnuft::tWeightRecursionTimer.Stop();
+			lnuft::L2LTimer.Stop();
 #endif
                     }
                 }
@@ -325,14 +325,14 @@ LNUFT
                 if( level <= log2N/2 )
                 {
 #ifdef TIMING
-		    lnuft::sWeightRecursionTimer.Start();
+		    lnuft::M2MTimer.Start();
 #endif
-                    bfly::SourceWeightRecursion
+                    bfly::M2M
                     ( bflyContext, plan, phase, level, x0A, p0B, wB,
                       parentIOffset, weightGridList,
                       partialWeightGridList[tIndex] );
 #ifdef TIMING
-		    lnuft::sWeightRecursionTimer.Stop();
+		    lnuft::M2MTimer.Stop();
 #endif
                 }
                 else
@@ -348,15 +348,15 @@ LNUFT
                         ARelativeToAp |= (globalA[j]&1)<<j;
                     }
 #ifdef TIMING
-		    lnuft::tWeightRecursionTimer.Start();
+		    lnuft::L2LTimer.Start();
 #endif
-                    bfly::TargetWeightRecursion
+                    bfly::L2L
                     ( bflyContext, plan, phase, level,
                       ARelativeToAp, x0A, x0Ap, p0B, wA, wB,
                       parentIOffset, weightGridList, 
                       partialWeightGridList[tIndex] );
 #ifdef TIMING
-		    lnuft::tWeightRecursionTimer.Stop();
+		    lnuft::L2LTimer.Stop();
 #endif
                 }
             }
@@ -441,14 +441,14 @@ LNUFT
         if( level==log2N/2 )
         {
 #ifdef TIMING
-	    lnuft::switchToTargetInterpTimer.Start();
+	    lnuft::M2LTimer.Start();
 #endif
-            lnuft::SwitchToTargetInterp
+            lnuft::M2L
             ( nuftContext, plan, sBox, tBox, mySBox, myTBox,
               log2LocalSBoxes, log2LocalTBoxes,
               log2LocalSBoxesPerDim, log2LocalTBoxesPerDim, weightGridList );
 #ifdef TIMING
-	    lnuft::switchToTargetInterpTimer.Stop();
+	    lnuft::M2LTimer.Stop();
 #endif
         }
     }

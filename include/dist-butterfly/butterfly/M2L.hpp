@@ -6,8 +6,8 @@
    <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef DBF_BFLY_SWITCH_TO_TARGET_INTERP_HPP
-#define DBF_BFLY_SWITCH_TO_TARGET_INTERP_HPP
+#ifndef DBF_BFLY_M2L_HPP
+#define DBF_BFLY_M2L_HPP
 
 #include "dist-butterfly/structures/box.hpp"
 #include "dist-butterfly/structures/constrained_htree_walker.hpp"
@@ -29,7 +29,7 @@ namespace bfly {
 
 template<typename R,size_t d,size_t q>
 inline void
-SwitchToTargetInterp
+M2L
 ( const Context<R,d,q>& context,
   const Plan<d>& plan,
   const Amplitude<R,d>& amplitude,
@@ -169,4 +169,4 @@ SwitchToTargetInterp
 } // bfly
 } // dbf
 
-#endif // ifndef DBF_BFLY_SWITCH_TO_TARGET_INTERP_HPP
+#endif // ifndef DBF_BFLY_M2L_HPP

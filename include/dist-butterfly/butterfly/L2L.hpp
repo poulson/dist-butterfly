@@ -6,18 +6,18 @@
    <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#ifndef DBF_BFLY_SOURCE_WEIGHT_RECURSION_HPP
-#define DBF_BFLY_SOURCE_WEIGHT_RECURSION_HPP
+#ifndef DBF_BFLY_L2L_HPP
+#define DBF_BFLY_L2L_HPP
 
 #include <cstring>
 
-#include "dist-butterfly/constants.hpp"
-
+#include "dist-butterfly/structures/plan.hpp"
 #include "dist-butterfly/structures/weight_grid.hpp"
 #include "dist-butterfly/structures/weight_grid_list.hpp"
 
 #include "dist-butterfly/functors/phase.hpp"
 
+#include "dist-butterfly/tools/blas.hpp"
 #include "dist-butterfly/tools/special_functions.hpp"
 
 #include "dist-butterfly/butterfly/context.hpp"
@@ -34,13 +34,16 @@ namespace bfly {
 // 1d specialization
 template<typename R,size_t q>
 inline void
-SourceWeightRecursion
+L2L
 ( const Context<R,1,q>& context,
   const Plan<1>& plan,
   const Phase<R,1>& phase,
   const size_t level,
+  const size_t ARelativeToAp,
   const array<R,1>& x0A,
+  const array<R,1>& x0Ap,
   const array<R,1>& p0B,
+  const array<R,1>& wA,
   const array<R,1>& wB,
   const size_t parentIOffset,
   const WeightGridList<R,1,q>& oldWeights,
@@ -54,40 +57,40 @@ SourceWeightRecursion
     const vector<R>& rightMap = context.GetRightChebyshevMap();
 
     vector<R> phiResults, sinResults, cosResults;
-    vector<array<R,1>> xPoint( 1, x0A ), pPoints( q );
-    const vector<array<R,1>>& sourceChildGrids = context.GetSourceChildGrids();
+    vector<array<R,1>> pPoint( 1 ), xPoints( q );
+    const vector<array<R,1>>& chebyshevGrid = context.GetChebyshevGrid();
     for( size_t cLocal=0; cLocal<(1u<<(1-log2NumMergingProcesses)); ++cLocal )
     {
         //--------------------------------------------------------------------//
         // Step 1                                                             //
         //--------------------------------------------------------------------//
 #ifdef TIMING
-        sWeightRecursionTimer1.Start();
+        L2LTimer1.Start();
 #endif
         const size_t iIndex = parentIOffset + cLocal;
         const size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
 
-        // Form the set of p points to evaluate
+        pPoint[0][0] = p0B[0] + ( c&1 ? wB[0]/4 : -wB[0]/4 );
         {
-            R* RESTRICT pPointsBuffer = &pPoints[0][0];
-            const R* RESTRICT sourceChildBuffer = &sourceChildGrids[c*q][0];
+            R* RESTRICT xPointsBuffer = &xPoints[0][0];
+            const R* RESTRICT wABuffer = &wA[0];
+            const R* RESTRICT x0ApBuffer = &x0Ap[0];
+            const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
             for( size_t tPrime=0; tPrime<q; ++tPrime )
-                pPointsBuffer[tPrime] = 
-                    p0B[0] + wB[0]*sourceChildBuffer[tPrime];
+                xPointsBuffer[tPrime] = 
+                    x0ApBuffer[0] + 2*wABuffer[0]*chebyshevBuffer[tPrime];
         }
-
-        // Form the phase factors
 #ifdef TIMING
-        sWeightRecursionTimer1Phase.Start();
+        L2LTimer1Phase.Start();
 #endif
-        phase.BatchEvaluate( xPoint, pPoints, phiResults );
+        phase.BatchEvaluate( xPoints, pPoint, phiResults );
 #ifdef TIMING
-        sWeightRecursionTimer1Phase.Stop();
-        sWeightRecursionTimer1SinCos.Start();
+        L2LTimer1Phase.Stop();
+        L2LTimer1SinCos.Start();
 #endif
         SinCosBatch( phiResults, sinResults, cosResults );
 #ifdef TIMING
-        sWeightRecursionTimer1SinCos.Stop();
+        L2LTimer1SinCos.Stop();
 #endif
 
         WeightGrid<R,1,q> scaledWeightGrid;
@@ -100,84 +103,93 @@ SourceWeightRecursion
             const R* RESTRICT oldImags = oldWeights[iIndex].ImagBuffer();
             for( size_t tPrime=0; tPrime<q; ++tPrime )
             {
+                const R realPhase = cosBuffer[tPrime];
+                const R imagPhase = -sinBuffer[tPrime];
                 const R realWeight = oldReals[tPrime];
                 const R imagWeight = oldImags[tPrime];
-                const R realPhase = cosBuffer[tPrime];
-                const R imagPhase = sinBuffer[tPrime];
                 scaledReals[tPrime] = realPhase*realWeight-imagPhase*imagWeight;
                 scaledImags[tPrime] = imagPhase*realWeight+realPhase*imagWeight;
             }
         }
 #ifdef TIMING
-        sWeightRecursionTimer1.Stop();
+        L2LTimer1.Stop();
 #endif
 
         //--------------------------------------------------------------------//
         // Step 2                                                             //
         //--------------------------------------------------------------------//
 #ifdef TIMING
-        sWeightRecursionTimer2.Start();
+        L2LTimer2.Start();
 #endif
-        // TODO: Create preprocessor flag for switching to two Gemv's, as
+        // TODO: Create a preprocessor flag for switching to two Gemv's, as 
         //       Gemm is probably not optimized for only 2 right-hand sides.
+        WeightGrid<R,1,q> expandedWeightGrid;
         {
-            const R* mapBuffer = ( c&1 ? &rightMap[0] : &leftMap[0] );
+            const R* mapBuffer = 
+                ( ARelativeToAp&1 ? &rightMap[0] : &leftMap[0] );
             Gemm
-            ( 'N', 'N', q, 2, q,
-              R(1), mapBuffer,                 q,
-                    scaledWeightGrid.Buffer(), q,
-              R(1), weightGrid.Buffer(),       q );
+            ( 'T', 'N', q, 2, q,
+              R(1), mapBuffer,                   q,
+                    scaledWeightGrid.Buffer(),   q,
+              R(0), expandedWeightGrid.Buffer(), q );
         }
 #ifdef TIMING
-        sWeightRecursionTimer2.Stop();
+        L2LTimer2.Stop();
 #endif
-    }
 
-    //------------------------------------------------------------------------//
-    // Step 3                                                                 //
-    //------------------------------------------------------------------------//
+        //--------------------------------------------------------------------//
+        // Step 3                                                             //
+        //--------------------------------------------------------------------//
 #ifdef TIMING
-    sWeightRecursionTimer3.Start();
+        L2LTimer3.Start();
 #endif
-    const vector<array<R,1>>& chebyshevGrid = context.GetChebyshevGrid();
-    {
-        R* RESTRICT pPointsBuffer = &pPoints[0][0];
-        const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
-        for( size_t t=0; t<q; ++t )
-            pPointsBuffer[t] = p0B[0] + wB[0]*chebyshevBuffer[t];
-    }
-    phase.BatchEvaluate( xPoint, pPoints, phiResults );
-    SinCosBatch( phiResults, sinResults, cosResults );
-    {
-        R* RESTRICT reals = weightGrid.RealBuffer();
-        R* RESTRICT imags = weightGrid.ImagBuffer();
-        const R* RESTRICT cosBuffer = &cosResults[0];
-        const R* RESTRICT sinBuffer = &sinResults[0];
-        for( size_t t=0; t<q; ++t )
         {
-            const R realPhase = cosBuffer[t];
-            const R imagPhase = -sinBuffer[t];
-            const R realWeight = reals[t];
-            const R imagWeight = imags[t];
-            reals[t] = realPhase*realWeight - imagPhase*imagWeight;
-            imags[t] = imagPhase*realWeight + realPhase*imagWeight;
+            R* RESTRICT xPointsBuffer = &xPoints[0][0];
+            const R* RESTRICT wABuffer = &wA[0];
+            const R* RESTRICT x0ABuffer = &x0A[0];
+            const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
+            for( size_t t=0; t<q; ++t )
+                xPointsBuffer[t] = 
+                    x0ABuffer[0] + wABuffer[0]*chebyshevBuffer[t];
         }
-    }
+        phase.BatchEvaluate( xPoints, pPoint, phiResults );
+        SinCosBatch( phiResults, sinResults, cosResults );
+        {
+            R* RESTRICT reals = weightGrid.RealBuffer();
+            R* RESTRICT imags = weightGrid.ImagBuffer();
+            const R* RESTRICT cosBuffer = &cosResults[0];
+            const R* RESTRICT sinBuffer = &sinResults[0];
+            const R* RESTRICT expandedReals = expandedWeightGrid.RealBuffer();
+            const R* RESTRICT expandedImags = expandedWeightGrid.ImagBuffer();
+            for( size_t t=0; t<q; ++t )
+            {
+                const R realPhase = cosBuffer[t];
+                const R imagPhase = sinBuffer[t];
+                const R realWeight = expandedReals[t];
+                const R imagWeight = expandedImags[t];
+                reals[t] += realPhase*realWeight - imagPhase*imagWeight;
+                imags[t] += imagPhase*realWeight + realPhase*imagWeight;
+            }
+        }
 #ifdef TIMING
-    sWeightRecursionTimer3.Stop();
+        L2LTimer3.Stop();
 #endif
+    }
 }
 
 // 2d specialization
 template<typename R,size_t q>
 inline void
-SourceWeightRecursion
+L2L
 ( const Context<R,2,q>& context,
   const Plan<2>& plan,
   const Phase<R,2>& phase,
   const size_t level,
+  const size_t ARelativeToAp,
   const array<R,2>& x0A,
+  const array<R,2>& x0Ap,
   const array<R,2>& p0B,
+  const array<R,2>& wA,
   const array<R,2>& wB,
   const size_t parentIOffset,
   const WeightGridList<R,2,q>& oldWeights,
@@ -191,45 +203,43 @@ SourceWeightRecursion
     const vector<R>& rightMap = context.GetRightChebyshevMap();
 
     vector<R> phiResults, sinResults, cosResults;
-    vector<array<R,2>> xPoint( 1, x0A ), pPoints( q*q );
-    const vector<array<R,2>>& sourceChildGrids = context.GetSourceChildGrids();
+    vector<array<R,2>> pPoint( 1 ), xPoints( q*q );
+    const vector<array<R,2>>& chebyshevGrid = context.GetChebyshevGrid();
     for( size_t cLocal=0; cLocal<(1u<<(2-log2NumMergingProcesses)); ++cLocal )
     {
         //--------------------------------------------------------------------//
         // Step 1                                                             //
         //--------------------------------------------------------------------//
 #ifdef TIMING
-        sWeightRecursionTimer1.Start();
+        L2LTimer1.Start();
 #endif
-
         const size_t iIndex = parentIOffset + cLocal;
         const size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
 
-        // Form the set of p points to evaluate
+        for( size_t j=0; j<2; ++j )
+            pPoint[0][j] = p0B[j] + ( (c>>j)&1 ? wB[j]/4 : -wB[j]/4 );
         {
-            R* RESTRICT pPointsBuffer = &pPoints[0][0];
-            const R* RESTRICT wBBuffer = &wB[0];
-            const R* RESTRICT p0Buffer = &p0B[0];
-            const R* RESTRICT sourceChildBuffer = &sourceChildGrids[c*q*q][0];
+            R* RESTRICT xPointsBuffer = &xPoints[0][0];
+            const R* RESTRICT wABuffer = &wA[0];
+            const R* RESTRICT x0ApBuffer = &x0Ap[0];
+            const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
             for( size_t tPrime=0; tPrime<q*q; ++tPrime )
                 for( size_t j=0; j<2; ++j )
-                    pPointsBuffer[tPrime*2+j] = 
-                        p0Buffer[j] + 
-                        wBBuffer[j]*sourceChildBuffer[tPrime*2+j];
+                    xPointsBuffer[tPrime*2+j] = 
+                        x0ApBuffer[j] + 
+                        2*wABuffer[j]*chebyshevBuffer[tPrime*2+j];
         }
-
-        // Form the phase factors
 #ifdef TIMING
-        sWeightRecursionTimer1Phase.Start();
+        L2LTimer1Phase.Start();
 #endif
-        phase.BatchEvaluate( xPoint, pPoints, phiResults );
+        phase.BatchEvaluate( xPoints, pPoint, phiResults );
 #ifdef TIMING
-        sWeightRecursionTimer1Phase.Stop();
-        sWeightRecursionTimer1SinCos.Start();
+        L2LTimer1Phase.Stop();
+        L2LTimer1SinCos.Start();
 #endif
         SinCosBatch( phiResults, sinResults, cosResults );
 #ifdef TIMING
-        sWeightRecursionTimer1SinCos.Stop();
+        L2LTimer1SinCos.Stop();
 #endif
 
         WeightGrid<R,2,q> scaledWeightGrid;
@@ -242,31 +252,32 @@ SourceWeightRecursion
             const R* RESTRICT oldImags = oldWeights[iIndex].ImagBuffer();
             for( size_t tPrime=0; tPrime<q*q; ++tPrime )
             {
+                const R realPhase = cosBuffer[tPrime];
+                const R imagPhase = -sinBuffer[tPrime];
                 const R realWeight = oldReals[tPrime];
                 const R imagWeight = oldImags[tPrime];
-                const R realPhase = cosBuffer[tPrime];
-                const R imagPhase = sinBuffer[tPrime];
                 scaledReals[tPrime] = realPhase*realWeight-imagPhase*imagWeight;
                 scaledImags[tPrime] = imagPhase*realWeight+realPhase*imagWeight;
             }
         }
 #ifdef TIMING
-        sWeightRecursionTimer1.Stop();
+        L2LTimer1.Stop();
 #endif
 
         //--------------------------------------------------------------------//
         // Step 2                                                             //
         //--------------------------------------------------------------------//
 #ifdef TIMING
-        sWeightRecursionTimer2.Start();
+        L2LTimer2.Start();
 #endif
-        // Interpolate over the first dimension. We can take care of the real 
-        // and imaginary weights at once.
+        // Interpolate over the first dimension. We can take care of the real
+        // and imaginary weights at once
         WeightGrid<R,2,q> tempWeightGrid;
         {
-            const R* mapBuffer = ( c&1 ? &rightMap[0] : &leftMap[0] );
+            const R* mapBuffer = 
+                ( ARelativeToAp&1 ? &rightMap[0] : &leftMap[0] );
             Gemm
-            ( 'N', 'N', q, 2*q, q,
+            ( 'T', 'N', q, 2*q, q,
               R(1), mapBuffer,                 q,
                     scaledWeightGrid.Buffer(), q,
               R(0), tempWeightGrid.Buffer(),   q );
@@ -274,73 +285,79 @@ SourceWeightRecursion
 
         // Interpolate over the second dimension. We can get away with applying
         // our maps with a gemm on the real and imag parts.
+        WeightGrid<R,2,q> expandedWeightGrid;
         {
-            const R* mapBuffer = ( (c>>1)&1 ? &rightMap[0] : &leftMap[0] );
+            const R* mapBuffer = 
+                ( (ARelativeToAp>>1)&1 ? &rightMap[0] : &leftMap[0] );
             Gemm
-            ( 'N', 'T', q, q, q,
-              R(1), tempWeightGrid.RealBuffer(), q,
-                    mapBuffer,                   q,
-              R(1), weightGrid.RealBuffer(),     q );
+            ( 'N', 'N', q, q, q,
+              R(1), tempWeightGrid.RealBuffer(),     q,
+                    mapBuffer,                       q,
+              R(0), expandedWeightGrid.RealBuffer(), q );
             Gemm
-            ( 'N', 'T', q, q, q,
-              R(1), tempWeightGrid.ImagBuffer(), q,
-                    mapBuffer,                   q,
-              R(1), weightGrid.ImagBuffer(),     q );
+            ( 'N', 'N', q, q, q,
+              R(1), tempWeightGrid.ImagBuffer(),     q,
+                    mapBuffer,                       q,
+              R(0), expandedWeightGrid.ImagBuffer(), q );
         }
 #ifdef TIMING
-        sWeightRecursionTimer2.Stop();
+        L2LTimer2.Stop();
 #endif
-    }
 
-    //------------------------------------------------------------------------//
-    // Step 3                                                                 //
-    //------------------------------------------------------------------------//
+        //--------------------------------------------------------------------//
+        // Step 3                                                             //
+        //--------------------------------------------------------------------//
 #ifdef TIMING
-    sWeightRecursionTimer3.Start();
+        L2LTimer3.Start();
 #endif
-    const vector<array<R,2>>& chebyshevGrid = context.GetChebyshevGrid();
-    {
-        R* RESTRICT pPointsBuffer = &pPoints[0][0];
-        const R* RESTRICT wBBuffer = &wB[0];
-        const R* RESTRICT p0Buffer = &p0B[0];
-        const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
-        for( size_t t=0; t<q*q; ++t )
-            for( size_t j=0; j<2; ++j )
-                pPointsBuffer[t*2+j] = 
-                    p0Buffer[j] + wBBuffer[j]*chebyshevBuffer[t*2+j];
-    }
-    phase.BatchEvaluate( xPoint, pPoints, phiResults );
-    SinCosBatch( phiResults, sinResults, cosResults );
-    {
-        R* RESTRICT reals = weightGrid.RealBuffer();
-        R* RESTRICT imags = weightGrid.ImagBuffer();
-        const R* RESTRICT cosBuffer = &cosResults[0];
-        const R* RESTRICT sinBuffer = &sinResults[0];
-        for( size_t t=0; t<q*q; ++t )
         {
-            const R realPhase = cosBuffer[t];
-            const R imagPhase = -sinBuffer[t];
-            const R realWeight = reals[t];
-            const R imagWeight = imags[t];
-            reals[t] = realPhase*realWeight - imagPhase*imagWeight;
-            imags[t] = imagPhase*realWeight + realPhase*imagWeight;
+            R* RESTRICT xPointsBuffer = &xPoints[0][0];
+            const R* RESTRICT wABuffer = &wA[0];
+            const R* RESTRICT x0ABuffer = &x0A[0];
+            const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
+            for( size_t t=0; t<q*q; ++t )
+                for( size_t j=0; j<2; ++j )
+                    xPointsBuffer[t*2+j] = 
+                        x0ABuffer[j] + wABuffer[j]*chebyshevBuffer[t*2+j];
         }
-    }
+        phase.BatchEvaluate( xPoints, pPoint, phiResults );
+        SinCosBatch( phiResults, sinResults, cosResults );
+        {
+            R* RESTRICT reals = weightGrid.RealBuffer();
+            R* RESTRICT imags = weightGrid.ImagBuffer();
+            const R* RESTRICT cosBuffer = &cosResults[0];
+            const R* RESTRICT sinBuffer = &sinResults[0];
+            const R* RESTRICT expandedReals = expandedWeightGrid.RealBuffer();
+            const R* RESTRICT expandedImags = expandedWeightGrid.ImagBuffer();
+            for( size_t t=0; t<q*q; ++t )
+            {
+                const R realPhase = cosBuffer[t];
+                const R imagPhase = sinBuffer[t];
+                const R realWeight = expandedReals[t];
+                const R imagWeight = expandedImags[t];
+                reals[t] += realPhase*realWeight - imagPhase*imagWeight;
+                imags[t] += imagPhase*realWeight + realPhase*imagWeight;
+            }
+        }
 #ifdef TIMING
-    sWeightRecursionTimer3.Stop();
+        L2LTimer3.Stop();
 #endif
+    }
 }
 
 // Fallback for 3d and above
 template<typename R,size_t d,size_t q>
 inline void
-SourceWeightRecursion
+L2L
 ( const Context<R,d,q>& context,
   const Plan<d>& plan,
   const Phase<R,d>& phase,
   const size_t level,
+  const size_t ARelativeToAp,
   const array<R,d>& x0A,
+  const array<R,d>& x0Ap,
   const array<R,d>& p0B,
+  const array<R,d>& wA,
   const array<R,d>& wB,
   const size_t parentIOffset,
   const WeightGridList<R,d,q>& oldWeights,
@@ -355,48 +372,46 @@ SourceWeightRecursion
     const vector<R>& rightMap = context.GetRightChebyshevMap();
 
     vector<R> phiResults, sinResults, cosResults;
-    vector<array<R,d>> xPoint( 1, x0A ), pPoints( q_to_d );
-    const vector<array<R,d>>& sourceChildGrids = context.GetSourceChildGrids();
-    WeightGrid<R,d,q> scaledWeightGrid;
+    vector<array<R,d>> pPoint( 1 ), xPoints( q_to_d );
+    const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
     for( size_t cLocal=0; cLocal<(1u<<(d-log2NumMergingProcesses)); ++cLocal )
     {
         //--------------------------------------------------------------------//
         // Step 1                                                             //
         //--------------------------------------------------------------------//
 #ifdef TIMING
-        sWeightRecursionTimer1.Start();
+        L2LTimer1.Start();
 #endif
         const size_t iIndex = parentIOffset + cLocal;
         const size_t c = plan.LocalToClusterSourceIndex( level, cLocal );
 
-        // Form the set of p points to evaluate
+        for( size_t j=0; j<d; ++j )
+            pPoint[0][j] = p0B[j] + ( (c>>j)&1 ? wB[j]/4 : -wB[j]/4 );
         {
-            R* RESTRICT pPointsBuffer = &pPoints[0][0];
-            const R* RESTRICT wBBuffer = &wB[0];
-            const R* RESTRICT p0BBuffer = &p0B[0];
-            const R* RESTRICT sourceChildBuffer = 
-                &sourceChildGrids[c*q_to_d][0];
+            R* RESTRICT xPointsBuffer = &xPoints[0][0];
+            const R* RESTRICT wABuffer = &wA[0];
+            const R* RESTRICT x0ApBuffer = &x0Ap[0];
+            const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
             for( size_t tPrime=0; tPrime<q_to_d; ++tPrime )
                 for( size_t j=0; j<d; ++j )
-                    pPointsBuffer[tPrime*d+j] = 
-                        p0BBuffer[j] + 
-                        wBBuffer[j]*sourceChildBuffer[tPrime*d+j];
+                    xPointsBuffer[tPrime*d+j] = 
+                        x0ApBuffer[j] + 
+                        2*wABuffer[j]*chebyshevBuffer[tPrime*d+j];
         }
-
-        // Form the phase factors
 #ifdef TIMING
-        sWeightRecursionTimer1Phase.Start();
+        L2LTimer1Phase.Start();
 #endif
-        phase.BatchEvaluate( xPoint, pPoints, phiResults );
+        phase.BatchEvaluate( xPoints, pPoint, phiResults );
 #ifdef TIMING
-        sWeightRecursionTimer1Phase.Stop();
-        sWeightRecursionTimer1SinCos.Start();
+        L2LTimer1Phase.Stop();
+        L2LTimer1SinCos.Start();
 #endif
         SinCosBatch( phiResults, sinResults, cosResults );
 #ifdef TIMING
-        sWeightRecursionTimer1SinCos.Stop();
+        L2LTimer1SinCos.Stop();
 #endif
 
+        WeightGrid<R,d,q> scaledWeightGrid;
         {
             R* RESTRICT scaledReals = scaledWeightGrid.RealBuffer();
             R* RESTRICT scaledImags = scaledWeightGrid.ImagBuffer();
@@ -406,50 +421,52 @@ SourceWeightRecursion
             const R* RESTRICT oldImags = oldWeights[iIndex].ImagBuffer();
             for( size_t tPrime=0; tPrime<q_to_d; ++tPrime )
             {
+                const R realPhase = cosBuffer[tPrime];
+                const R imagPhase = -sinBuffer[tPrime];
                 const R realWeight = oldReals[tPrime];
                 const R imagWeight = oldImags[tPrime];
-                const R realPhase = cosBuffer[tPrime];
-                const R imagPhase = sinBuffer[tPrime];
                 scaledReals[tPrime] = realPhase*realWeight-imagPhase*imagWeight;
                 scaledImags[tPrime] = imagPhase*realWeight+realPhase*imagWeight;
             }
         }
 #ifdef TIMING
-        sWeightRecursionTimer1.Stop();
+        L2LTimer1.Stop();
 #endif
 
         //--------------------------------------------------------------------//
         // Step 2                                                             //
         //--------------------------------------------------------------------//
 #ifdef TIMING
-        sWeightRecursionTimer2.Start();
+        L2LTimer2.Start();
 #endif
 
-        // Interpolate over the first dimension. This can be performed with a 
-        // single gemm that takes care of both the real and imaginary weights.
+        // Interpolate over the first dimension. We can take care of the real
+        // and imaginary weights at once
         WeightGrid<R,d,q> tempWeightGrid;
         {
-            const R* mapBuffer = ( c&1 ? &rightMap[0] : &leftMap[0] );
+            const R* mapBuffer = 
+                ( ARelativeToAp&1 ? &rightMap[0] : &leftMap[0] );
             Gemm
-            ( 'N', 'N', q, 2*Pow<q,d-1>::val, q,
+            ( 'T', 'N', q, 2*Pow<q,d-1>::val, q,
               R(1), mapBuffer,                 q,
                     scaledWeightGrid.Buffer(), q,
               R(0), tempWeightGrid.Buffer(),   q );
         }
 
-        // Interpolate over the second dimension. We can do so by using 
-        // q^(d-2) gemms on right-hand sides of size q x q for both the real 
+        // Interpolate over the second dimension. We can do so by using
+        // q^(d-2) gemms on right-hand sides of size q x q for both the real
         // and imaginary buffers.
         {
             R* realWriteBuffer = scaledWeightGrid.RealBuffer();
             R* imagWriteBuffer = scaledWeightGrid.ImagBuffer();
             const R* realReadBuffer = tempWeightGrid.RealBuffer();
             const R* imagReadBuffer = tempWeightGrid.ImagBuffer();
-            const R* mapBuffer = ( (c>>1)&1 ? &rightMap[0] : &leftMap[0] );
+            const R* mapBuffer = 
+                ( (ARelativeToAp>>1)&1 ? &rightMap[0] : &leftMap[0] );
             for( size_t w=0; w<Pow<q,d-2>::val; ++w )
             {
                 Gemm
-                ( 'N', 'T', q, q, q,
+                ( 'N', 'N', q, q, q,
                   R(1), &realReadBuffer[w*q*q],  q,
                         mapBuffer,               q,
                   R(0), &realWriteBuffer[w*q*q], q );
@@ -457,48 +474,46 @@ SourceWeightRecursion
             for( size_t w=0; w<Pow<q,d-2>::val; ++w )
             {
                 Gemm
-                ( 'N', 'T', q, q, q,
+                ( 'N', 'N', q, q, q,
                   R(1), &imagReadBuffer[w*q*q],  q,
                         mapBuffer,               q,
                   R(0), &imagWriteBuffer[w*q*q], q );
             }
         }
 
-        // Interpolate over the remaining dimensions. These are necessarily 
+        // Interpolate over the remaining dimensions. These are necessarily
         // more expensive because we cannot make use of gemm.
         //
-        // TODO: Compile flag for making the left and right maps transposed 
+        // TODO: Compile flag for making the left and right maps transposed
         //       to get contiguous memory access in the summations.
-        //
+        // 
         // TODO: Check if loading discontinuous chunks is faster than repeatedly
         //       striding over them.
         size_t q_to_j = q*q;
+        WeightGrid<R,d,q> expandedWeightGrid;
         for( size_t j=2; j<d; ++j )
         {
             const size_t stride = q_to_j;
 
             R* realWrites = 
-                ( j==d-1 ? weightGrid.RealBuffer()
+                ( j==d-1 ? expandedWeightGrid.RealBuffer()
                          : ( j&1 ? scaledWeightGrid.RealBuffer()
                                  : tempWeightGrid.RealBuffer() ) );
             R* imagWrites = 
-                ( j==d-1 ? weightGrid.ImagBuffer()
-                         : ( j&1 ? scaledWeightGrid.ImagBuffer()
-                                 : tempWeightGrid.ImagBuffer() ) );
+                ( j==d-1 ? expandedWeightGrid.ImagBuffer()
+                         : ( j&1 ? scaledWeightGrid.RealBuffer()
+                                 : tempWeightGrid.RealBuffer() ) );
             const R* realReads = 
-                ( j&1 ? tempWeightGrid.RealBuffer() 
+                ( j&1 ? tempWeightGrid.RealBuffer()
                       : scaledWeightGrid.RealBuffer() );
             const R* imagReads = 
                 ( j&1 ? tempWeightGrid.ImagBuffer()
                       : scaledWeightGrid.ImagBuffer() );
             const R* RESTRICT mapBuffer = 
-                ( (c>>j)&1 ? &rightMap[0] : &leftMap[0] );
+                ( (ARelativeToAp>>j)&1 ? &rightMap[0] : &leftMap[0] );
 
-            if( j != d-1 )
-            {
-                memset( realWrites, 0, q_to_d*sizeof(R) );
-                memset( imagWrites, 0, q_to_d*sizeof(R) );
-            }
+            memset( realWrites, 0, q_to_d*sizeof(R) );
+            memset( imagWrites, 0, q_to_d*sizeof(R) );
             for( size_t p=0; p<q_to_d/(q_to_j*q); ++p )
             {
                 const size_t offset = p*(q_to_j*q);
@@ -513,7 +528,7 @@ SourceWeightRecursion
                         for( size_t tPrime=0; tPrime<q; ++tPrime )
                         {
                             offsetRealWrites[w+t*stride] +=
-                                mapBuffer[t+tPrime*q] * 
+                                mapBuffer[tPrime+t*q] *
                                 offsetRealReads[w+tPrime*stride];
                         }
                     }
@@ -522,7 +537,7 @@ SourceWeightRecursion
                         for( size_t tPrime=0; tPrime<q; ++tPrime )
                         {
                             offsetImagWrites[w+t*stride] +=
-                                mapBuffer[t+tPrime*q] *
+                                mapBuffer[tPrime+t*q] *
                                 offsetImagReads[w+tPrime*stride];
                         }
                     }
@@ -531,51 +546,51 @@ SourceWeightRecursion
             q_to_j *= q;
         }
 #ifdef TIMING
-        sWeightRecursionTimer2.Stop();
+        L2LTimer2.Stop();
 #endif
-    }
 
-    //------------------------------------------------------------------------//
-    // Step 3                                                                 //
-    //------------------------------------------------------------------------//
+        //--------------------------------------------------------------------//
+        // Step 3                                                             //
+        //--------------------------------------------------------------------//
 #ifdef TIMING
-    sWeightRecursionTimer3.Start();
+        L2LTimer3.Start();
 #endif
-
-    const vector<array<R,d>>& chebyshevGrid = context.GetChebyshevGrid();
-    {
-        R* RESTRICT pPointsBuffer = &pPoints[0][0];
-        const R* RESTRICT wBBuffer = &wB[0];
-        const R* RESTRICT p0BBuffer = &p0B[0];
-        const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
-        for( size_t t=0; t<q_to_d; ++t )
-            for( size_t j=0; j<d; ++j )
-                pPointsBuffer[t*d+j] =  
-                    p0BBuffer[j] + wBBuffer[j]*chebyshevBuffer[t*d+j];
-    }
-    phase.BatchEvaluate( xPoint, pPoints, phiResults );
-    SinCosBatch( phiResults, sinResults, cosResults );
-    {
-        R* RESTRICT reals = weightGrid.RealBuffer();
-        R* RESTRICT imags = weightGrid.ImagBuffer();
-        const R* RESTRICT cosBuffer = &cosResults[0];
-        const R* RESTRICT sinBuffer = &sinResults[0];
-        for( size_t t=0; t<q_to_d; ++t )
         {
-            const R realPhase = cosBuffer[t];
-            const R imagPhase = -sinBuffer[t];
-            const R realWeight = reals[t];
-            const R imagWeight = imags[t];
-            reals[t] = realPhase*realWeight - imagPhase*imagWeight;
-            imags[t] = imagPhase*realWeight + realPhase*imagWeight;
+            R* RESTRICT xPointsBuffer = &xPoints[0][0];
+            const R* RESTRICT wABuffer = &wA[0];
+            const R* RESTRICT x0ABuffer = &x0A[0];
+            const R* RESTRICT chebyshevBuffer = &chebyshevGrid[0][0];
+            for( size_t t=0; t<q_to_d; ++t )
+                for( size_t j=0; j<d; ++j )
+                    xPointsBuffer[t*d+j] = 
+                        x0ABuffer[j] + wABuffer[j]*chebyshevBuffer[t*d+j];
         }
-    }
+        phase.BatchEvaluate( xPoints, pPoint, phiResults );
+        SinCosBatch( phiResults, sinResults, cosResults );
+        {
+            R* RESTRICT reals = weightGrid.RealBuffer();
+            R* RESTRICT imags = weightGrid.ImagBuffer();
+            const R* RESTRICT cosBuffer = &cosResults[0];
+            const R* RESTRICT sinBuffer = &sinResults[0];
+            const R* RESTRICT expandedReals = expandedWeightGrid.RealBuffer();
+            const R* RESTRICT expandedImags = expandedWeightGrid.ImagBuffer();
+            for( size_t t=0; t<q_to_d; ++t )
+            {
+                const R realPhase = cosBuffer[t];
+                const R imagPhase = sinBuffer[t];
+                const R realWeight = expandedReals[t];
+                const R imagWeight = expandedImags[t];
+                reals[t] += realPhase*realWeight - imagPhase*imagWeight;
+                imags[t] += imagPhase*realWeight + realPhase*imagWeight;
+            }
+        }
 #ifdef TIMING
-    sWeightRecursionTimer3.Stop();
+        L2LTimer3.Stop();
 #endif
+    }
 }
 
 } // bfly
 } // dbf
 
-#endif // ifndef DBF_BFLY_SOURCE_WEIGHT_RECURSION_HPP
+#endif // ifndef DBF_BFLY_L2L_HPP
