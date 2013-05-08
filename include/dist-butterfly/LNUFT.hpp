@@ -49,21 +49,18 @@ PrintTimings()
 {
 #ifndef RELEASE
     if( !alreadyTimed )
-	throw std::logic_error("You have not yet run LNUFT.");
+        throw std::logic_error("You have not yet run LNUFT.");
 #endif
     std::cout << "LNUFT timings:\n"
               << "------------------------------------------\n" 
-	      << "InitializeWeights:     " 
-	      << initializeWeightsTimer.Total() << " seconds.\n"
-	      << "M2M: " 
-	      << M2MTimer.Total() << " seconds.\n"
-	      << "M2L:  "
-	      << M2LTimer.Total() << " seconds.\n"
-	      << "L2L: "
-	      << L2LTimer.Total() << " seconds.\n"
-	      << "SumScatter:            "
-	      << sumScatterTimer.Total() << " seconds.\n"
-	      << "Total: " << timer.Total() << " seconds.\n" << std::endl;
+              << "InitializeWeights:     " 
+              << initializeWeightsTimer.Total() << " seconds.\n"
+              << "M2M: " << M2MTimer.Total() << " seconds.\n"
+              << "M2L:  " << M2LTimer.Total() << " seconds.\n"
+              << "L2L: " << L2LTimer.Total() << " seconds.\n"
+              << "SumScatter:            "
+              << sumScatterTimer.Total() << " seconds.\n"
+              << "Total: " << timer.Total() << " seconds.\n" << std::endl;
 }
 
 } // lnuft
@@ -167,14 +164,14 @@ LNUFT
     if( log2N == 0 || log2N == 1 )
     {
 #ifdef TIMING
-	lnuft::M2LTimer.Start();
+        lnuft::M2LTimer.Start();
 #endif
         lnuft::M2L
         ( nuftContext, plan, sBox, tBox, mySBox, myTBox,
           log2LocalSBoxes, log2LocalTBoxes,
           log2LocalSBoxesPerDim, log2LocalTBoxesPerDim, weightGridList );
 #ifdef TIMING
-	lnuft::M2LTimer.Stop();
+        lnuft::M2LTimer.Stop();
 #endif
     }
     for( size_t level=1; level<=log2N; ++level )
@@ -234,14 +231,14 @@ LNUFT
                     if( level <= log2N/2 )
                     {
 #ifdef TIMING
-			lnuft::M2MTimer.Start();
+                        lnuft::M2MTimer.Start();
 #endif
                         bfly::M2M
                         ( bflyContext, plan, phase, level, x0A, p0B, wB,
                           parentIOffset, oldWeightGridList,
                           weightGridList[iIndex] );
 #ifdef TIMING
-			lnuft::M2MTimer.Stop();
+                        lnuft::M2MTimer.Stop();
 #endif
                     }
                     else
@@ -257,7 +254,7 @@ LNUFT
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
 #ifdef TIMING
-			lnuft::L2LTimer.Start();
+                        lnuft::L2LTimer.Start();
 #endif
                         bfly::L2L
                         ( bflyContext, plan, phase, level,
@@ -265,7 +262,7 @@ LNUFT
                           parentIOffset, oldWeightGridList, 
                           weightGridList[iIndex] );
 #ifdef TIMING
-			lnuft::L2LTimer.Stop();
+                        lnuft::L2LTimer.Stop();
 #endif
                     }
                 }
@@ -325,14 +322,14 @@ LNUFT
                 if( level <= log2N/2 )
                 {
 #ifdef TIMING
-		    lnuft::M2MTimer.Start();
+                    lnuft::M2MTimer.Start();
 #endif
                     bfly::M2M
                     ( bflyContext, plan, phase, level, x0A, p0B, wB,
                       parentIOffset, weightGridList,
                       partialWeightGridList[tIndex] );
 #ifdef TIMING
-		    lnuft::M2MTimer.Stop();
+                    lnuft::M2MTimer.Stop();
 #endif
                 }
                 else
@@ -348,7 +345,7 @@ LNUFT
                         ARelativeToAp |= (globalA[j]&1)<<j;
                     }
 #ifdef TIMING
-		    lnuft::L2LTimer.Start();
+                    lnuft::L2LTimer.Start();
 #endif
                     bfly::L2L
                     ( bflyContext, plan, phase, level,
@@ -356,7 +353,7 @@ LNUFT
                       parentIOffset, weightGridList, 
                       partialWeightGridList[tIndex] );
 #ifdef TIMING
-		    lnuft::L2LTimer.Stop();
+                    lnuft::L2LTimer.Stop();
 #endif
                 }
             }
@@ -441,14 +438,14 @@ LNUFT
         if( level==log2N/2 )
         {
 #ifdef TIMING
-	    lnuft::M2LTimer.Start();
+            lnuft::M2LTimer.Start();
 #endif
             lnuft::M2L
             ( nuftContext, plan, sBox, tBox, mySBox, myTBox,
               log2LocalSBoxes, log2LocalTBoxes,
               log2LocalSBoxesPerDim, log2LocalTBoxesPerDim, weightGridList );
 #ifdef TIMING
-	    lnuft::M2LTimer.Stop();
+            lnuft::M2LTimer.Stop();
 #endif
         }
     }

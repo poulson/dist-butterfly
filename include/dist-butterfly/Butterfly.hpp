@@ -74,38 +74,25 @@ PrintTimings()
 {
 #ifndef RELEASE
     if( !alreadyTimed )
-	throw std::logic_error("You have not yet run Butterfly.");
+        throw std::logic_error("You have not yet run Butterfly.");
 #endif
     std::cout << "Butterfly timings:\n"
-	      << "--------------------------------------------\n"
+              << "--------------------------------------------\n"
               << "InitializeWeights:     "
               << initializeWeightsTimer.Total() << " seconds.\n"
-              << "M2M: "
-              << M2MTimer.Total() << " seconds.\n"
-              << "  Stage 1: "
-              << M2MTimer1.Total() << " seconds.\n"
-              << "    Phase: "
-              << M2MTimer1Phase.Total() << " seconds.\n"
-              << "    SinCos: "
-              << M2MTimer1SinCos.Total() << " seconds.\n"
-              << "  Stage 2: "
-              << M2MTimer2.Total() << " seconds.\n"
-              << "  Stage 3: "
-              << M2MTimer3.Total() << " seconds.\n"
-              << "M2L:  "
-              << M2LTimer.Total() << " seconds.\n"
-              << "L2L: "
-              << L2LTimer.Total() << " seconds.\n"
-              << "  Stage 1: "
-              << L2LTimer1.Total() << " seconds.\n"
-              << "    Phase: "
-              << L2LTimer1Phase.Total() << " seconds.\n"
-              << "    SinCos: "
-              << L2LTimer1SinCos.Total() << " seconds.\n"
-              << "  Stage 2: "
-              << L2LTimer2.Total() << " seconds.\n"
-              << "  Stage 3: "
-              << L2LTimer3.Total() << " seconds.\n"
+              << "M2M: " << M2MTimer.Total() << " seconds.\n"
+              << "  Stage 1: " << M2MTimer1.Total() << " seconds.\n"
+              << "    Phase: " << M2MTimer1Phase.Total() << " seconds.\n"
+              << "    SinCos: " << M2MTimer1SinCos.Total() << " seconds.\n"
+              << "  Stage 2: " << M2MTimer2.Total() << " seconds.\n"
+              << "  Stage 3: " << M2MTimer3.Total() << " seconds.\n"
+              << "M2L:  " << M2LTimer.Total() << " seconds.\n"
+              << "L2L: " << L2LTimer.Total() << " seconds.\n"
+              << "  Stage 1: " << L2LTimer1.Total() << " seconds.\n"
+              << "    Phase: " << L2LTimer1Phase.Total() << " seconds.\n"
+              << "    SinCos: " << L2LTimer1SinCos.Total() << " seconds.\n"
+              << "  Stage 2: " << L2LTimer2.Total() << " seconds.\n"
+              << "  Stage 3: " << L2LTimer3.Total() << " seconds.\n"
               << "SumScatter:            "
               << sumScatterTimer.Total() << " seconds.\n"
               << "Total: " << timer.Total() << " seconds.\n" << std::endl;
@@ -219,14 +206,14 @@ transform
     if( bootstrap == log2N/2 )
     {
 #ifdef TIMING
-	bfly::M2LTimer.Start();
+        bfly::M2LTimer.Start();
 #endif
         bfly::M2L
         ( context, plan, amplitude, phase, sBox, tBox, mySBox, myTBox, 
           log2LocalSBoxes, log2LocalTBoxes,
           log2LocalSBoxesPerDim, log2LocalTBoxesPerDim, weightGridList );
 #ifdef TIMING
-	bfly::M2LTimer.Stop();
+        bfly::M2LTimer.Stop();
 #endif
     }
     for( size_t level=bootstrap+1; level<=log2N; ++level )
@@ -287,14 +274,14 @@ transform
                     if( level <= log2N/2 )
                     {
 #ifdef TIMING
-			bfly::M2MTimer.Start();
+                        bfly::M2MTimer.Start();
 #endif
                         bfly::M2M
                         ( context, plan, phase, level, x0A, p0B, wB, 
                           parentIOffset, oldWeightGridList,
                           weightGridList[iIndex] );
 #ifdef TIMING
-			bfly::M2MTimer.Stop();
+                        bfly::M2MTimer.Stop();
 #endif
                     }
                     else
@@ -310,7 +297,7 @@ transform
                             ARelativeToAp |= (globalA[j]&1)<<j;
                         }
 #ifdef TIMING
-			bfly::L2LTimer.Start();
+                        bfly::L2LTimer.Start();
 #endif
                         bfly::L2L
                         ( context, plan, phase, level,
@@ -318,7 +305,7 @@ transform
                           parentIOffset, oldWeightGridList, 
                           weightGridList[iIndex] );
 #ifdef TIMING
-			bfly::L2LTimer.Stop();
+                        bfly::L2LTimer.Stop();
 #endif
                     }
                 }
@@ -377,14 +364,14 @@ transform
                 if( level <= log2N/2 )
                 {
 #ifdef TIMING
-		    bfly::M2MTimer.Start();
+                    bfly::M2MTimer.Start();
 #endif
                     bfly::M2M
                     ( context, plan, phase, level, x0A, p0B, wB,
                       parentIOffset, weightGridList,
                       partialWeightGridList[tIndex] );
 #ifdef TIMING
-		    bfly::M2MTimer.Stop();
+                    bfly::M2MTimer.Stop();
 #endif
                 }
                 else
@@ -400,7 +387,7 @@ transform
                         ARelativeToAp |= (globalA[j]&1)<<j;
                     }
 #ifdef TIMING
-		    bfly::L2LTimer.Start();
+                    bfly::L2LTimer.Start();
 #endif
                     bfly::L2L
                     ( context, plan, phase, level,
@@ -408,7 +395,7 @@ transform
                       parentIOffset, weightGridList, 
                       partialWeightGridList[tIndex] );
 #ifdef TIMING
-		    bfly::L2LTimer.Stop();
+                    bfly::L2LTimer.Stop();
 #endif
                 }
             }
@@ -492,14 +479,14 @@ transform
         if( level==log2N/2 )
         {
 #ifdef TIMING
-	    bfly::M2LTimer.Start();
+            bfly::M2LTimer.Start();
 #endif
             bfly::M2L
             ( context, plan, amplitude, phase, sBox, tBox, mySBox, myTBox,
               log2LocalSBoxes, log2LocalTBoxes, 
               log2LocalSBoxesPerDim, log2LocalTBoxesPerDim, weightGridList );
 #ifdef TIMING
-	    bfly::M2LTimer.Stop();
+            bfly::M2LTimer.Stop();
 #endif
         }
     }

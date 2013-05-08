@@ -233,25 +233,25 @@ INUFT
                         ((tIndex>>d)<<(log2LocalSBoxes+d)) + (sIndex<<d);
 
 #ifdef TIMING
-		    inuft::formCheckPotentialsTimer.Start();
+                    inuft::formCheckPotentialsTimer.Start();
 #endif
                     inuft::FormCheckPotentials
                     ( context, plan, level, realPrescalings, imagPrescalings,
                       x0A, p0B, wA, wB, parentIOffset,
                       oldWeightGridList, weightGridList[iIndex] );
 #ifdef TIMING
-		    inuft::formCheckPotentialsTimer.Stop();
+                    inuft::formCheckPotentialsTimer.Stop();
 #endif
                 }
             }
 #ifdef TIMING
-	    inuft::formEquivalentSourcesTimer.Start();
+            inuft::formEquivalentSourcesTimer.Start();
 #endif
             inuft::FormEquivalentSources
             ( context, plan, mySBox, myTBox, log2LocalSBoxes, log2LocalTBoxes,
               log2LocalSBoxesPerDim, log2LocalTBoxesPerDim, weightGridList );
 #ifdef TIMING
-	    inuft::formEquivalentSourcesTimer.Stop();
+            inuft::formEquivalentSourcesTimer.Stop();
 #endif
         }
         else 
@@ -326,14 +326,14 @@ INUFT
                     ((tIndex>>d)<<(d-log2NumMergingProcesses));
 
 #ifdef TIMING
-		inuft::formCheckPotentialsTimer.Start();
+                inuft::formCheckPotentialsTimer.Start();
 #endif
                 inuft::FormCheckPotentials
                 ( context, plan, level, realPrescalings, imagPrescalings,
                   x0A, p0B, wA, wB, parentIOffset,
                   weightGridList, partialWeightGridList[tIndex] );
 #ifdef TIMING
-		inuft::formCheckPotentialsTimer.Stop();
+                inuft::formCheckPotentialsTimer.Stop();
 #endif
             }
 
@@ -418,13 +418,13 @@ INUFT
             
             // Backtransform all of the potentials into equivalent sources
 #ifdef TIMING
-	    inuft::formEquivalentSourcesTimer.Start();
+            inuft::formEquivalentSourcesTimer.Start();
 #endif
             inuft::FormEquivalentSources
             ( context, plan, mySBox, myTBox, log2LocalSBoxes, log2LocalTBoxes,
               log2LocalSBoxesPerDim, log2LocalTBoxesPerDim, weightGridList );
 #ifdef TIMING
-	    inuft::formEquivalentSourcesTimer.Stop();
+            inuft::formEquivalentSourcesTimer.Stop();
 #endif
         }
     }
