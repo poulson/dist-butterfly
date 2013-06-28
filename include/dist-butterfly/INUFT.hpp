@@ -161,8 +161,7 @@ INUFT
     for( size_t level=1; level<=log2N; ++level )
     {
         // Compute the width of the nodes at this level
-        array<R,d> wA;
-        array<R,d> wB;
+        array<R,d> wA, wB;
         for( size_t j=0; j<d; ++j )
         {
             wA[j] = tBox.widths[j] / (1<<level);
@@ -256,8 +255,7 @@ INUFT
         }
         else 
         {
-            const size_t log2NumMergingProcesses = d-log2LocalSBoxes;
-            const size_t numMergingProcesses = 1u<<log2NumMergingProcesses;
+            const size_t log2NumMerging = d-log2LocalSBoxes;
 
             log2LocalSBoxes = 0; 
             for( size_t j=0; j<d; ++j )
@@ -267,12 +265,12 @@ INUFT
             // We partition the target domain after the SumScatter.
             const vector<size_t>& sDimsToMerge = 
                 plan.GetSourceDimsToMerge( level );
-            for( size_t i=0; i<log2NumMergingProcesses; ++i )
+            for( size_t i=0; i<log2NumMerging; ++i )
             {
                 const size_t j = sDimsToMerge[i];
                 if( mySBoxCoords[j] & 1 )
                     mySBox.offsets[j] -= mySBox.widths[j];
-                mySBoxCoords[j] >>= 1;
+                mySBoxCoords[j] /= 2;
                 mySBox.widths[j] *= 2;
             }
             for( size_t j=0; j<d; ++j )
@@ -322,8 +320,7 @@ INUFT
 
                 // Compute the interaction offset of A's parent interacting 
                 // with the remaining local source boxes
-                const size_t parentIOffset = 
-                    ((tIndex>>d)<<(d-log2NumMergingProcesses));
+                const size_t parentIOffset = ((tIndex>>d)<<(d-log2NumMerging));
 
 #ifdef TIMING
                 inuft::formCheckPotentialsTimer.Start();
@@ -361,15 +358,14 @@ INUFT
             else
             {
                 const size_t log2NumSubclusters = 
-                    log2NumMergingProcesses-log2SubclusterSize;
+                    log2NumMerging-log2SubclusterSize;
                 const size_t numSubclusters = 1u<<log2NumSubclusters;
                 const size_t subclusterSize = 1u<<log2SubclusterSize;
 
-                const size_t sendSize = recvSize*numMergingProcesses;
                 const size_t numChunksPerProcess = subclusterSize;
                 const size_t chunkSize = recvSize / numChunksPerProcess;
                 const R* partialBuffer = partialWeightGridList.Buffer();
-                vector<R> sendBuffer( sendSize );
+                vector<R> sendBuffer( recvSize<<log2NumMerging );
                 for( size_t sc=0; sc<numSubclusters; ++sc )
                 {
                     R* subclusterSendBuffer = 
@@ -402,7 +398,7 @@ INUFT
             const vector<size_t>& tDimsToCut = plan.GetTargetDimsToCut( level );
             const vector<bool>& rightSideOfCut = 
                 plan.GetRightSideOfCut( level );
-            for( size_t i=0; i<log2NumMergingProcesses; ++i )
+            for( size_t i=0; i<log2NumMerging; ++i )
             {
                 const size_t j = tDimsToCut[i];
                 myTBox.widths[j] /= 2;
