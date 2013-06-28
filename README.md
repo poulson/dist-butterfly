@@ -9,4 +9,13 @@ details.
 
 ### Documentation
 
-Coming soon!
+Coming soon! For now, please see [this example driver](https://github.com/poulson/dist-butterfly/blob/master/test/transform/GenRadon-3d.cpp), which efficiently
+applies an analogue of a generalized Radon transform over a 3D volume. 
+
+Building DistButterfly is often as simple as running:
+
+    cd dist-butterfly
+    mkdir build
+    cd build
+    cmake ..
+    make
